@@ -10,7 +10,8 @@ Persistent memory and identity for AI coding assistants. Install on any machine,
 
 - **Persistent memory** — Your AI assistant remembers what was built, what decisions were made, and what's pending
 - **Multi-agent identities** — Run multiple AI personas (work brain, sysadmin, family coordinator) each with their own memory
-- **Knowledge base** — Journal entries, learnings, project context, and decisions organized in plain markdown
+- **Knowledge base** — Journal entries, learnings, project context, and decisions organized in plain markdown with YAML frontmatter
+- **Obsidian-compatible** — Open your knowledge base as an Obsidian vault with wikilinks, tags, and graph view
 - **Hybrid search** — FTS5 keyword + sqlite-vec semantic search with Reciprocal Rank Fusion
 - **Hook integration** — Automatic context injection into Claude Code, OpenCode, and Cursor
 - **Heartbeat pipeline** — Auto-extracts memories from sessions (collect → AI extract → route)
@@ -882,6 +883,119 @@ Files are scanned before indexing. Files containing these patterns are excluded:
 ### Files always skipped
 
 `.env*`, `credentials.json`, `service-account.json`, `.db`, `.sqlite`, `.pyc`, `.so`, `.dylib`
+
+---
+
+## Obsidian integration
+
+The entire knowledge base is plain markdown with YAML frontmatter — it works as an Obsidian vault out of the box.
+
+### Setup
+
+Point Obsidian at your agent's `data/` directory:
+
+```
+Open Vault → Open folder as vault → ~/.innie/agents/innie/data/
+```
+
+That's it. All journal entries, learnings, projects, decisions, contacts, and meeting notes appear in the vault immediately.
+
+### What you get
+
+**YAML frontmatter** on every file — enables Obsidian's tag search, Dataview queries, and filtering:
+
+```markdown
+---
+date: 2026-03-02
+type: learning
+category: debugging
+confidence: high
+tags: [learning, debugging]
+---
+# FTS5 Tricks
+
+Use MATCH for phrase queries...
+```
+
+**Wikilinks** between related entries — decisions link to their project, meetings link to attendees:
+
+```markdown
+# Use SQLite over Postgres
+
+Project: [[projects/innie-engine/context|innie-engine]]
+
+## Context
+...
+```
+
+```markdown
+# Sprint Planning
+
+*Attendees: [[people/sarah-chen|Sarah Chen]], [[people/josh|Josh]]*
+
+## Notes
+...
+```
+
+**Graph view** — Obsidian's graph view shows the connections between your projects, decisions, people, and learnings. The wikilinks create a navigable knowledge graph automatically.
+
+### Frontmatter fields
+
+| Field | Values | Present on |
+|-------|--------|-----------|
+| `date` | `YYYY-MM-DD` | All files |
+| `type` | `journal`, `learning`, `project`, `decision`, `meeting`, `person`, `inbox` | All files |
+| `tags` | Array | All files |
+| `category` | `debugging`, `patterns`, `tools`, `infrastructure`, `processes` | Learnings |
+| `confidence` | `high`, `medium`, `low` | Learnings |
+| `status` | `active`, `paused`, `completed`, `accepted`, `deprecated` | Projects, decisions |
+| `project` | Project name | Decisions, ADRs |
+| `attendees` | Array of names | Meetings |
+| `role` | Person's role | Contacts |
+
+### Dataview examples
+
+If you have the [Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin:
+
+```dataview
+-- Recent learnings
+TABLE category, confidence, date
+FROM #learning
+SORT date DESC
+LIMIT 10
+```
+
+```dataview
+-- All decisions for a project
+TABLE status, date
+FROM #decision
+WHERE project = "innie-engine"
+SORT date DESC
+```
+
+```dataview
+-- This week's journal
+TABLE date
+FROM #journal
+WHERE date >= date(today) - dur(7 days)
+SORT date DESC
+```
+
+### Multiple agents, multiple vaults
+
+Each agent has its own `data/` directory. You can open each as a separate vault, or symlink them under one vault:
+
+```bash
+# One vault per agent
+# Vault 1: ~/.innie/agents/innie/data/
+# Vault 2: ~/.innie/agents/avery/data/
+
+# Or combine into one vault with symlinks
+mkdir -p ~/obsidian-innie
+ln -s ~/.innie/agents/innie/data ~/obsidian-innie/innie
+ln -s ~/.innie/agents/avery/data ~/obsidian-innie/avery
+# Open ~/obsidian-innie/ as vault
+```
 
 ---
 

@@ -3,15 +3,53 @@
 These skills create well-formatted entries in the agent's data/ directory.
 They are designed to be called during interactive sessions, either by the
 AI assistant or via CLI.
+
+All files include YAML frontmatter and Obsidian-compatible wikilinks.
 """
 
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
 from innie.core import paths
 
 logger = logging.getLogger(__name__)
+
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower().strip())
+    return slug.strip("-")[:60]
+
+
+def _frontmatter(**fields) -> str:
+    """Build YAML frontmatter block."""
+    lines = ["---"]
+    for key, value in fields.items():
+        if value is None:
+            continue
+        if isinstance(value, list):
+            if value:
+                formatted = ", ".join(str(v) for v in value)
+                lines.append(f"{key}: [{formatted}]")
+        else:
+            lines.append(f"{key}: {value}")
+    lines.append("---")
+    return "\n".join(lines) + "\n\n"
+
+
+def _wikilink(kind: str, name: str) -> str:
+    """Build an Obsidian wikilink."""
+    slug = _slugify(name)
+    if kind == "project":
+        return f"[[projects/{slug}/context|{name}]]"
+    elif kind == "person":
+        return f"[[people/{slug}|{name}]]"
+    elif kind == "decision":
+        return f"[[decisions/{slug}|{name}]]"
+    elif kind == "meeting":
+        return f"[[meetings/{slug}|{name}]]"
+    return f"[[{slug}|{name}]]"
 
 
 def daily(
@@ -36,6 +74,14 @@ def daily(
         parts.append(journal_file.read_text().rstrip())
         parts.append("")  # blank line separator
     else:
+        date_str = today.strftime("%Y-%m-%d")
+        parts.append(
+            _frontmatter(
+                date=date_str,
+                type="journal",
+                tags=["journal"],
+            ).rstrip()
+        )
         parts.append(f"# {today.strftime('%Y-%m-%d %A')}")
         parts.append("")
 
@@ -72,7 +118,7 @@ def learn(
     Categories: debugging, patterns, tools, infrastructure, processes
     """
     today = datetime.now().strftime("%Y-%m-%d")
-    slug = title.lower().replace(" ", "-")[:50]
+    slug = _slugify(title)
 
     learn_dir = paths.learnings_dir(agent) / category
     learn_dir.mkdir(parents=True, exist_ok=True)
@@ -80,16 +126,22 @@ def learn(
     filename = f"{today}-{slug}.md"
     filepath = learn_dir / filename
 
+    all_tags = ["learning", category]
+    if tags:
+        all_tags.extend(tags)
+
     parts = [
+        _frontmatter(
+            date=today,
+            type="learning",
+            category=category,
+            tags=all_tags,
+        ).rstrip(),
         f"# {title}",
         "",
-        f"*Learned: {today}*",
+        content,
+        "",
     ]
-
-    if tags:
-        parts.append(f"*Tags: {', '.join(tags)}*")
-
-    parts.extend(["", content, ""])
     filepath.write_text("\n".join(parts))
     return filepath
 
@@ -104,7 +156,7 @@ def meeting(
 ) -> Path:
     """Create a meeting notes entry."""
     today = datetime.now()
-    slug = title.lower().replace(" ", "-")[:50]
+    slug = _slugify(title)
 
     meeting_dir = paths.meetings_dir(agent)
     meeting_dir.mkdir(parents=True, exist_ok=True)
@@ -112,11 +164,19 @@ def meeting(
     filename = f"{today.strftime('%Y-%m-%d')}-{slug}.md"
     filepath = meeting_dir / filename
 
+    date_str = today.strftime("%Y-%m-%d")
+    attendee_links = [_wikilink("person", a) for a in attendees]
+
     parts = [
+        _frontmatter(
+            date=date_str,
+            type="meeting",
+            attendees=attendees,
+            tags=["meeting"],
+        ).rstrip(),
         f"# {title}",
         "",
-        f"*Date: {today.strftime('%Y-%m-%d %H:%M')}*",
-        f"*Attendees: {', '.join(attendees)}*",
+        f"*Attendees: {', '.join(attendee_links)}*",
         "",
         "## Notes",
         "",
@@ -146,7 +206,7 @@ def contact(
     agent: str | None = None,
 ) -> Path:
     """Create or update a contact entry."""
-    slug = name.lower().replace(" ", "-")
+    slug = _slugify(name)
 
     people_dir = paths.people_dir(agent)
     people_dir.mkdir(parents=True, exist_ok=True)
@@ -160,7 +220,18 @@ def contact(
         updated = f"{existing}\n\n## Update ({today})\n\n{notes}\n"
         filepath.write_text(updated)
     else:
+        today = datetime.now().strftime("%Y-%m-%d")
+        tag_list = ["person"]
+        if role:
+            tag_list.append(_slugify(role))
+
         parts = [
+            _frontmatter(
+                date=today,
+                type="person",
+                role=role or None,
+                tags=tag_list,
+            ).rstrip(),
             f"# {name}",
             "",
         ]
@@ -198,6 +269,7 @@ def inbox(
             f.write(entry)
     else:
         with open(inbox_file, "w") as f:
+            f.write(_frontmatter(type="inbox", tags=["inbox"]))
             f.write("# Inbox\n")
             f.write(entry)
 
@@ -208,6 +280,7 @@ def adr(
     title: str,
     context: str,
     decision: str,
+    project: str | None = None,
     alternatives: list[str] | None = None,
     consequences: list[str] | None = None,
     status: str = "accepted",
@@ -215,9 +288,8 @@ def adr(
 ) -> Path:
     """Create an Architecture Decision Record."""
     today = datetime.now().strftime("%Y-%m-%d")
-    slug = title.lower().replace(" ", "-")[:60]
+    slug = _slugify(title)
 
-    # ADRs go in data/projects or a top-level decisions dir
     decisions_dir = paths.data_dir(agent) / "decisions"
     decisions_dir.mkdir(parents=True, exist_ok=True)
 
@@ -228,12 +300,27 @@ def adr(
     filename = f"{next_num:04d}-{slug}.md"
     filepath = decisions_dir / filename
 
+    tag_list = ["decision", "adr"]
+    if project:
+        tag_list.append(_slugify(project))
+
     parts = [
+        _frontmatter(
+            date=today,
+            type="decision",
+            status=status,
+            project=project,
+            tags=tag_list,
+        ).rstrip(),
         f"# ADR {next_num}: {title}",
         "",
-        f"*Date: {today}*",
-        f"*Status: {status}*",
-        "",
+    ]
+
+    if project:
+        parts.append(f"Project: {_wikilink('project', project)}")
+        parts.append("")
+
+    parts.extend([
         "## Context",
         "",
         context,
@@ -241,7 +328,7 @@ def adr(
         "## Decision",
         "",
         decision,
-    ]
+    ])
 
     if alternatives:
         parts.extend(["", "## Alternatives Considered"])

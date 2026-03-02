@@ -2,6 +2,9 @@
 
 Routes extraction results to the correct files in the knowledge base.
 AI never writes files directly — this module handles all file I/O.
+
+All routed files include YAML frontmatter for Obsidian compatibility
+and wikilinks to related entries (projects, people, decisions).
 """
 
 import json
@@ -17,6 +20,34 @@ from innie.heartbeat.schema import HeartbeatExtraction
 def _slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.lower().strip())
     return slug.strip("-")[:60]
+
+
+def _frontmatter(**fields) -> str:
+    """Build YAML frontmatter block."""
+    lines = ["---"]
+    for key, value in fields.items():
+        if value is None:
+            continue
+        if isinstance(value, list):
+            if value:
+                formatted = ", ".join(str(v) for v in value)
+                lines.append(f"{key}: [{formatted}]")
+        else:
+            lines.append(f"{key}: {value}")
+    lines.append("---")
+    return "\n".join(lines) + "\n\n"
+
+
+def _wikilink(kind: str, name: str) -> str:
+    """Build an Obsidian wikilink. e.g. [[projects/my-app/context|my-app]]"""
+    slug = _slugify(name)
+    if kind == "project":
+        return f"[[projects/{slug}/context|{name}]]"
+    elif kind == "person":
+        return f"[[people/{slug}|{name}]]"
+    elif kind == "decision":
+        return f"[[decisions/{slug}|{name}]]"
+    return f"[[{slug}|{name}]]"
 
 
 def route_journal(extraction: HeartbeatExtraction, agent: str | None = None) -> int:
@@ -36,7 +67,12 @@ def route_journal(extraction: HeartbeatExtraction, agent: str | None = None) -> 
         if journal_file.exists():
             content = journal_file.read_text()
         else:
-            content = f"# {entry.date}\n\n"
+            content = _frontmatter(
+                date=entry.date,
+                type="journal",
+                tags=["journal"],
+            )
+            content += f"# {entry.date}\n\n"
 
         content += f"- **{entry.time}** — {entry.summary}"
         if entry.details:
@@ -59,8 +95,14 @@ def route_learnings(extraction: HeartbeatExtraction, agent: str | None = None) -
         slug = _slugify(learning.title)
         learning_file = cat_dir / f"{today}-{slug}.md"
 
-        content = f"# {learning.title}\n\n"
-        content += f"*Confidence: {learning.confidence} | Learned: {today}*\n\n"
+        content = _frontmatter(
+            date=today,
+            type="learning",
+            category=learning.category,
+            confidence=learning.confidence,
+            tags=["learning", learning.category],
+        )
+        content += f"# {learning.title}\n\n"
         content += learning.content + "\n"
 
         learning_file.write_text(content)
@@ -73,14 +115,21 @@ def route_project_updates(extraction: HeartbeatExtraction, agent: str | None = N
     count = 0
     today = datetime.now().strftime("%Y-%m-%d")
     for update in extraction.project_updates:
-        project_dir = paths.projects_dir(agent) / _slugify(update.project)
+        project_slug = _slugify(update.project)
+        project_dir = paths.projects_dir(agent) / project_slug
         project_dir.mkdir(parents=True, exist_ok=True)
 
         context_file = project_dir / "context.md"
         if context_file.exists():
             content = context_file.read_text()
         else:
-            content = f"# {update.project}\n\n*Status: {update.status}*\n\n## Updates\n\n"
+            content = _frontmatter(
+                date=today,
+                type="project",
+                status=update.status,
+                tags=["project", project_slug],
+            )
+            content += f"# {update.project}\n\n## Updates\n\n"
 
         content += f"### {today}\n\n{update.summary}\n\n"
         context_file.write_text(content)
@@ -93,15 +142,22 @@ def route_decisions(extraction: HeartbeatExtraction, agent: str | None = None) -
     count = 0
     today = datetime.now().strftime("%Y-%m-%d")
     for decision in extraction.decisions:
-        project_dir = paths.projects_dir(agent) / _slugify(decision.project)
+        project_slug = _slugify(decision.project)
+        project_dir = paths.projects_dir(agent) / project_slug
         decisions_dir = project_dir / "decisions"
         decisions_dir.mkdir(parents=True, exist_ok=True)
 
         slug = _slugify(decision.title)
         decision_file = decisions_dir / f"{today}-{slug}.md"
 
-        content = f"# {decision.title}\n\n"
-        content += f"*Date: {today} | Project: {decision.project}*\n\n"
+        content = _frontmatter(
+            date=today,
+            type="decision",
+            project=decision.project,
+            tags=["decision", project_slug],
+        )
+        content += f"# {decision.title}\n\n"
+        content += f"Project: {_wikilink('project', decision.project)}\n\n"
         content += f"## Context\n\n{decision.context}\n\n"
         content += f"## Decision\n\n{decision.decision}\n\n"
         if decision.alternatives:

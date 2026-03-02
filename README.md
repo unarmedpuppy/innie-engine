@@ -869,13 +869,58 @@ The embedding service is a thin FastAPI server running `BAAI/bge-base-en-v1.5` i
 
 ---
 
-## Destructive command guard (dcg)
+## Sandboxing and security
 
-For agents with elevated permissions (`permissions: yolo`), innie supports [dcg](https://github.com/Dicklesworthstone/destructive_command_guard) — a Rust binary that blocks dangerous shell commands at the hook level before they execute.
+Agents with elevated permissions need guardrails. Innie uses a defense-in-depth approach — multiple independent layers that each catch different categories of risk.
 
-This lets you run agents like Gilfoyle (server sysadmin) with full autonomy for reads and diagnostics, while blocking destructive operations like `rm -rf`, `docker system prune`, or `git push --force`.
+### Defense-in-depth
 
-### How it works
+```
+┌─────────────────────────────────────────────────────────┐
+│                  Agent Session                           │
+│                                                          │
+│  ┌─ Layer 1: SOUL.md / CLAUDE.md (soft) ──────────────┐ │
+│  │  Behavioral instructions:                           │ │
+│  │  "Never delete without confirmation"                │ │
+│  │  "Default to reading, not writing"                  │ │
+│  │  "Use sudo for docker commands"                     │ │
+│  └─────────────────────────────────────────────────────┘ │
+│                          │                               │
+│  ┌─ Layer 2: dcg (hard) ─────────────────────────────┐  │
+│  │  PreToolUse hook intercepts Bash commands          │  │
+│  │  Blocks: rm -rf, git push --force, docker rm, etc │  │
+│  │  Per-agent: only enforced if profile has dcg       │  │
+│  │  Fail-open: won't break agents without dcg         │  │
+│  └────────────────────────────────────────────────────┘  │
+│                          │                               │
+│  ┌─ Layer 3: OS permissions (hard) ──────────────────┐  │
+│  │  Agent user not in docker group → must sudo        │  │
+│  │  Restricted filesystem paths                       │  │
+│  │  SSH key scoping                                   │  │
+│  └────────────────────────────────────────────────────┘  │
+│                          │                               │
+│  ┌─ Layer 4: Secret scanning (data) ─────────────────┐  │
+│  │  API keys, tokens, private keys never indexed      │  │
+│  │  .env files excluded from knowledge base           │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+| Layer | Type | What it catches |
+|-------|------|----------------|
+| **SOUL.md / CLAUDE.md** | Soft (instructions) | Intent-level mistakes — "don't delete production data" |
+| **dcg** | Hard (PreToolUse hook) | Command-level mistakes — blocks `rm -rf`, `docker system prune`, `git push --force` |
+| **OS permissions** | Hard (system config) | Privilege escalation — agent user can't run docker without sudo |
+| **Secret scanning** | Data protection | Credential leaks — API keys never enter the search index |
+
+### Destructive command guard (dcg)
+
+[dcg](https://github.com/Dicklesworthstone/destructive_command_guard) is a Rust binary that blocks dangerous shell commands at the hook level before they execute. It's the primary sandbox for agents running with `permissions: yolo`.
+
+This lets you run agents like Gilfoyle (server sysadmin) with full autonomy for reads and diagnostics, while blocking destructive operations at the shell level.
+
+#### How it works
 
 ```
 Claude wants to run `rm -rf /data`
@@ -888,15 +933,20 @@ Claude wants to run `rm -rf /data`
 
 The guard is **fail-open** — if dcg isn't installed or errors, commands are allowed. This prevents the guard from breaking agents on machines where dcg isn't set up.
 
-### Setup
-
-1. Install dcg:
+#### Install dcg
 
 ```bash
+# Via cargo (Rust)
 cargo install destructive_command_guard
+
+# Or via the install script
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/destructive_command_guard/main/install.sh" \
+  | bash -s -- --easy-mode
 ```
 
-2. Enable in `profile.yaml`:
+#### Configure per agent
+
+Enable in `profile.yaml`:
 
 ```yaml
 name: gilfoyle
@@ -909,7 +959,7 @@ guard:
   trust_level: low
 ```
 
-3. Create `dcg-config.toml` in the agent directory (`~/.innie/agents/gilfoyle/dcg-config.toml`):
+Create `dcg-config.toml` in the agent directory (`~/.innie/agents/gilfoyle/dcg-config.toml`):
 
 ```toml
 [packs]
@@ -926,22 +976,25 @@ enabled = [
 trust_level = "low"
 ```
 
-4. Install hooks (dcg-guard.sh is included automatically):
+Install hooks (dcg-guard.sh is included automatically):
 
 ```bash
 innie backend install claude-code
 ```
 
-### Per-agent enforcement
+#### Per-agent enforcement
 
 The guard checks `INNIE_AGENT` to determine which profile is active. Only agents with `guard.engine: dcg` in their `profile.yaml` are guarded — other agents pass through freely.
 
-This means you can have:
-- **gilfoyle**: `permissions: yolo` + `guard.engine: dcg` — full access, dcg-enforced
-- **innie**: `permissions: interactive` — normal Claude Code permission prompts
-- **avery**: `permissions: yolo` — full access, no guard (trusted context)
+Different agents get different security postures:
 
-### Migration
+| Agent | Permissions | Guard | Effect |
+|-------|-------------|-------|--------|
+| gilfoyle | `yolo` | `dcg` | Full access, destructive commands blocked |
+| innie | `interactive` | none | Claude Code permission prompts for every tool call |
+| avery | `yolo` | none | Full access, no guard (trusted context, no shell access needed) |
+
+#### Migration
 
 `innie migrate agent-harness` automatically copies `dcg-config.toml` from existing profiles.
 

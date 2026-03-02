@@ -1,5 +1,7 @@
 # innie-engine
 
+![innie-engine](https://github.com/user-attachments/assets/3f9f4f6a-0790-433c-b7fa-a5cd6e7c2def)
+
 Persistent memory and identity for AI coding assistants. Install on any machine, run `innie init`, and your AI assistant remembers everything across sessions.
 
 ## What it does

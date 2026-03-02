@@ -877,6 +877,22 @@ The fleet gateway aggregates traces across all machines:
 | `/api/traces/{session_id}` | GET | Find session on any machine |
 | `/api/traces/stats` | GET | Fleet-wide statistics |
 
+#### Data location and persistence
+
+Trace data lives at `~/.innie/agents/<name>/state/trace/traces.db`. This is in the `state/` directory (operational data, not the `data/` knowledge base), so it's:
+
+- **Not git-tracked** by default — `state/` is in `.gitignore` since it's local operational cache
+- **Per-agent** — each agent has its own trace database
+- **SQLite WAL mode** — safe for concurrent reads/writes from hooks and CLI
+- **Survives sessions** — persists across all Claude Code sessions on the machine
+
+To back up traces, either:
+- Copy `state/trace/traces.db` to your backup location
+- Use the fleet gateway to centralize traces from multiple machines
+- Remove `agents/*/state/` from `.gitignore` if you want traces version-controlled
+
+The JSONL files (`state/trace/YYYY-MM-DD.jsonl`) are the fast-path append log from PostToolUse hooks. The SQLite database is the queryable source of truth.
+
 ### API server
 
 ```bash

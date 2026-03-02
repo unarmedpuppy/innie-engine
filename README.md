@@ -14,6 +14,27 @@ Persistent memory and identity for AI coding assistants. Install on any machine,
 
 ## Install
 
+### Recommended: uv
+
+[uv](https://docs.astral.sh/uv/) is a fast Python package manager. If you don't have it:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then install innie as a global CLI tool:
+
+```bash
+# From a git clone (editable — changes take effect immediately)
+git clone https://github.com/joshuajenquist/innie-engine.git
+uv tool install -e ./innie-engine
+
+# Or directly from GitHub (no clone needed)
+uv tool install git+https://github.com/joshuajenquist/innie-engine.git
+```
+
+### Alternative: pip
+
 ```bash
 git clone https://github.com/joshuajenquist/innie-engine.git
 cd innie-engine

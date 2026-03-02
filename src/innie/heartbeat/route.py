@@ -135,12 +135,16 @@ def route_open_items(extraction: HeartbeatExtraction, agent: str | None = None) 
                 content = content[: next_nl + 1] + f"\n- {item.text}" + content[next_nl:]
                 changes += 1
         elif item.action == "complete":
-            # Mark as done (strikethrough)
-            content = content.replace(f"- {item.text}", f"- ~~{item.text}~~")
-            changes += 1
+            # Mark as done (strikethrough) — only count if actually found
+            new_content = content.replace(f"- {item.text}", f"- ~~{item.text}~~")
+            if new_content != content:
+                content = new_content
+                changes += 1
         elif item.action == "remove":
-            content = content.replace(f"- {item.text}\n", "")
-            changes += 1
+            new_content = content.replace(f"- {item.text}\n", "")
+            if new_content != content:
+                content = new_content
+                changes += 1
 
     if changes:
         # Update timestamp

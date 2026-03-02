@@ -1,4 +1,4 @@
-.PHONY: install dev docs test lint fmt clean build publish publish-test
+.PHONY: install dev docs test lint fmt clean build
 
 install:
 	pip install -e .
@@ -28,12 +28,6 @@ docs-build:
 
 build: clean
 	python -m build
-
-publish-test: build
-	twine upload --repository testpypi dist/*
-
-publish: build
-	twine upload dist/*
 
 embeddings-up:
 	docker compose up -d embeddings

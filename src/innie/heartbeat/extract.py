@@ -110,5 +110,14 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
         text = text[:-3]
     text = text.strip()
 
-    data = json.loads(text)
-    return HeartbeatExtraction(**data)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"AI returned invalid JSON: {e}\nRaw output:\n{text[:500]}") from e
+
+    try:
+        return HeartbeatExtraction(**data)
+    except Exception as e:
+        raise RuntimeError(
+            f"AI output doesn't match schema: {e}\nParsed data keys: {list(data.keys())}"
+        ) from e

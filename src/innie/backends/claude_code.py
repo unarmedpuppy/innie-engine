@@ -45,6 +45,17 @@ class ClaudeCodeBackend(Backend):
             ),
         ]
 
+    def _is_innie_entry(self, entry: dict) -> bool:
+        """Check if a hook entry belongs to innie (works with both old and new formats)."""
+        # New format: matcher + hooks array
+        for h in entry.get("hooks", []):
+            if "innie" in h.get("command", ""):
+                return True
+        # Old format: bare command at top level
+        if "innie" in entry.get("command", ""):
+            return True
+        return False
+
     def install_hooks(self, hooks_dir: Path) -> None:
         config_path = self.get_config_path()
         config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,13 +77,13 @@ class ClaudeCodeBackend(Backend):
             event_hooks = hooks.get(hook.event, [])
 
             # Remove existing innie entries (namespace-based)
-            event_hooks = [h for h in event_hooks if "innie" not in h.get("command", "")]
+            event_hooks = [h for h in event_hooks if not self._is_innie_entry(h)]
 
-            # Append new innie hook
-            entry: dict = {"command": hook.command}
+            # Append new innie hook in the new matcher + hooks format
+            cmd_entry: dict = {"type": "command", "command": hook.command}
             if hook.timeout != 10000:
-                entry["timeout"] = hook.timeout
-            event_hooks.append(entry)
+                cmd_entry["timeout"] = hook.timeout
+            event_hooks.append({"matcher": "*", "hooks": [cmd_entry]})
 
             hooks[hook.event] = event_hooks
 
@@ -92,7 +103,7 @@ class ClaudeCodeBackend(Backend):
 
         hooks = config.get("hooks", {})
         for event in list(hooks.keys()):
-            hooks[event] = [h for h in hooks[event] if "innie" not in h.get("command", "")]
+            hooks[event] = [h for h in hooks[event] if not self._is_innie_entry(h)]
             if not hooks[event]:
                 del hooks[event]
 
@@ -114,7 +125,7 @@ class ClaudeCodeBackend(Backend):
         result = {}
         for event in ["SessionStart", "PreCompact", "Stop", "PostToolUse"]:
             event_hooks = hooks.get(event, [])
-            result[event] = any("innie" in h.get("command", "") for h in event_hooks)
+            result[event] = any(self._is_innie_entry(h) for h in event_hooks)
         return result
 
     def collect_sessions(self, since: float) -> list[SessionData]:

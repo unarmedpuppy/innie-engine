@@ -180,19 +180,25 @@ def _execute_setup(
 
     # 1. Config
     innie_home.mkdir(parents=True, exist_ok=True)
-    config_content = (
-        DEFAULT_CONFIG.replace('name = ""', f'name = "{name}"')
-        .replace('timezone = "UTC"', f'timezone = "{tz}"')
-        .replace('agent = "innie"', f'agent = "{agent_name}"')
-        .replace('provider = "docker"', f'provider = "{embed_provider}"')
-        .replace(
-            "enabled = false",
-            f"enabled = {'true' if enable_heartbeat else 'false'}",
-        )
-        .replace(
-            "auto_commit = false",
-            f"auto_commit = {'true' if enable_git else 'false'}",
-        )
+    # Build config from template — use unique markers to avoid ambiguous replaces
+    config_content = DEFAULT_CONFIG
+    config_content = config_content.replace('name = ""', f'name = "{name}"', 1)
+    config_content = config_content.replace('timezone = "UTC"', f'timezone = "{tz}"', 1)
+    config_content = config_content.replace('agent = "innie"', f'agent = "{agent_name}"', 1)
+    config_content = config_content.replace(
+        'provider = "docker"', f'provider = "{embed_provider}"', 1
+    )
+    # heartbeat.enabled is the only "enabled = false" in the template
+    config_content = config_content.replace(
+        "enabled = false",
+        f"enabled = {'true' if enable_heartbeat else 'false'}",
+        1,
+    )
+    # git.auto_commit is the only "auto_commit = false"
+    config_content = config_content.replace(
+        "auto_commit = false",
+        f"auto_commit = {'true' if enable_git else 'false'}",
+        1,
     )
     (innie_home / "config.toml").write_text(config_content)
     console.print("  [green]✓[/green] Created config.toml")

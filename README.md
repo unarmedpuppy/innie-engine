@@ -15,14 +15,9 @@ Persistent memory and identity for AI coding assistants. Install on any machine,
 ## Install
 
 ```bash
-pip install innie-engine
-```
-
-Or with Homebrew:
-
-```bash
-brew tap joshuajenquist/tap
-brew install innie
+git clone https://github.com/joshuajenquist/innie-engine.git
+cd innie-engine
+pip install -e .
 ```
 
 ## Quick start

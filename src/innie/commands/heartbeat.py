@@ -156,7 +156,11 @@ def hb_status():
         console.print("[dim]Heartbeat has never run.[/dim]")
         return
 
-    state = json.loads(state_file.read_text())
+    try:
+        state = json.loads(state_file.read_text())
+    except (json.JSONDecodeError, ValueError):
+        console.print("[yellow]Heartbeat state file is corrupted. Delete and re-run.[/yellow]")
+        return
     last_run = state.get("last_run", 0)
     processed = len(state.get("processed_sessions", []))
 

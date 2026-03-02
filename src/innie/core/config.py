@@ -32,8 +32,12 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     with open(path, "rb") as f:
         cfg = tomllib.load(f)
 
-    if path is None:
-        _cache = cfg
+    # Cache only when we loaded from the default path
+    if _cache is None:
+        from innie.core.paths import config_file
+
+        if path == config_file():
+            _cache = cfg
     return cfg
 
 

@@ -22,6 +22,7 @@ def _register_commands():
         search,
         serve,
         skills,
+        trace,
     )
 
     app.command("init")(init.init)
@@ -74,6 +75,13 @@ def _register_commands():
     skill_app.command("list")(skills.list_skills)
     skill_app.command("run")(skills.run_skill)
     app.add_typer(skill_app, name="skill")
+
+    # Trace subcommands
+    trace_app = typer.Typer(help="Session traces and observability.")
+    trace_app.command("list")(trace.list_traces)
+    trace_app.command("show")(trace.show)
+    trace_app.command("stats")(trace.stats)
+    app.add_typer(trace_app, name="trace")
 
 
 _register_commands()

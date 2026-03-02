@@ -68,6 +68,26 @@ def status():
                     hook_status = f"[yellow]{installed}/{total}[/yellow]"
                 console.print(f"Hooks ({bname}): {hook_status}")
 
+    # Trace stats
+    from innie.core.trace import trace_db_path
+
+    tdb = trace_db_path(agent)
+    if tdb.exists():
+        try:
+            from innie.core.trace import get_stats, open_trace_db
+
+            conn = open_trace_db(tdb)
+            ts = get_stats(conn, agent_name=agent, since=None)
+            conn.close()
+            cost_str = f"${ts.total_cost_usd:.4f}" if ts.total_cost_usd else "$0"
+            console.print(
+                f"Traces: {ts.total_sessions} sessions, {ts.total_spans} spans, {cost_str} total"
+            )
+        except Exception:
+            console.print("Traces: [yellow]error reading[/yellow]")
+    else:
+        console.print("Traces: [dim]no data yet[/dim]")
+
     # Embedding health
     provider = get("embedding.provider", "docker")
     if provider != "none":

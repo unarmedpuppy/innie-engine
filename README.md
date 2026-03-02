@@ -15,7 +15,8 @@ Persistent memory and identity for AI coding assistants. Install on any machine,
 - **Hybrid search** — FTS5 keyword + sqlite-vec semantic search with Reciprocal Rank Fusion
 - **Hook integration** — Automatic context injection into Claude Code, OpenCode, and Cursor
 - **Heartbeat pipeline** — Auto-extracts memories from sessions (collect → AI extract → route)
-- **Fleet gateway** — Multi-machine agent coordination with health monitoring
+- **Tracing** — SQLite-backed session and tool span tracing with cost, token, and duration tracking
+- **Fleet gateway** — Multi-machine agent coordination with health monitoring and trace aggregation
 - **Jobs API** — OpenAI-compatible chat completions and async job submission
 
 ---
@@ -743,6 +744,138 @@ Quick overview — active agent, file counts, hook status, embedding health.
 ```bash
 innie status
 ```
+
+### Tracing and observability
+
+Every session and tool invocation is recorded in a SQLite trace database (`state/trace/traces.db`).
+
+#### `innie trace list`
+
+List recent trace sessions.
+
+```bash
+$ innie trace list
+  SESSION ID           AGENT     MODEL           STARTED           DURATION  TURNS  COST     TOKENS
+  ses-a1b2c3d4e5f6     innie     claude-sonnet   2026-03-02 14:30  23m       12     $0.0842  45.2K
+  ses-f7e8d9c0b1a2     avery     claude-haiku    2026-03-02 13:15  5m        3      $0.0031  8.1K
+  ses-112233445566     gilfoyle  claude-sonnet   2026-03-01 22:00  45m       28     $0.2100  112.5K
+
+$ innie trace list --agent avery --days 7   # filter by agent, last 7 days
+$ innie trace list --limit 5                # show 5 most recent
+```
+
+#### `innie trace show <session_id>`
+
+Session detail with all tool spans.
+
+```bash
+$ innie trace show ses-a1b2c3d4e5f6
+
+  Session: ses-a1b2c3d4e5f6
+    Agent:    innie
+    Machine:  macbook-pro
+    Model:    claude-sonnet
+    CWD:      /Users/josh/workspace/polyjuiced
+    Started:  2026-03-02 14:30:15
+    Ended:    2026-03-02 14:53:22 (1387s)
+    Cost:     $0.0842
+    Tokens:   32,100 in / 13,100 out
+    Turns:    12
+
+  Spans (47):
+
+    TOOL          STATUS  DURATION  TIME      INPUT
+    Read          ok      12ms      14:30:22  {"file": "src/main.py"}
+    Grep          ok      45ms      14:30:25  {"pattern": "async def trade"}
+    Edit          ok      8ms       14:31:02  {"file_path": "src/main.py"...
+    Bash          ok      2340ms    14:32:15  {"command": "pytest tests/"}
+    ...
+```
+
+Supports prefix matching: `innie trace show ses-a1b` works.
+
+#### `innie trace stats`
+
+Aggregate statistics.
+
+```bash
+$ innie trace stats --days 30
+
+  Trace Statistics (last 30 days)
+
+    Sessions:          142
+    Tool spans:        8,431
+    Total cost:        $12.4300
+    Total tokens:      2.1M
+    Avg duration:      18.3m
+    Avg turns/session: 9.2
+
+  Tool Usage:
+    Read                  2841  ████████████████████████████
+    Edit                  1923  ███████████████████
+    Bash                  1456  ██████████████
+    Grep                   891  ████████
+    Glob                   720  ███████
+    Write                  600  ██████
+
+  Sessions by Agent:
+    innie                  98
+    avery                  32
+    gilfoyle               12
+
+  Daily Activity:
+    2026-03-02  8  ████████████████
+    2026-03-01  5  ██████████
+    2026-02-28  7  ██████████████
+    ...
+```
+
+#### How tracing works
+
+```
+┌─────────────────────────────────────────────────┐
+│                  Claude Session                  │
+│                                                  │
+│  SessionStart hook                               │
+│    └─ innie handle session-init                  │
+│       └─ INSERT trace_sessions (session start)   │
+│                                                  │
+│  PostToolUse hook (each tool call)               │
+│    ├─ JSONL append (fast path, <1ms)             │
+│    └─ innie handle tool-use (background)         │
+│       └─ INSERT trace_spans                      │
+│                                                  │
+│  Stop hook                                       │
+│    └─ innie handle session-end                   │
+│       └─ UPDATE trace_sessions (cost, tokens)    │
+└─────────────────────────────────────────────────┘
+```
+
+The trace database stores:
+
+| Table | Fields |
+|-------|--------|
+| `trace_sessions` | session_id, machine_id, agent_name, interactive, model, cwd, start_time, end_time, cost_usd, input_tokens, output_tokens, num_turns |
+| `trace_spans` | span_id, session_id, parent_span_id, tool_name, event_type, input_json, output_summary, status, start_time, end_time, duration_ms |
+
+#### Trace API endpoints
+
+When running `innie serve`, trace data is available via REST:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/traces` | GET | List sessions (supports `?agent=`, `?days=`, `?limit=`) |
+| `/v1/traces/{session_id}` | GET | Session detail with all spans |
+| `/v1/traces/stats` | GET | Aggregate statistics (supports `?agent=`, `?days=`) |
+| `/v1/traces/events` | POST | Ingest trace events (session_start, session_end, span) |
+
+The fleet gateway aggregates traces across all machines:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/traces` | GET | All sessions across fleet |
+| `/api/traces/{session_id}` | GET | Find session on any machine |
+| `/api/traces/stats` | GET | Fleet-wide statistics |
 
 ### API server
 

@@ -482,7 +482,7 @@ async def update_memory_context(request: Request):
 
 
 @app.get("/v1/memory/search")
-async def search_memory(q: str, limit: int = 5):
+async def search_memory_api(q: str, limit: int = 5):
     """Search the knowledge base via API."""
     try:
         from innie.core.search import (
@@ -500,3 +500,181 @@ async def search_memory(q: str, limit: int = 5):
         return {"results": results, "query": q, "count": len(results)}
     except Exception as e:
         return {"results": [], "query": q, "error": str(e)}
+
+
+# ── Traces API ──────────────────────────────────────────────────────────────
+
+
+@app.post("/v1/traces/events")
+async def ingest_trace_event(request: Request):
+    """Ingest a trace event (session start/end or span)."""
+    from innie.core.trace import end_session, open_trace_db, record_span, start_session
+
+    body = await request.json()
+    event_type = body.get("type", "span")
+    conn = open_trace_db()
+
+    try:
+        if event_type == "session_start":
+            sid = start_session(
+                conn,
+                session_id=body.get("session_id"),
+                agent_name=body.get("agent_name"),
+                interactive=body.get("interactive", True),
+                model=body.get("model"),
+                cwd=body.get("cwd"),
+                metadata=body.get("metadata"),
+            )
+            return {"status": "ok", "session_id": sid}
+
+        elif event_type == "session_end":
+            end_session(
+                conn,
+                session_id=body["session_id"],
+                cost_usd=body.get("cost_usd"),
+                input_tokens=body.get("input_tokens"),
+                output_tokens=body.get("output_tokens"),
+                num_turns=body.get("num_turns"),
+            )
+            return {"status": "ok"}
+
+        elif event_type == "span":
+            span_id = record_span(
+                conn,
+                session_id=body["session_id"],
+                tool_name=body.get("tool_name", "unknown"),
+                event_type=body.get("event_type", "tool_use"),
+                input_json=body.get("input_json"),
+                output_summary=body.get("output_summary"),
+                status=body.get("status", "ok"),
+                start_time=body.get("start_time"),
+                end_time=body.get("end_time"),
+                duration_ms=body.get("duration_ms"),
+            )
+            return {"status": "ok", "span_id": span_id}
+
+        else:
+            raise HTTPException(400, f"Unknown event type: {event_type}")
+    finally:
+        conn.close()
+
+
+@app.get("/v1/traces")
+async def list_traces_api(
+    agent: str | None = None,
+    limit: int = 50,
+    days: int = 0,
+):
+    """List trace sessions."""
+    import time as _time
+
+    from innie.core.trace import list_sessions, open_trace_db, trace_db_path
+
+    db = trace_db_path()
+    if not db.exists():
+        return {"sessions": [], "total": 0}
+
+    conn = open_trace_db(db)
+    since = _time.time() - (days * 86400) if days > 0 else None
+    sessions = list_sessions(conn, agent_name=agent, limit=limit, since=since)
+    conn.close()
+
+    return {
+        "sessions": [
+            {
+                "session_id": s.session_id,
+                "machine_id": s.machine_id,
+                "agent_name": s.agent_name,
+                "model": s.model,
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+                "cost_usd": s.cost_usd,
+                "input_tokens": s.input_tokens,
+                "output_tokens": s.output_tokens,
+                "num_turns": s.num_turns,
+            }
+            for s in sessions
+        ],
+        "total": len(sessions),
+    }
+
+
+@app.get("/v1/traces/{session_id}")
+async def get_trace_api(session_id: str):
+    """Get session detail with spans."""
+    from innie.core.trace import get_session, open_trace_db, trace_db_path
+
+    db = trace_db_path()
+    if not db.exists():
+        raise HTTPException(404, "No trace data")
+
+    conn = open_trace_db(db)
+    session = get_session(conn, session_id)
+    conn.close()
+
+    if not session:
+        raise HTTPException(404, f"Session '{session_id}' not found")
+
+    return {
+        "session_id": session.session_id,
+        "machine_id": session.machine_id,
+        "agent_name": session.agent_name,
+        "interactive": session.interactive,
+        "model": session.model,
+        "cwd": session.cwd,
+        "start_time": session.start_time,
+        "end_time": session.end_time,
+        "cost_usd": session.cost_usd,
+        "input_tokens": session.input_tokens,
+        "output_tokens": session.output_tokens,
+        "num_turns": session.num_turns,
+        "metadata": session.metadata,
+        "spans": [
+            {
+                "span_id": sp.span_id,
+                "tool_name": sp.tool_name,
+                "event_type": sp.event_type,
+                "status": sp.status,
+                "start_time": sp.start_time,
+                "end_time": sp.end_time,
+                "duration_ms": sp.duration_ms,
+                "input_json": sp.input_json,
+                "output_summary": sp.output_summary,
+            }
+            for sp in session.spans
+        ],
+        "span_count": len(session.spans),
+    }
+
+
+@app.get("/v1/traces/stats")
+async def trace_stats_api(
+    agent: str | None = None,
+    days: int = 30,
+):
+    """Aggregate trace statistics."""
+    import time as _time
+
+    from innie.core.trace import get_stats, open_trace_db, trace_db_path
+
+    db = trace_db_path()
+    if not db.exists():
+        return {"total_sessions": 0}
+
+    conn = open_trace_db(db)
+    since = _time.time() - (days * 86400) if days > 0 else None
+    s = get_stats(conn, agent_name=agent, since=since)
+    conn.close()
+
+    return {
+        "total_sessions": s.total_sessions,
+        "total_spans": s.total_spans,
+        "total_cost_usd": s.total_cost_usd,
+        "total_input_tokens": s.total_input_tokens,
+        "total_output_tokens": s.total_output_tokens,
+        "avg_session_duration_s": s.avg_session_duration_s,
+        "avg_turns_per_session": s.avg_turns_per_session,
+        "tool_usage": s.tool_usage,
+        "sessions_by_agent": s.sessions_by_agent,
+        "sessions_by_day": s.sessions_by_day,
+    }

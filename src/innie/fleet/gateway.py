@@ -292,6 +292,117 @@ async def cancel_job(job_id: str, agent_id: str | None = None):
     raise HTTPException(404, f"Job '{job_id}' not found or not cancellable")
 
 
+# ── Traces ─────────────────────────────────────────────────────────────────
+
+
+@app.get("/api/traces")
+async def list_traces(
+    agent_id: str | None = None,
+    days: int = Query(7, ge=1, le=365),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Aggregate traces across all online agents."""
+    all_traces = []
+    targets = [agents[agent_id]] if agent_id and agent_id in agents else list(agents.values())
+    targets = [a for a in targets if a.health.status == AgentStatus.ONLINE]
+
+    async with httpx.AsyncClient() as client:
+        for agent in targets:
+            try:
+                resp = await client.get(
+                    f"{agent.endpoint}/v1/traces",
+                    params={"days": days, "limit": limit},
+                    timeout=PROXY_TIMEOUT,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    for session in data.get("sessions", []):
+                        session["agent_id"] = agent.id
+                        all_traces.append(session)
+            except Exception:
+                continue
+
+    all_traces.sort(key=lambda t: t.get("start_time", 0), reverse=True)
+    return {"sessions": all_traces[:limit], "total": len(all_traces)}
+
+
+@app.get("/api/traces/stats")
+async def trace_stats(
+    agent_id: str | None = None,
+    days: int = Query(30, ge=1, le=365),
+):
+    """Aggregate trace statistics across the fleet."""
+    combined: dict = {
+        "total_sessions": 0,
+        "total_spans": 0,
+        "total_cost_usd": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "tool_usage": {},
+        "sessions_by_agent": {},
+        "sessions_by_machine": {},
+    }
+
+    targets = [agents[agent_id]] if agent_id and agent_id in agents else list(agents.values())
+    targets = [a for a in targets if a.health.status == AgentStatus.ONLINE]
+
+    async with httpx.AsyncClient() as client:
+        for agent in targets:
+            try:
+                resp = await client.get(
+                    f"{agent.endpoint}/v1/traces/stats",
+                    params={"days": days},
+                    timeout=PROXY_TIMEOUT,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    combined["total_sessions"] += data.get("total_sessions", 0)
+                    combined["total_spans"] += data.get("total_spans", 0)
+                    combined["total_cost_usd"] += data.get("total_cost_usd", 0)
+                    combined["total_input_tokens"] += data.get("total_input_tokens", 0)
+                    combined["total_output_tokens"] += data.get("total_output_tokens", 0)
+
+                    for tool, count in data.get("tool_usage", {}).items():
+                        combined["tool_usage"][tool] = combined["tool_usage"].get(tool, 0) + count
+
+                    for ag, count in data.get("sessions_by_agent", {}).items():
+                        combined["sessions_by_agent"][ag] = (
+                            combined["sessions_by_agent"].get(ag, 0) + count
+                        )
+
+                    combined["sessions_by_machine"][agent.id] = data.get("total_sessions", 0)
+            except Exception:
+                continue
+
+    return combined
+
+
+@app.get("/api/traces/{session_id}")
+async def get_trace(session_id: str, agent_id: str | None = None):
+    """Get trace detail. Searches all online agents if agent_id not provided."""
+    targets = (
+        [agents[agent_id]]
+        if agent_id and agent_id in agents
+        else [a for a in agents.values() if a.health.status == AgentStatus.ONLINE]
+    )
+
+    async with httpx.AsyncClient() as client:
+        for agent in targets:
+            try:
+                resp = await client.get(
+                    f"{agent.endpoint}/v1/traces/{session_id}",
+                    timeout=PROXY_TIMEOUT,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    data["agent_id"] = agent.id
+                    return data
+            except Exception:
+                continue
+
+    raise HTTPException(404, f"Trace '{session_id}' not found")
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 

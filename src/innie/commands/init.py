@@ -409,6 +409,24 @@ def handle(event: str):
         output = build_session_context(cwd=cwd)
         sys.stdout.write(output)
 
+        # Record trace session start
+        try:
+            from innie.core.trace import open_trace_db, start_session
+
+            session_id = os.environ.get("CLAUDE_SESSION_ID")
+            model = os.environ.get("CLAUDE_MODEL")
+            conn = open_trace_db()
+            start_session(
+                conn,
+                session_id=session_id,
+                model=model,
+                cwd=cwd,
+                interactive=True,
+            )
+            conn.close()
+        except Exception:
+            pass  # Never block the backend
+
         # Background index refresh
         subprocess.Popen(
             [sys.executable, "-m", "innie.cli", "index", "--changed-only"],
@@ -432,12 +450,35 @@ def handle(event: str):
         if not log_file.exists():
             log_file.write_text(f"# Sessions — {today}\n\n")
 
+        session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
+
         with open(log_file, "a") as f:
-            session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
             f.write(f"\n## {ts} (session: {session_id})\n\n")
             f.write("- Work Done: (to be filled by heartbeat)\n")
             f.write("- Key Decisions: \n")
             f.write("- Notes: \n\n")
+
+        # Close trace session with metrics from env
+        try:
+            from innie.core.trace import end_session, open_trace_db
+
+            cost = os.environ.get("CLAUDE_COST_USD")
+            in_tok = os.environ.get("CLAUDE_INPUT_TOKENS")
+            out_tok = os.environ.get("CLAUDE_OUTPUT_TOKENS")
+            turns = os.environ.get("CLAUDE_NUM_TURNS")
+
+            conn = open_trace_db()
+            end_session(
+                conn,
+                session_id=session_id,
+                cost_usd=float(cost) if cost else None,
+                input_tokens=int(in_tok) if in_tok else None,
+                output_tokens=int(out_tok) if out_tok else None,
+                num_turns=int(turns) if turns else None,
+            )
+            conn.close()
+        except Exception:
+            pass  # Never block the backend
 
         # Update CONTEXT.md timestamp
         ctx_file = paths.context_file()
@@ -451,6 +492,31 @@ def handle(event: str):
                 content,
             )
             ctx_file.write_text(content)
+
+    elif event == "tool-use":
+        # Record a tool span from PostToolUse hook (called from observability.sh)
+        try:
+            import json as _json
+
+            tool_input = os.environ.get("TOOL_INPUT", "{}")
+            data = _json.loads(tool_input) if tool_input else {}
+            tool_name = os.environ.get("TOOL_NAME", data.get("tool_name", "unknown"))
+            session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
+
+            from innie.core.trace import open_trace_db, record_span
+
+            conn = open_trace_db()
+            record_span(
+                conn,
+                session_id=session_id,
+                tool_name=tool_name,
+                input_json=tool_input[:2000] if tool_input else None,
+                output_summary=os.environ.get("TOOL_OUTPUT", "")[:500] or None,
+                status="ok",
+            )
+            conn.close()
+        except Exception:
+            pass  # Never block the backend
 
     else:
         console.print(f"[yellow]Unknown event: {event}[/yellow]", err=True)

@@ -1,6 +1,6 @@
 #!/bin/bash
-# PostToolUse hook — pure bash for performance (<10ms)
-# Appends tool use event to JSONL trace file. No Python.
+# PostToolUse hook — fast JSONL append + background SQLite trace.
+# JSONL stays for speed (<10ms). SQLite write fires in background.
 
 set -euo pipefail
 
@@ -12,13 +12,16 @@ TRACE_FILE="$TRACE_DIR/$TODAY.jsonl"
 
 mkdir -p "$TRACE_DIR"
 
-# Read tool info from stdin (Claude Code passes JSON)
-if [ -t 0 ]; then
-    exit 0
-fi
-
-INPUT=$(cat)
-TOOL=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | head -1 | cut -d'"' -f4 2>/dev/null || echo "unknown")
+# Read tool info from environment (Claude Code sets TOOL_NAME, TOOL_INPUT)
+TOOL="${TOOL_NAME:-unknown}"
 TS=$(date +%s)
 
+# Fast path: JSONL append (always, <1ms)
 echo "{\"ts\":$TS,\"tool\":\"$TOOL\"}" >> "$TRACE_FILE"
+
+# Background: structured SQLite trace (non-blocking)
+if command -v innie &>/dev/null; then
+    TOOL_NAME="$TOOL" CLAUDE_SESSION_ID="${CLAUDE_SESSION_ID:-}" \
+        TOOL_INPUT="${TOOL_INPUT:-}" TOOL_OUTPUT="" \
+        innie handle tool-use &>/dev/null &
+fi

@@ -2,25 +2,22 @@
 
 ## Installation
 
-=== "PyPI"
+=== "uv (recommended)"
     ```bash
-    pip install innie-engine
+    uv tool install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
     ```
 
-=== "Homebrew"
+=== "uv (editable, for development)"
     ```bash
-    brew tap joshuajenquist/tap
-    brew install innie
+    uv tool install -e ~/workspace/innie-engine
     ```
 
-=== "From source"
+=== "pip (fallback)"
     ```bash
-    git clone https://github.com/joshuajenquist/innie-engine
-    cd innie-engine
-    pip install -e .
+    pip install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
     ```
 
-**Requirements:** Python 3.12+, a terminal, an AI coding assistant.
+**Requirements:** Python 3.12+, a terminal, an AI coding assistant. See [ADR-0025](adrs/0025-uv-primary-distribution.md) for why uv is the primary distribution method.
 
 ---
 
@@ -63,9 +60,10 @@ This detects which AI coding assistant you have installed and wires four hooks:
 | Hook Event | What innie does |
 |---|---|
 | `SessionStart` | Injects SOUL.md + CONTEXT.md + search results as system context |
+| `PreToolUse` | Destructive command guard — blocks dangerous commands before execution |
 | `PreCompact` | Warns assistant to write context before compaction |
-| `Stop` | Saves session log for heartbeat |
-| `PostToolUse` | Appends tool traces to trace log |
+| `Stop` | Saves session log for heartbeat, closes trace session |
+| `PostToolUse` | Records tool trace span (JSONL fast path + SQLite background write) |
 
 Hooks are installed as **bash shims** in `~/.innie/hooks/`. The shims call `innie` subcommands. They are installed into the backend's config via a namespace-safe merge (existing hooks are never overwritten).
 
@@ -124,6 +122,21 @@ innie search "JWT refresh token edge cases"
 innie search "database schema decisions" --mode keyword
 innie search "what did we decide about caching" --mode semantic
 ```
+
+---
+
+## View Session Traces
+
+Every session and tool call is automatically traced to a SQLite database. Query traces from the CLI:
+
+```bash
+innie trace list                    # Recent sessions with cost/tokens
+innie trace list --agent mybot      # Filter by agent
+innie trace show <session-id>       # Session detail with all tool spans
+innie trace stats                   # Aggregate stats, tool usage, daily activity
+```
+
+Traces are stored at `~/.innie/agents/<name>/state/trace/traces.db`. See [Tracing (ADR-0019)](adrs/0019-sqlite-tracing.md) for architecture details.
 
 ---
 

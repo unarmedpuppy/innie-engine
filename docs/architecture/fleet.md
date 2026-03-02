@@ -94,6 +94,9 @@ The fleet gateway exposes:
 | `GET /api/jobs/{id}` | Get job status (auto-routes to correct agent) |
 | `POST /api/jobs/{id}/cancel` | Cancel job |
 | `GET /api/stats` | Fleet-wide statistics |
+| `GET /api/traces` | List trace sessions across all agents |
+| `GET /api/traces/stats` | Aggregated trace stats across fleet |
+| `GET /api/traces/{session_id}` | Find trace session on any machine |
 
 Job routing: the gateway maintains a `{job_id: agent_id}` mapping so it can route status/cancel requests without the caller needing to know which agent the job is on.
 

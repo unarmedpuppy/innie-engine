@@ -172,6 +172,109 @@ Search the agent's knowledge base.
 
 ---
 
+## Traces API
+
+### `POST /v1/traces/events`
+
+Ingest trace events (session start, session end, span).
+
+**Request (session_start):**
+```json
+{
+  "event_type": "session_start",
+  "session_id": "abc123",
+  "agent": "innie",
+  "model": "claude-sonnet-4",
+  "cwd": "/workspace/myrepo"
+}
+```
+
+**Request (span):**
+```json
+{
+  "event_type": "span",
+  "session_id": "abc123",
+  "tool_name": "Read",
+  "input": "{\"file_path\": \"/src/main.py\"}",
+  "status": "ok",
+  "duration_ms": 12.5
+}
+```
+
+### `GET /v1/traces`
+
+List trace sessions.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `agent` | all | Filter by agent name |
+| `days` | 7 | How many days back |
+| `limit` | 50 | Max sessions returned |
+
+**Response:**
+```json
+{
+  "sessions": [
+    {
+      "session_id": "abc123",
+      "agent_name": "innie",
+      "model": "claude-sonnet-4",
+      "start_time": 1740921600.0,
+      "end_time": 1740925200.0,
+      "cost_usd": 0.0342,
+      "input_tokens": 15000,
+      "output_tokens": 3200,
+      "num_turns": 12
+    }
+  ]
+}
+```
+
+### `GET /v1/traces/{session_id}`
+
+Get session detail with all spans.
+
+**Response:**
+```json
+{
+  "session": { "session_id": "abc123", "..." : "..." },
+  "spans": [
+    {
+      "span_id": "span-001",
+      "tool_name": "Read",
+      "status": "ok",
+      "duration_ms": 12.5,
+      "start_time": 1740921610.0
+    }
+  ]
+}
+```
+
+### `GET /v1/traces/stats`
+
+Aggregate trace statistics.
+
+| Parameter | Default | Description |
+|---|---|---|
+| `agent` | all | Filter by agent name |
+| `days` | 30 | How many days back |
+
+**Response:**
+```json
+{
+  "total_sessions": 142,
+  "total_spans": 3847,
+  "total_cost_usd": 4.52,
+  "total_input_tokens": 1250000,
+  "total_output_tokens": 320000,
+  "tool_usage": {"Read": 1200, "Edit": 450, "Bash": 890},
+  "sessions_by_agent": {"innie": 100, "mybot": 42},
+  "sessions_by_day": {"2026-03-01": 8, "2026-03-02": 12}
+}
+```
+
+---
+
 ## Reply-To Schemes
 
 When a job is created with `reply_to`, the server delivers the result asynchronously when the job completes.

@@ -24,9 +24,10 @@ Visual map of where every piece of data lives, what creates it, and what reads i
 │
 ├── hooks/                              Created by: innie backend install
 │   ├── session-start.sh               Executed by: AI assistant SessionStart hook
+│   ├── dcg-guard.sh                   Executed by: AI assistant PreToolUse hook
 │   ├── pre-compact.sh                 Executed by: AI assistant PreCompact hook
 │   ├── stop.sh                        Executed by: AI assistant Stop hook
-│   └── post-tool-use.sh              Executed by: AI assistant PostToolUse hook
+│   └── observability.sh               Executed by: AI assistant PostToolUse hook
 │
 └── agents/
     └── <name>/                         Created by: innie create <name>
@@ -103,8 +104,13 @@ Visual map of where every piece of data lives, what creates it, and what reads i
             │                           Read by: heartbeat Phase 1 (collector)
             │
             ├── trace/
-            │   └── YYYY-MM-DD.jsonl    Created by: PostToolUse hook (append)
-            │                           Format: {timestamp, tool, args, result}
+            │   ├── traces.db           Created by: innie handle session-init
+            │   │                       Written by: innie handle tool-use, session-end
+            │   │                       Read by: innie trace list/show/stats, API
+            │   │                       Contains: trace_sessions, trace_spans
+            │   │
+            │   └── YYYY-MM-DD.jsonl    Created by: PostToolUse hook (append, <1ms)
+            │                           Format: {ts, tool} — fast-path only
             │
             ├── .index/
             │   └── memory.db           Created by: innie index
@@ -128,7 +134,8 @@ Visual map of where every piece of data lives, what creates it, and what reads i
 | `profile.yaml` | innie + user | Yes | Yes — via `innie create` |
 | `data/**` | innie + user | **Yes** | No — primary knowledge base |
 | `state/sessions/` | innie (hooks) | Optional | No (source data for heartbeat) |
-| `state/trace/` | innie (hooks) | No | No (operational log) |
+| `state/trace/traces.db` | innie (hooks + handle) | Optional | No (session + span history) |
+| `state/trace/*.jsonl` | innie (PostToolUse) | No | No (fast-path log) |
 | `state/.index/memory.db` | innie (indexer) | No | **Yes** — `innie index` rebuilds |
 | `state/heartbeat-state.json` | innie (heartbeat) | No | Yes — reset to epoch 0 |
 | `hooks/` bash shims | innie (backend install) | No | Yes — `innie backend install` |

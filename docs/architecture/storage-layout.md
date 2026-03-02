@@ -56,7 +56,8 @@
             │   └── YYYY-MM-summary.md     ← monthly compression (>90 days)
             │
             ├── trace/
-            │   └── YYYY-MM-DD.jsonl       ← tool execution traces (PostToolUse)
+            │   ├── traces.db              ← SQLite: trace_sessions + trace_spans
+            │   └── YYYY-MM-DD.jsonl       ← fast-path tool traces (PostToolUse)
             │
             ├── .index/
             │   └── memory.db              ← SQLite: FTS5 + sqlite-vec search index
@@ -138,3 +139,41 @@ git -C ~/.innie/agents/<name>/data commit -m "heartbeat: YYYY-MM-DD HH:MM"
 ```
 
 Alternatively, the entire `~/.innie/` can be a git repo with `state/` gitignored. Both patterns work.
+
+---
+
+## Trace Database Data Model
+
+```
+traces.db
+│
+├── trace_sessions                     One row per session
+│   ├── session_id (PK)               UUID or Claude session ID
+│   ├── machine_id                    Hostname
+│   ├── agent_name                    Agent that ran the session
+│   ├── interactive                   1 = interactive, 0 = job
+│   ├── model                         Model used (e.g., claude-sonnet-4)
+│   ├── cwd                           Working directory
+│   ├── start_time                    Unix timestamp
+│   ├── end_time                      Unix timestamp (null if open)
+│   ├── cost_usd                      Total session cost
+│   ├── input_tokens                  Total input tokens
+│   ├── output_tokens                 Total output tokens
+│   ├── num_turns                     Number of API turns
+│   └── metadata_json                 Arbitrary JSON metadata
+│
+└── trace_spans                        One row per tool call
+    ├── span_id (PK)                  UUID
+    ├── session_id (FK)               Links to trace_sessions
+    ├── parent_span_id                For nested spans (optional)
+    ├── tool_name                     Tool that was called
+    ├── event_type                    'tool_use' (default)
+    ├── input_json                    Tool input parameters
+    ├── output_summary                Truncated output
+    ├── status                        'ok' | 'error' | 'blocked'
+    ├── start_time                    Unix timestamp
+    ├── end_time                      Unix timestamp
+    └── duration_ms                   Computed duration
+```
+
+The JSONL files (`YYYY-MM-DD.jsonl`) serve as a fast-write fallback for the PostToolUse hook. They contain `{ts, tool}` entries and are not queried by the CLI or API — `traces.db` is the primary query target.

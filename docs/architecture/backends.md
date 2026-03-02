@@ -27,7 +27,7 @@ class Backend(ABC):
 ```python
 @dataclass
 class HookConfig:
-    event: str      # SessionStart | PreCompact | Stop | PostToolUse
+    event: str      # SessionStart | PreToolUse | PreCompact | Stop | PostToolUse
     command: str    # Path to bash shim
     timeout: int    # Milliseconds (default: 10000)
 ```
@@ -50,10 +50,11 @@ class SessionData:
 
 | Event | When | innie action |
 |---|---|---|
-| `SessionStart` | AI assistant launches | Inject SOUL.md + CONTEXT.md + search results |
+| `SessionStart` | AI assistant launches | Inject SOUL.md + CONTEXT.md + search results; create trace session |
+| `PreToolUse` | Before tool execution | Destructive command guard (dcg) — blocks dangerous commands |
 | `PreCompact` | Context window fills up | Warn agent to preserve key context |
-| `Stop` | Session ends | Save session log to `state/sessions/` |
-| `PostToolUse` | After any tool call | Append to `state/trace/` JSONL |
+| `Stop` | Session ends | Save session log to `state/sessions/`; close trace session |
+| `PostToolUse` | After any tool call | Record trace span (JSONL fast path + SQLite background) |
 
 ---
 
@@ -110,7 +111,7 @@ To uninstall, the adapter removes only the hooks it installed (matching by the s
 
 **Detect:** Checks if `claude` binary exists in PATH and if `~/.claude/` exists.
 
-**Hook events:** SessionStart, PreCompact, Stop, PostToolUse
+**Hook events:** SessionStart, PreToolUse (dcg guard), PreCompact, Stop, PostToolUse
 
 **Session collection:** Reads session transcripts from Claude Code's session storage.
 

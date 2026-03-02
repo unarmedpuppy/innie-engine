@@ -62,6 +62,41 @@ This function is called on every file before indexing. A file that returns False
 
 ---
 
+## Destructive Command Guard (dcg)
+
+**File:** `src/innie/hooks/dcg-guard.sh`
+
+A PreToolUse hook that intercepts tool calls before the AI assistant executes them. If the command matches a dangerous pattern, it is blocked with an error message.
+
+### Default Blocked Patterns
+
+| Category | Examples |
+|---|---|
+| Filesystem destruction | `rm -rf /`, `rm -rf ~`, `rm -rf *` |
+| Database destruction | `DROP TABLE`, `DROP DATABASE`, `TRUNCATE TABLE` |
+| Git force operations | `git push --force`, `git reset --hard`, `git clean -fdx` |
+| System damage | `mkfs`, `dd if=`, `:(){ :|:& };:` (fork bomb) |
+| Credential exposure | `chmod 777`, `curl \| bash`, `wget \| sh` |
+
+### Fail-Open Design
+
+If the guard script errors (crashes, timeout, etc.), the command **proceeds** — the guard never blocks the AI assistant from working. This is deliberate: a false positive that blocks legitimate work is worse than missing a rare destructive command.
+
+### Configuration
+
+```yaml
+# profile.yaml
+guard:
+  enabled: true
+  extra_patterns:
+    - "kubectl delete namespace"
+    - "terraform destroy"
+```
+
+See [ADR-0020](../adrs/0020-dcg-guard.md) for rationale.
+
+---
+
 ## Hook Installation Safety
 
 The Claude Code backend uses a **namespace-safe merge** for hook installation:

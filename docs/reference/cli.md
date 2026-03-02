@@ -179,6 +179,43 @@ innie skill run inbox --args '{"content": "Remember to update docs"}'
 
 ---
 
+## Trace Commands
+
+### `innie trace list`
+List recent trace sessions with duration, cost, and token counts.
+
+```bash
+innie trace list                    # Last 20 sessions
+innie trace list --agent mybot      # Filter by agent
+innie trace list --days 3           # Last 3 days only
+innie trace list --limit 50         # More results
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--agent` | all | Filter by agent name |
+| `--days` | 7 | How many days back |
+| `--limit` | 20 | Max sessions to show |
+
+### `innie trace show <session_id>`
+Show a session's detail with all tool spans.
+
+```bash
+innie trace show abc123             # Full session ID
+innie trace show abc                # Prefix match works too
+```
+
+### `innie trace stats`
+Show aggregate trace statistics — total cost, token usage, tool breakdown, daily activity.
+
+```bash
+innie trace stats                   # Last 30 days
+innie trace stats --agent mybot     # Filter by agent
+innie trace stats --days 7          # Last week only
+```
+
+---
+
 ## Fleet Commands
 
 ### `innie fleet start`
@@ -238,12 +275,20 @@ Run diagnostics — check hooks, index health, config validity.
 innie doctor
 ```
 
-### `innie alias`
-Install shell alias (`innie` → full path).
+### `innie alias add <name>`
+Add a shell alias to `~/.zshrc` or `~/.bashrc`.
 
 ```bash
-innie alias install
-innie alias remove
+innie alias add innie              # Creates: alias innie='INNIE_AGENT=innie claude'
+innie alias add mybot              # Creates: alias mybot='INNIE_AGENT=mybot claude'
+```
+
+### `innie alias remove <name>`
+Remove a previously installed shell alias.
+
+```bash
+innie alias remove innie
+innie alias remove mybot
 ```
 
 ---

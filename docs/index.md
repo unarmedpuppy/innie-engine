@@ -18,6 +18,8 @@ Every session with an AI coding assistant starts cold. The assistant has no memo
 | **Knowledge base** | Structured `data/` directory — journal, learnings, people, decisions |
 | **Hybrid search** | FTS5 keyword + sqlite-vec semantic search with Reciprocal Rank Fusion |
 | **Heartbeat pipeline** | After each session, extract structured insights and route to knowledge base |
+| **Tracing** | SQLite trace database — sessions, spans, cost/token tracking, CLI + API |
+| **Destructive command guard** | PreToolUse hook blocks dangerous commands (rm -rf, DROP TABLE, etc.) |
 | **Git backup** | Optionally auto-commit the knowledge base after every heartbeat |
 | **Backend adapters** | Hooks into Claude Code, Cursor, OpenCode transparently |
 | **Fleet gateway** | Coordinate multiple agents across machines via HTTP |
@@ -29,7 +31,7 @@ Every session with an AI coding assistant starts cold. The assistant has no memo
 ## Quick Start
 
 ```bash
-pip install innie-engine      # or: brew install joshuajenquist/tap/innie
+uv tool install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
 innie init                    # interactive wizard
 innie backend install         # wire hooks into your AI assistant
 ```
@@ -60,7 +62,9 @@ Then start your AI assistant. It will automatically receive your SOUL.md and CON
         ├── skills/           ← custom slash-command skills
         └── state/            ← operational state (rebuildable, not git)
             ├── sessions/     ← raw session logs from heartbeat
-            ├── trace/        ← tool execution traces
+            ├── trace/        ← SQLite trace database + JSONL fast log
+            │   ├── traces.db ← sessions + spans tables
+            │   └── YYYY-MM-DD.jsonl ← fast-path tool traces
             ├── .index/       ← SQLite search database
             │   └── memory.db
             └── heartbeat-state.json

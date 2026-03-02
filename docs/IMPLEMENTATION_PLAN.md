@@ -14,7 +14,7 @@ innie-engine emerged from two parallel systems built in a homelab:
 
 Both systems solved the same problem: **make Claude Code remember who it is and what it knows across sessions.** They had slightly different implementations and lived in separate repos. The goal with innie-engine was to:
 - Merge them into a single, well-structured Python library
-- Make it installable by anyone (PyPI + Homebrew)
+- Make it installable by anyone (`uv tool install`)
 - Add capabilities neither had (semantic search, memory decay, fleet gateway, migration)
 - Make it work with any AI coding assistant, not just Claude Code
 
@@ -95,19 +95,27 @@ Going in, we had several non-negotiable constraints:
 
 ---
 
-## Phase 3: Distribution
+## Phase 3: Distribution + Polish
 
 **What we built:**
 - `innie migrate` — general migration from agent-harness, openclaw, and generic directories
 - PyPI packaging (`pyproject.toml`, `hatchling` build backend)
-- GitHub Actions publish workflow with OIDC trusted publishing
-- `homebrew-tap` repository with auto-updating formula
-- Full test suite (47 tests, 0 failures)
-- Documentation (this document + full docs/)
+- `uv tool install` as primary distribution method (superseded PyPI + Homebrew plan)
+- SQLite-backed tracing — sessions + spans tables, CLI commands, API endpoints, fleet aggregation
+- Destructive command guard (dcg) — PreToolUse hook blocking dangerous commands with fail-open design
+- Obsidian compatibility — frontmatter-aware indexing, wikilink support
+- Full test suite (54 tests, 0 failures)
+- Documentation — 25 ADRs, full docs/ site, README with all features
 
 **Key decisions made in Phase 3:**
 - Auto-detection for migrate over manual specification (ADR-0012)
-- PyPI + Homebrew over other distribution methods (ADR-0013)
+- `uv tool install` over PyPI + Homebrew (ADR-0025, supersedes ADR-0013)
+- SQLite tracing over OpenTelemetry/Prometheus (ADR-0019)
+- Fail-open dcg guard over strict blocking (ADR-0020)
+- Obsidian frontmatter/wikilink compatibility (ADR-0021)
+- Engine scope boundary — data engine only, consumers are separate (ADR-0022)
+- AI never writes files directly — structured JSON only (ADR-0023)
+- Token-budgeted context injection (ADR-0024)
 
 ---
 
@@ -123,9 +131,9 @@ Several features were considered and explicitly deferred:
 
 **Automatic agent discovery in fleet:** Agents self-registering via `POST /register` would eliminate the manual `fleet.yaml`. Deferred — the manual YAML is simple and explicit.
 
-**Windows support for Homebrew:** Homebrew doesn't run on Windows. Windows users use `pip install`. This is acceptable.
+**Homebrew tap:** We initially planned a Homebrew tap (ADR-0013) but chose `uv tool install` instead (ADR-0025). Homebrew formulas for Python tools are fragile, require maintaining a separate repo, and personal taps have low discoverability.
 
-**OpenTelemetry tracing:** The trace log (`state/trace/YYYY-MM-DD.jsonl`) is a simple JSONL format. OpenTelemetry would be better for fleet-wide observability but adds a significant dependency.
+**OpenTelemetry tracing:** We considered OTEL but chose SQLite-backed tracing instead (ADR-0019). SQLite gives us structured queries (sessions, spans, cost/token tracking) without external dependencies. Fleet-wide aggregation is handled by the gateway proxying `/api/traces` to each agent.
 
 ---
 
@@ -144,7 +152,7 @@ innie/
 │   ├── collector.py        Heartbeat Phase 1: collect raw data
 │   ├── decay.py            Memory decay: context archive, session compress, index cleanup
 │   ├── secrets.py          Secret scanning before indexing
-│   └── trace.py            JSONL trace appender
+│   └── trace.py            SQLite trace database (sessions + spans + JSONL fast path)
 ├── heartbeat/
 │   ├── schema.py           Pydantic models (HeartbeatExtraction + components)
 │   ├── extract.py          Heartbeat Phase 2: AI extraction
@@ -163,6 +171,7 @@ innie/
 │   ├── doctor.py           diagnostics + decay command
 │   ├── search.py           search/index/context/log commands
 │   ├── heartbeat.py        heartbeat run/status
+│   ├── trace.py            innie trace list/show/stats
 │   ├── serve.py            innie serve
 │   ├── fleet.py            innie fleet start/agents/stats
 │   ├── skills.py           innie skill list/run
@@ -185,7 +194,7 @@ innie/
 
 ## Testing Strategy
 
-**47 tests, 0 dependencies on running services.**
+**54 tests, 0 dependencies on running services.**
 
 All tests use `INNIE_HOME` env var isolation — each test gets a fresh temp directory. The embedding service is never called in tests; semantic search is tested with keyword fallback.
 
@@ -199,7 +208,7 @@ Test coverage by module:
 | `core/context.py` | 2 | Session context assembly, precompact warning |
 | `core/search.py` | 7 | DB creation, chunking, indexing, FTS5 search, format |
 | `core/secrets.py` | 7 | API key detection, AWS key, GitHub token, clean file, skip list |
-| `core/trace.py` | 2 | Append + multiple events |
+| `core/trace.py` | 9 | DB creation, sessions, spans, list, stats, filters, JSONL |
 | `core/decay.py` | 3 | Context archival, session compression, index cleanup |
 | `heartbeat/schema.py` | 5 | Minimal extraction, full extraction, validation, serialization |
 | `skills/builtins.py` | 5 | daily, learn, inbox, append behavior, callable check |
@@ -208,15 +217,13 @@ Test coverage by module:
 
 ## Remaining Work
 
-The following items are known gaps as of v0.1.0:
+The following items are known gaps as of v0.2.0:
 
 1. **Cursor + OpenCode backends** — Stub only. Full hook installation not implemented.
 2. **heartbeat `extract.py`** — Phase 2 calls an LLM. The LLM client code needs the user's configured model/endpoint wired up.
 3. **`heartbeat/route.py`** — Phase 3 routing is scaffolded; specific file write logic for each schema field needs completion.
 4. **`backend.py` `collect_sessions()`** — Claude Code session collection logic not implemented (requires reading Claude Code's session storage format).
-5. **Fleet gateway persistence** — Health state is in-memory; a restart resets all statuses.
-6. **`innie doctor` full diagnostics** — Currently reports basic status; could check hook installation, embedding service health, index freshness.
-7. **Windows path handling** — Path resolution uses POSIX conventions; untested on Windows.
+5. **Windows path handling** — Path resolution uses POSIX conventions; untested on Windows.
 
 ---
 
@@ -224,4 +231,5 @@ The following items are known gaps as of v0.1.0:
 
 | Version | What changed |
 |---|---|
-| 0.1.0 | Initial release. All Phase 1-3 features. 47 tests. PyPI + Homebrew distribution. |
+| 0.1.0 | Initial release. Phase 1-2 features. 47 tests. |
+| 0.2.0 | SQLite tracing (sessions + spans, CLI, API, fleet aggregation). Destructive command guard (dcg). Obsidian compatibility. `uv tool install` distribution. 54 tests. 25 ADRs. |

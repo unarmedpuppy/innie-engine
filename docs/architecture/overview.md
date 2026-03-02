@@ -9,7 +9,7 @@ innie-engine is built around a single principle: **the AI assistant's memory sho
 ```
   AI Coding Assistant (Claude Code, Cursor, OpenCode)
         │
-        │ hooks (SessionStart, PreCompact, Stop, PostToolUse)
+        │ hooks (SessionStart, PreToolUse, PreCompact, Stop, PostToolUse)
         │
         ▼
   ┌─────────────────────────────────────────────────────┐
@@ -18,7 +18,9 @@ innie-engine is built around a single principle: **the AI assistant's memory sho
   │  context.py ──► assembles SOUL + CONTEXT + search   │
   │  heartbeat/ ──► extracts insights from sessions     │
   │  search.py  ──► FTS5 + sqlite-vec + RRF             │
+  │  trace.py   ──► SQLite session + span tracing       │
   │  decay.py   ──► prunes stale content automatically  │
+  │  dcg        ──► blocks destructive commands         │
   │  skills/    ──► structured knowledge entry          │
   └─────────────────────────────────────────────────────┘
         │
@@ -34,7 +36,7 @@ innie-engine is built around a single principle: **the AI assistant's memory sho
 
 ---
 
-## Six Core Subsystems
+## Eight Core Subsystems
 
 ### 1. Storage (Two-Layer)
 
@@ -134,6 +136,29 @@ For multi-machine setups, the fleet gateway is a FastAPI app that:
 - Aggregates fleet-wide statistics
 
 See [Fleet Coordination](fleet.md) for details.
+
+### 7. Tracing (SQLite)
+
+Every session and tool call is recorded in a SQLite database (`state/trace/traces.db`) with two tables:
+
+- **`trace_sessions`** — one row per session (session_id, agent, model, cwd, cost, tokens, turns)
+- **`trace_spans`** — one row per tool call (span_id, session_id, tool_name, duration, status)
+
+Dual-write architecture: the PostToolUse bash hook writes JSONL (<1ms fast path), then fires a background `innie handle tool-use` for SQLite. SessionStart creates the session row; Stop closes it with cost/token metadata.
+
+Query via `innie trace list|show|stats` or the API (`GET /v1/traces`). The fleet gateway aggregates traces across machines.
+
+See [ADR-0019](../adrs/0019-sqlite-tracing.md) for rationale.
+
+### 8. Destructive Command Guard (dcg)
+
+A PreToolUse hook that blocks dangerous commands before the AI assistant executes them. Pattern-matched against a configurable blocklist:
+
+- `rm -rf /`, `DROP TABLE`, `git push --force`, `:(){ :|:& };:`, etc.
+- **Fail-open design**: if the guard errors, the command proceeds (never blocks the AI)
+- Configurable per agent via `profile.yaml` `guard` field
+
+See [ADR-0020](../adrs/0020-dcg-guard.md) for design details.
 
 ---
 

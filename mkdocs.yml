@@ -1,0 +1,99 @@
+site_name: innie-engine
+site_description: Persistent memory and identity for AI coding assistants
+site_author: Joshua Jenquist
+site_url: https://joshuajenquist.github.io/innie-engine
+
+repo_name: joshuajenquist/innie-engine
+repo_url: https://github.com/joshuajenquist/innie-engine
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - content.code.annotate
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Storage Layout: architecture/storage-layout.md
+    - Heartbeat Pipeline: architecture/heartbeat-pipeline.md
+    - Search Engine: architecture/search-engine.md
+    - Backend System: architecture/backends.md
+    - Fleet Coordination: architecture/fleet.md
+    - Security Model: architecture/security.md
+  - Diagrams:
+    - Data Flow: diagrams/data-flow.md
+    - Host Integration: diagrams/host-integration.md
+    - Storage Map: diagrams/storage-map.md
+  - Reference:
+    - CLI Commands: reference/cli.md
+    - Configuration: reference/config.md
+    - Hook Events: reference/hooks.md
+    - Built-in Skills: reference/skills.md
+    - Fleet Config: reference/fleet-config.md
+    - API Server: reference/api-server.md
+  - ADRs:
+    - Index: adrs/index.md
+    - "0001 – Journal-First Architecture": adrs/0001-journal-first-architecture.md
+    - "0002 – SQLite Hybrid Storage": adrs/0002-sqlite-hybrid-storage.md
+    - "0003 – Backend Plugin System": adrs/0003-backend-plugin-system.md
+    - "0004 – Three-Phase Heartbeat": adrs/0004-three-phase-heartbeat.md
+    - "0005 – Hybrid Search with RRF": adrs/0005-hybrid-search-rrf.md
+    - "0006 – Init Wizard Setup Modes": adrs/0006-init-wizard-setup-modes.md
+    - "0007 – Git Auto-Backup": adrs/0007-git-auto-backup.md
+    - "0008 – Fleet Gateway": adrs/0008-fleet-gateway.md
+    - "0009 – Skills as Slash Commands": adrs/0009-skills-as-slash-commands.md
+    - "0010 – Memory Decay Strategy": adrs/0010-memory-decay-strategy.md
+    - "0011 – Secret Scanning": adrs/0011-secret-scanning.md
+    - "0012 – Migration from Existing Setups": adrs/0012-migration.md
+    - "0013 – Distribution: PyPI + Homebrew": adrs/0013-distribution.md
+  - Implementation Plan: IMPLEMENTATION_PLAN.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/joshuajenquist/innie-engine
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/innie-engine/
+
+plugins:
+  - search

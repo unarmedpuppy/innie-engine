@@ -1,0 +1,81 @@
+"""Typer CLI entry point for innie-engine."""
+
+import typer
+
+app = typer.Typer(
+    name="innie",
+    help="Persistent memory and identity for AI coding assistants.",
+    no_args_is_help=True,
+)
+
+
+def _register_commands():
+    from innie.commands import (
+        agent,
+        alias,
+        backend,
+        doctor,
+        fleet,
+        heartbeat,
+        init,
+        migrate,
+        search,
+        serve,
+        skills,
+    )
+
+    app.command("init")(init.init)
+    app.command("create")(agent.create)
+    app.command("list")(agent.list_agents)
+    app.command("delete")(agent.delete)
+    app.command("switch")(agent.switch)
+    app.command("search")(search.search)
+    app.command("index")(search.index)
+    app.command("context")(search.context)
+    app.command("log")(search.log)
+    app.command("handle")(init.handle)
+    app.command("status")(doctor.status)
+    app.command("doctor")(doctor.doctor)
+    app.command("serve")(serve.serve)
+    app.command("decay")(doctor.decay)
+    app.command("migrate")(migrate.migrate)
+
+    # Alias subcommands
+    alias_app = typer.Typer(help="Manage shell aliases.")
+    alias_app.command("add")(alias.add)
+    alias_app.command("remove")(alias.remove)
+    app.add_typer(alias_app, name="alias")
+
+    # Backend subcommands
+    backend_app = typer.Typer(help="Manage AI backend integrations.")
+    backend_app.command("install")(backend.install)
+    backend_app.command("list")(backend.list_backends)
+    backend_app.command("check")(backend.check)
+    app.add_typer(backend_app, name="backend")
+
+    # Heartbeat subcommands
+    hb_app = typer.Typer(help="Automated memory extraction pipeline.")
+    hb_app.command("run")(heartbeat.run)
+    hb_app.command("enable")(heartbeat.enable)
+    hb_app.command("disable")(heartbeat.disable)
+    hb_app.command("status")(heartbeat.hb_status)
+    app.add_typer(hb_app, name="heartbeat")
+
+    # Fleet subcommands
+    fleet_app = typer.Typer(help="Fleet gateway for multi-machine agent coordination.")
+    fleet_app.command("start")(fleet.start)
+    fleet_app.command("agents")(fleet.agents)
+    fleet_app.command("stats")(fleet.stats)
+    app.add_typer(fleet_app, name="fleet")
+
+    # Skill subcommands
+    skill_app = typer.Typer(help="Knowledge base skills (slash commands).")
+    skill_app.command("list")(skills.list_skills)
+    skill_app.command("run")(skills.run_skill)
+    app.add_typer(skill_app, name="skill")
+
+
+_register_commands()
+
+if __name__ == "__main__":
+    app()

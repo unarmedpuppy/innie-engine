@@ -1,0 +1,24 @@
+# Heartbeat Extraction Instructions
+
+You are processing raw session data. Extract structured information.
+
+## Rules
+- Output ONLY valid JSON matching the schema
+- Never fabricate information not present in the source data
+- Categorize learnings: debugging, patterns, tools, infrastructure, processes
+- Keep journal entries factual and concise
+- Mark items as decisions only if an explicit choice was made
+
+## Schema
+
+```json
+{
+  "journal_entries": [{"date": "YYYY-MM-DD", "time": "HH:MM", "summary": "...", "details": "..."}],
+  "learnings": [{"category": "debugging|patterns|tools|infrastructure|processes", "title": "...", "content": "...", "confidence": "high|medium|low"}],
+  "project_updates": [{"project": "...", "summary": "...", "status": "active|paused|completed"}],
+  "decisions": [{"project": "...", "title": "...", "context": "...", "decision": "...", "alternatives": ["..."]}],
+  "open_items": [{"action": "add|complete|remove", "text": "...", "priority": "high|medium|low"}],
+  "context_updates": {"focus": "...", "priorities": ["..."]},
+  "processed_sessions": {"count": 0, "ids": ["..."]}
+}
+```

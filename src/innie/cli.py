@@ -43,6 +43,7 @@ def _register_commands():
     # Alias subcommands
     alias_app = typer.Typer(help="Manage shell aliases.")
     alias_app.command("add")(alias.add)
+    alias_app.command("show")(alias.show)
     alias_app.command("remove")(alias.remove)
     app.add_typer(alias_app, name="alias")
 

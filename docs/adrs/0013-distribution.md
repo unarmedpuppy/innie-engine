@@ -1,6 +1,6 @@
 # ADR-0013 — Distribution: PyPI + Homebrew
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-0025](0025-uv-primary-distribution.md)
 **Date:** 2026-03
 **Context:** How users install innie-engine
 

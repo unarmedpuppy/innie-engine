@@ -22,4 +22,16 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0010](0010-memory-decay-strategy.md) | Memory Decay Strategy | Accepted | 2026-02 |
 | [0011](0011-secret-scanning.md) | Secret Scanning Before Indexing | Accepted | 2026-02 |
 | [0012](0012-migration.md) | Migration from Existing Setups | Accepted | 2026-03 |
-| [0013](0013-distribution.md) | Distribution: PyPI + Homebrew | Accepted | 2026-03 |
+| [0013](0013-distribution.md) | Distribution: PyPI + Homebrew | Superseded by 0025 | 2026-03 |
+| [0014](0014-two-layer-storage.md) | Two-Layer Storage: Knowledge Base + Operational State | Accepted | 2026-03 |
+| [0015](0015-config-format-split.md) | TOML for Config, YAML for Agent Profiles | Accepted | 2026-03 |
+| [0016](0016-thin-bash-shims.md) | Thin Bash Shims Delegating to Python CLI | Accepted | 2026-03 |
+| [0017](0017-namespace-hook-merge.md) | Namespace-Based Hook Merge | Accepted | 2026-03 |
+| [0018](0018-dockerized-embedding-service.md) | Dockerized Embedding Service | Accepted | 2026-03 |
+| [0019](0019-sqlite-tracing.md) | SQLite-Backed Tracing Over OpenTelemetry/Prometheus | Accepted | 2026-03 |
+| [0020](0020-dcg-guard.md) | Destructive Command Guard (dcg) with Fail-Open Design | Accepted | 2026-03 |
+| [0021](0021-obsidian-compatibility.md) | Obsidian Compatibility via Frontmatter and Wikilinks | Accepted | 2026-03 |
+| [0022](0022-engine-scope-boundary.md) | Engine Scope Boundary: What innie-engine Is and Isn't | Accepted | 2026-03 |
+| [0023](0023-ai-never-writes-files.md) | AI Never Writes Files Directly | Accepted | 2026-03 |
+| [0024](0024-context-injection-token-budget.md) | Context Injection with Token Budget | Accepted | 2026-03 |
+| [0025](0025-uv-primary-distribution.md) | uv as Primary Distribution Method | Accepted | 2026-03 |

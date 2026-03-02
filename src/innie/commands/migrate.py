@@ -145,6 +145,12 @@ def _migrate_agent_harness(
                 shutil.copy2(profile_yaml, agent_dst / "profile.yaml")
                 console.print("    [green]✓[/green] profile.yaml")
 
+            # Copy dcg-config.toml if present (destructive command guard)
+            dcg_config = profile_src / "dcg-config.toml"
+            if dcg_config.exists():
+                shutil.copy2(dcg_config, agent_dst / "dcg-config.toml")
+                console.print("    [green]✓[/green] dcg-config.toml (destructive command guard)")
+
         # 2. Copy memory data
         if memory_src.exists():
             # CONTEXT.md

@@ -869,6 +869,84 @@ The embedding service is a thin FastAPI server running `BAAI/bge-base-en-v1.5` i
 
 ---
 
+## Destructive command guard (dcg)
+
+For agents with elevated permissions (`permissions: yolo`), innie supports [dcg](https://github.com/Dicklesworthstone/destructive_command_guard) — a Rust binary that blocks dangerous shell commands at the hook level before they execute.
+
+This lets you run agents like Gilfoyle (server sysadmin) with full autonomy for reads and diagnostics, while blocking destructive operations like `rm -rf`, `docker system prune`, or `git push --force`.
+
+### How it works
+
+```
+Claude wants to run `rm -rf /data`
+  → PreToolUse hook fires
+  → dcg-guard.sh intercepts Bash tool calls
+  → runs `dcg check "rm -rf /data"`
+  → blocks it → returns {"decision": "block"} to Claude
+  → Claude reports what it wanted to do and why
+```
+
+The guard is **fail-open** — if dcg isn't installed or errors, commands are allowed. This prevents the guard from breaking agents on machines where dcg isn't set up.
+
+### Setup
+
+1. Install dcg:
+
+```bash
+cargo install destructive_command_guard
+```
+
+2. Enable in `profile.yaml`:
+
+```yaml
+name: gilfoyle
+role: "Server Sysadmin"
+permissions: yolo
+
+guard:
+  engine: dcg
+  config: dcg-config.toml
+  trust_level: low
+```
+
+3. Create `dcg-config.toml` in the agent directory (`~/.innie/agents/gilfoyle/dcg-config.toml`):
+
+```toml
+[packs]
+enabled = [
+  "core.filesystem",      # rm -rf, etc.
+  "core.git",             # git reset --hard, git push --force
+  "containers.docker",    # docker rm, docker system prune
+  "system.services",      # service stops, config deletions
+  "system.disk",          # disk operations
+  "system.permissions",   # permission changes
+]
+
+[agents.claude-code]
+trust_level = "low"
+```
+
+4. Install hooks (dcg-guard.sh is included automatically):
+
+```bash
+innie backend install claude-code
+```
+
+### Per-agent enforcement
+
+The guard checks `INNIE_AGENT` to determine which profile is active. Only agents with `guard.engine: dcg` in their `profile.yaml` are guarded — other agents pass through freely.
+
+This means you can have:
+- **gilfoyle**: `permissions: yolo` + `guard.engine: dcg` — full access, dcg-enforced
+- **innie**: `permissions: interactive` — normal Claude Code permission prompts
+- **avery**: `permissions: yolo` — full access, no guard (trusted context)
+
+### Migration
+
+`innie migrate agent-harness` automatically copies `dcg-config.toml` from existing profiles.
+
+---
+
 ## Security
 
 ### Secret scanning

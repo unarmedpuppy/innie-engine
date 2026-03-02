@@ -43,6 +43,11 @@ class ClaudeCodeBackend(Backend):
                 command=f"bash {hooks_dir}/observability.sh",
                 timeout=1000,
             ),
+            HookConfig(
+                event="PreToolUse",
+                command=f"bash {hooks_dir}/dcg-guard.sh",
+                timeout=5000,
+            ),
         ]
 
     def _is_innie_entry(self, entry: dict) -> bool:
@@ -123,7 +128,7 @@ class ClaudeCodeBackend(Backend):
 
         hooks = config.get("hooks", {})
         result = {}
-        for event in ["SessionStart", "PreCompact", "Stop", "PostToolUse"]:
+        for event in ["SessionStart", "PreCompact", "Stop", "PostToolUse", "PreToolUse"]:
             event_hooks = hooks.get(event, [])
             result[event] = any(self._is_innie_entry(h) for h in event_hooks)
         return result

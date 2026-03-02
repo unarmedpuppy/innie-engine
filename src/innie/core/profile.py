@@ -15,11 +15,19 @@ class MemoryConfig:
 
 
 @dataclass
+class GuardConfig:
+    engine: str = ""  # dcg | "" (empty = no guard)
+    config: str = ""  # path to config file (e.g. dcg-config.toml), relative to agent dir
+    trust_level: str = "low"  # low | medium | high
+
+
+@dataclass
 class Profile:
     name: str
     role: str = "Work Second Brain"
     permissions: str = "interactive"
     memory: MemoryConfig = field(default_factory=MemoryConfig)
+    guard: GuardConfig = field(default_factory=GuardConfig)
     backend_config: dict[str, Any] = field(default_factory=dict)
 
     # Loaded markdown content (populated by load_profile)
@@ -44,11 +52,19 @@ def load_profile(name: str | None = None) -> Profile:
         max_context_lines=mem.get("max_context_lines", 200),
     )
 
+    guard_cfg = cfg.get("guard", {})
+    guard_config = GuardConfig(
+        engine=guard_cfg.get("engine", ""),
+        config=guard_cfg.get("config", ""),
+        trust_level=guard_cfg.get("trust_level", "low"),
+    )
+
     profile = Profile(
         name=cfg.get("name", name),
         role=cfg.get("role", "Work Second Brain"),
         permissions=cfg.get("permissions", "interactive"),
         memory=memory_config,
+        guard=guard_config,
         backend_config=cfg.get("claude-code", {}),
     )
 
@@ -80,6 +96,12 @@ def save_profile(profile: Profile, name: str | None = None) -> None:
             "max_context_lines": profile.memory.max_context_lines,
         },
     }
+    if profile.guard.engine:
+        data["guard"] = {
+            "engine": profile.guard.engine,
+            "config": profile.guard.config,
+            "trust_level": profile.guard.trust_level,
+        }
     if profile.backend_config:
         data["claude-code"] = profile.backend_config
 

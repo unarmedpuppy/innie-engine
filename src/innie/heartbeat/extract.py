@@ -53,30 +53,22 @@ Do not include any text outside the JSON object.
 """
 
 
-def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
-    """Run AI extraction on collected data.
-
-    Uses the configured model (default: cheapest available).
-    Returns validated HeartbeatExtraction.
-    """
-    import httpx
-
-    prompt = _build_extraction_prompt(collected, agent)
-    model = get("heartbeat.model", "auto")
-
-    # For now, use Anthropic API directly
-    # TODO: Support multiple providers based on config
+def _call_anthropic(prompt: str, model: str) -> str:
+    """Call Anthropic Messages API. Returns response text."""
     import os
+
+    import httpx
 
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
         raise RuntimeError(
-            "ANTHROPIC_API_KEY not set. Required for heartbeat extraction.\n"
-            "Set it in your environment or configure a different model in config.toml."
+            "ANTHROPIC_API_KEY not set.\n"
+            "Either set the env var or switch to an external provider:\n"
+            "  [heartbeat]\n"
+            "  provider = \"external\"\n"
+            "  external_url = \"http://your-vllm-host/v1\"\n"
+            "  model = \"your-model-name\""
         )
-
-    if model == "auto":
-        model = "claude-haiku-4-5-20251001"
 
     resp = httpx.post(
         "https://api.anthropic.com/v1/messages",
@@ -94,15 +86,63 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
     )
     resp.raise_for_status()
     body = resp.json()
+    return "".join(b["text"] for b in body.get("content", []) if b.get("type") == "text")
 
-    # Extract text content
-    text = ""
-    for block in body.get("content", []):
-        if block.get("type") == "text":
-            text += block["text"]
 
-    # Parse and validate JSON
-    # Strip markdown code fences if present
+def _call_openai_compatible(prompt: str, model: str, url: str) -> str:
+    """Call any OpenAI-compatible /chat/completions endpoint. Returns response text."""
+    import httpx
+
+    resp = httpx.post(
+        f"{url.rstrip('/')}/chat/completions",
+        json={
+            "model": model,
+            "max_tokens": 4096,
+            "messages": [{"role": "user", "content": prompt}],
+        },
+        timeout=120.0,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
+
+
+def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
+    """Run AI extraction on collected data.
+
+    Provider selection via config:
+      heartbeat.provider = "anthropic"  → Anthropic API (requires ANTHROPIC_API_KEY)
+      heartbeat.provider = "external"   → OpenAI-compatible endpoint (vLLM, Ollama, etc.)
+      heartbeat.provider = "auto"       → external if external_url is set, else anthropic
+
+    Returns validated HeartbeatExtraction.
+    """
+    prompt = _build_extraction_prompt(collected, agent)
+    model = get("heartbeat.model", "auto")
+    provider = get("heartbeat.provider", "auto")
+    external_url = get("heartbeat.external_url", "")
+
+    # Resolve "auto" provider
+    if provider == "auto":
+        provider = "external" if external_url else "anthropic"
+
+    # Resolve "auto" model
+    if model == "auto":
+        model = "claude-haiku-4-5-20251001" if provider == "anthropic" else "default"
+
+    if provider == "external":
+        if not external_url:
+            raise RuntimeError(
+                "heartbeat.provider = \"external\" requires heartbeat.external_url to be set.\n"
+                "Example:\n"
+                "  [heartbeat]\n"
+                "  external_url = \"http://homelab-ai.server.unarmedpuppy.com/v1\"\n"
+                "  model = \"qwen3-32b-awq\""
+            )
+        text = _call_openai_compatible(prompt, model, external_url)
+    else:
+        text = _call_anthropic(prompt, model)
+
+    # Parse and validate JSON — strip markdown code fences if present
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else text[3:]

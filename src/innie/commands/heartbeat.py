@@ -144,11 +144,21 @@ def enable():
     """Install cron job for automatic heartbeat (every 30 min)."""
     import os
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
+    from innie.core.config import get
+
+    provider = get("heartbeat.provider", "auto")
+    external_url = get("heartbeat.external_url", "")
+
+    # Warn if Anthropic path is selected but key is missing
+    needs_anthropic = provider == "anthropic" or (provider == "auto" and not external_url)
+    if needs_anthropic and not os.environ.get("ANTHROPIC_API_KEY", ""):
         console.print("[yellow]ANTHROPIC_API_KEY is not set in the current environment.[/yellow]")
         console.print("  The heartbeat cron will fail silently without it.")
-        console.print("  Make sure it's exported in your shell profile (e.g. ~/.zshrc).")
+        console.print("  To use a local model instead, set in config.toml:")
+        console.print("  [dim]  [heartbeat]")
+        console.print("  [dim]  provider = \"external\"")
+        console.print("  [dim]  external_url = \"http://your-vllm-host/v1\"")
+        console.print("  [dim]  model = \"your-model-name\"")
         if not typer.confirm("  Enable cron anyway?", default=False):
             raise typer.Abort()
 
@@ -203,10 +213,21 @@ def hb_status():
     has_cron = result.returncode == 0 and "innie" in result.stdout
     console.print(f"Cron: {'[green]enabled[/green]' if has_cron else '[dim]disabled[/dim]'}")
 
-    # API key check
+    # Provider + credential check
     import os
-    has_key = bool(os.environ.get("ANTHROPIC_API_KEY", ""))
-    console.print(f"ANTHROPIC_API_KEY: {'[green]set[/green]' if has_key else '[red]not set[/red]'}")
+
+    from innie.core.config import get as cfg_get
+
+    provider = cfg_get("heartbeat.provider", "auto")
+    external_url = cfg_get("heartbeat.external_url", "")
+    model = cfg_get("heartbeat.model", "auto")
+    resolved_provider = provider if provider != "auto" else ("external" if external_url else "anthropic")
+    console.print(f"Provider: [bold]{resolved_provider}[/bold]  model={model}")
+    if resolved_provider == "external":
+        console.print(f"  URL: {external_url or '[red]not set[/red]'}")
+    else:
+        has_key = bool(os.environ.get("ANTHROPIC_API_KEY", ""))
+        console.print(f"  ANTHROPIC_API_KEY: {'[green]set[/green]' if has_key else '[red]not set[/red]'}")
 
 
 def reset_state(

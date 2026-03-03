@@ -82,7 +82,9 @@ url = "http://localhost:8766"
 [heartbeat]
 enabled = false
 interval = "30m"
-model = "auto"
+provider = "auto"             # auto | anthropic | external
+model = "auto"                # model name, or "auto" to pick per provider
+external_url = ""             # OpenAI-compatible endpoint (vLLM, Ollama, etc.)
 collect_git = true
 collect_sessions = true
 

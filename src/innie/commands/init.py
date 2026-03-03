@@ -447,10 +447,14 @@ def handle(event: str):
     """Internal: called by bash shims to process hook events."""
     if event == "session-init":
         cwd = os.environ.get("PWD", os.getcwd())
-        from innie.core.context import build_session_context
+        try:
+            from innie.core.context import build_session_context
 
-        output = build_session_context(cwd=cwd)
-        sys.stdout.write(output)
+            output = build_session_context(cwd=cwd)
+            sys.stdout.write(output)
+        except Exception as e:
+            # Never block the backend — output minimal context on error
+            sys.stderr.write(f"[innie] session-init error: {e}\n")
 
         # Record trace session start
         try:
@@ -471,35 +475,45 @@ def handle(event: str):
             pass  # Never block the backend
 
         # Background index refresh
-        subprocess.Popen(
-            [sys.executable, "-m", "innie.cli", "index", "--changed-only"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        try:
+            subprocess.Popen(
+                [sys.executable, "-m", "innie.cli", "index", "--changed-only"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            pass
 
     elif event == "pre-compact":
-        from innie.core.context import build_precompact_warning
+        try:
+            from innie.core.context import build_precompact_warning
 
-        sys.stdout.write(build_precompact_warning())
+            sys.stdout.write(build_precompact_warning())
+        except Exception as e:
+            sys.stderr.write(f"[innie] pre-compact error: {e}\n")
 
     elif event == "session-end":
         # Append to today's session log
-        today = datetime.now().strftime("%Y-%m-%d")
-        ts = datetime.now().strftime("%H:%M")
-        session_dir = paths.sessions_dir()
-        session_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            today = datetime.now().strftime("%Y-%m-%d")
+            ts = datetime.now().strftime("%H:%M")
+            session_dir = paths.sessions_dir()
+            session_dir.mkdir(parents=True, exist_ok=True)
 
-        log_file = session_dir / f"{today}.md"
-        if not log_file.exists():
-            log_file.write_text(f"# Sessions — {today}\n\n")
+            log_file = session_dir / f"{today}.md"
+            if not log_file.exists():
+                log_file.write_text(f"# Sessions — {today}\n\n")
 
-        session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
+            session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
 
-        with open(log_file, "a") as f:
-            f.write(f"\n## {ts} (session: {session_id})\n\n")
-            f.write("- Work Done: (to be filled by heartbeat)\n")
-            f.write("- Key Decisions: \n")
-            f.write("- Notes: \n\n")
+            with open(log_file, "a") as f:
+                f.write(f"\n## {ts} (session: {session_id})\n\n")
+                f.write("- Work Done: (to be filled by heartbeat)\n")
+                f.write("- Key Decisions: \n")
+                f.write("- Notes: \n\n")
+        except Exception as e:
+            sys.stderr.write(f"[innie] session-end log error: {e}\n")
+            session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
 
         # Close trace session with metrics from env
         try:
@@ -524,17 +538,20 @@ def handle(event: str):
             pass  # Never block the backend
 
         # Update CONTEXT.md timestamp
-        ctx_file = paths.context_file()
-        if ctx_file.exists():
-            import re
+        try:
+            ctx_file = paths.context_file()
+            if ctx_file.exists():
+                import re
 
-            content = ctx_file.read_text()
-            content = re.sub(
-                r"\*Last updated:.*?\*",
-                f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
-                content,
-            )
-            ctx_file.write_text(content)
+                content = ctx_file.read_text()
+                content = re.sub(
+                    r"\*Last updated:.*?\*",
+                    f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+                    content,
+                )
+                ctx_file.write_text(content)
+        except Exception:
+            pass  # Never block the backend
 
     elif event == "tool-use":
         # Record a tool span from PostToolUse hook (called from observability.sh)

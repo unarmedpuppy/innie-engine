@@ -29,8 +29,14 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     if not path.exists():
         return {}
 
-    with open(path, "rb") as f:
-        cfg = tomllib.load(f)
+    try:
+        with open(path, "rb") as f:
+            cfg = tomllib.load(f)
+    except Exception as e:
+        import sys as _sys
+
+        print(f"[innie] config error in {path}: {e}", file=_sys.stderr)
+        return {}
 
     # Cache only when we loaded from the default path
     if _cache is None:

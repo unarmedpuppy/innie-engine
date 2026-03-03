@@ -113,6 +113,36 @@ def init(
         console.print("  Git-tracking data/ lets you back up and sync your knowledge base.")
         enable_git = typer.confirm("  Initialize git repo in ~/.innie?", default=False)
 
+    # ── Step 6: Update source ────────────────────────────────────────────
+
+    _GITEA_URL = "git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git"
+    _GITHUB_URL = "git+https://github.com/joshuajenquist/innie-engine.git"
+
+    if yes or local:
+        update_source = _GITEA_URL
+        update_installer = "uv"
+    else:
+        console.print("\n  [bold]Update source for `innie update`[/bold]")
+        console.print(f"  [1] Gitea (homelab)  {_GITEA_URL}")
+        console.print(f"  [2] GitHub           {_GITHUB_URL}")
+        console.print("  [3] Local path       (editable install — auto-updates from source)")
+        console.print("  [4] Skip             (configure later in config.toml)")
+        src_choice = typer.prompt("  Choice", default="1")
+
+        if src_choice == "2":
+            update_source = _GITHUB_URL
+        elif src_choice == "3":
+            update_source = typer.prompt("  Path to local clone", default=str(Path.home() / "workspace/innie-engine"))
+        elif src_choice == "4":
+            update_source = ""
+        else:
+            update_source = _GITEA_URL
+
+        if update_source and not update_source.startswith("/") and not update_source.startswith("~"):
+            update_installer = "uv" if typer.confirm("  Use uv (recommended)?", default=True) else "pip"
+        else:
+            update_installer = "uv"
+
     # ── Create everything ────────────────────────────────────────────────
 
     console.print()
@@ -126,6 +156,8 @@ def init(
         enable_heartbeat=enable_heartbeat,
         enable_git=enable_git,
         selected_backends=selected_backends,
+        update_source=update_source,
+        update_installer=update_installer,
     )
 
 
@@ -175,6 +207,8 @@ def _execute_setup(
     enable_heartbeat: bool,
     enable_git: bool,
     selected_backends: list[str],
+    update_source: str = "",
+    update_installer: str = "uv",
 ):
     """Execute all setup steps after wizard is complete."""
 
@@ -198,6 +232,16 @@ def _execute_setup(
     config_content = config_content.replace(
         "auto_commit = false",
         f"auto_commit = {'true' if enable_git else 'false'}",
+        1,
+    )
+    config_content = config_content.replace(
+        'source = ""',
+        f'source = "{update_source}"',
+        1,
+    )
+    config_content = config_content.replace(
+        'installer = "uv"',
+        f'installer = "{update_installer}"',
         1,
     )
     (innie_home / "config.toml").write_text(config_content)

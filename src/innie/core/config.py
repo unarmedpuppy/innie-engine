@@ -87,8 +87,9 @@ collect_git = true
 collect_sessions = true
 
 [index]
-chunk_words = 100
-chunk_overlap = 15
+chunk_words = 300
+chunk_overlap = 60
+chunk_markdown_aware = true
 
 [context]
 max_tokens = 2000
@@ -96,4 +97,12 @@ max_tokens = 2000
 [git]
 auto_commit = false         # Auto-commit data/ after heartbeat
 auto_push = false           # Auto-push after commit (requires remote)
+
+[search]
+query_expansion = false
+expansion_model = "auto"
+
+[update]
+source = ""                 # git URL or local path — set by `innie init`
+installer = "uv"            # uv | pip
 """

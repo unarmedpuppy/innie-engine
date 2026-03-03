@@ -23,6 +23,7 @@ def _register_commands():
         serve,
         skills,
         trace,
+        update,
     )
 
     app.command("init")(init.init)
@@ -40,6 +41,7 @@ def _register_commands():
     app.command("serve")(serve.serve)
     app.command("decay")(doctor.decay)
     app.command("migrate")(migrate.migrate)
+    app.command("update")(update.update)
 
     # Alias subcommands
     alias_app = typer.Typer(help="Manage shell aliases.")

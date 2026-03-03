@@ -15,6 +15,7 @@ def _register_commands():
         alias,
         backend,
         doctor,
+        embeddings,
         fleet,
         heartbeat,
         init,
@@ -42,6 +43,14 @@ def _register_commands():
     app.command("decay")(doctor.decay)
     app.command("migrate")(migrate.migrate)
     app.command("update")(update.update)
+
+    # Embeddings subcommands
+    emb_app = typer.Typer(help="Manage the local embedding service (Docker).")
+    emb_app.command("up")(embeddings.up)
+    emb_app.command("down")(embeddings.down)
+    emb_app.command("status")(embeddings.emb_status)
+    emb_app.command("logs")(embeddings.logs)
+    app.add_typer(emb_app, name="embeddings")
 
     # Alias subcommands
     alias_app = typer.Typer(help="Manage shell aliases.")

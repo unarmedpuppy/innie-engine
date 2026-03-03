@@ -185,7 +185,7 @@ a rephrasing that bridges the vocabulary gap. Adds ~1-2s latency per search call
 The bundled `docker-compose.yml` runs a local `bge-base-en` embedding model:
 
 ```bash
-innie embeddings-up   # or: docker compose up -d embeddings
+innie embeddings up
 ```
 
 Endpoint: `http://localhost:8766/v1/embeddings`

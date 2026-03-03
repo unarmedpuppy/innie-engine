@@ -37,7 +37,9 @@ url = "http://localhost:8766"  # Local embedding service (docker compose up)
 [heartbeat]
 enabled = false             # Enable automatic scheduled heartbeat
 interval = "30m"            # Cron-style or duration string
-model = "auto"              # LLM for extraction ("auto" = configured default)
+provider = "auto"           # auto | anthropic | external
+model = "auto"              # LLM model name, or "auto" to pick default per provider
+external_url = ""           # OpenAI-compatible endpoint (required when provider = "external")
 collect_git = true          # Include git log/diff in collection
 collect_sessions = true     # Include session logs in collection
 
@@ -116,9 +118,21 @@ auto_push = false           # Auto git push after commit (requires remote)
 |---|---|---|---|
 | `enabled` | bool | `false` | Enable automatic heartbeat on schedule |
 | `interval` | string | `"30m"` | How often to run (duration or cron) |
-| `model` | string | `"auto"` | LLM model for extraction phase |
+| `provider` | string | `"auto"` | `auto` \| `anthropic` \| `external` |
+| `model` | string | `"auto"` | LLM model name, or `"auto"` to pick default per provider |
+| `external_url` | string | `""` | OpenAI-compatible endpoint (required when `provider = "external"`) |
 | `collect_git` | bool | `true` | Include git log/diff in Phase 1 |
 | `collect_sessions` | bool | `true` | Include session logs in Phase 1 |
+
+**provider = "auto"** — uses `external` if `external_url` is set, otherwise falls back to
+`anthropic`. Existing installs with `ANTHROPIC_API_KEY` continue to work unchanged.
+
+**provider = "external"** — routes to any OpenAI-compatible `/chat/completions` endpoint.
+Works with vLLM, Ollama (in OpenAI compat mode), LM Studio, llama.cpp server, etc. No API
+key required. Set `external_url` and `model` explicitly.
+
+**provider = "anthropic"** — Anthropic Messages API. `ANTHROPIC_API_KEY` must be set in
+the environment. `model = "auto"` resolves to `claude-haiku-4-5-20251001`.
 
 ### `[index]`
 

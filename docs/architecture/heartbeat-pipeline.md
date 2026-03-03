@@ -99,9 +99,40 @@ Each agent has a `HEARTBEAT.md` file that serves as the extraction instructions.
 - What level of detail to capture in journal entries
 - Specific patterns to watch for (e.g., "always note performance discoveries")
 
-### Model Selection
+### Provider Selection
 
-The heartbeat uses `config.heartbeat.model`. Setting it to `"auto"` uses the configured default. You can point it at any OpenAI-compatible endpoint or use the local embedding service.
+Phase 2 supports two LLM providers, configured via `heartbeat.provider`:
+
+| Provider | Description |
+|---|---|
+| `"auto"` | Default. Uses `external` if `external_url` is set, otherwise `anthropic`. |
+| `"anthropic"` | Anthropic Messages API. Requires `ANTHROPIC_API_KEY` env var. |
+| `"external"` | Any OpenAI-compatible `/chat/completions` endpoint — vLLM, Ollama, LM Studio, etc. |
+
+**Self-hosted setup (recommended for homelab):**
+
+```toml
+[heartbeat]
+provider = "external"
+external_url = "http://homelab-ai.server.unarmedpuppy.com/v1"
+model = "qwen3-32b-awq"
+```
+
+**Anthropic setup:**
+
+```toml
+[heartbeat]
+provider = "anthropic"
+model = "claude-haiku-4-5-20251001"
+# ANTHROPIC_API_KEY must be set in environment
+```
+
+`model = "auto"` resolves to `claude-haiku-4-5-20251001` for Anthropic, or passes `"default"`
+to external endpoints (set an explicit model name for external providers).
+
+**Note on local models:** The extraction prompt asks the model to return structured JSON
+matching a specific schema. Models that struggle with structured output may return malformed
+JSON — the pipeline surfaces this as a clear error. A capable 32B+ model handles this reliably.
 
 ---
 

@@ -114,8 +114,8 @@ Phase 2 supports two LLM providers, configured via `heartbeat.provider`:
 ```toml
 [heartbeat]
 provider = "external"
-external_url = "http://homelab-ai.server.unarmedpuppy.com/v1"
-model = "qwen3-32b-awq"
+external_url = "http://localhost:11434/v1"
+model = "llama3.1:8b"
 ```
 
 **Anthropic setup:**

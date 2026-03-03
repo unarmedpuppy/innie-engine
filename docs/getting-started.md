@@ -4,7 +4,7 @@
 
 === "uv (recommended)"
     ```bash
-    uv tool install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
+    uv tool install git+https://github.com/joshuajenquist/innie-engine.git
     ```
 
 === "uv (editable, for development)"
@@ -14,7 +14,7 @@
 
 === "pip (fallback)"
     ```bash
-    pip install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
+    pip install git+https://github.com/joshuajenquist/innie-engine.git
     ```
 
 **Requirements:** Python 3.12+, a terminal, an AI coding assistant. See [ADR-0025](adrs/0025-uv-primary-distribution.md) for why uv is the primary distribution method.

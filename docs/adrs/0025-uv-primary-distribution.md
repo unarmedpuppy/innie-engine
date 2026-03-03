@@ -14,13 +14,13 @@ Recommend `uv tool install` as the primary install method. Support `pip install`
 
 ```bash
 # Primary: uv (recommended)
-uv tool install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
+uv tool install git+https://github.com/joshuajenquist/innie-engine.git
 
 # Editable for development
 uv tool install -e ~/workspace/innie-engine
 
 # Fallback: pip
-pip install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
+pip install git+https://github.com/joshuajenquist/innie-engine.git
 ```
 
 ## Options Considered

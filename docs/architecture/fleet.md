@@ -30,12 +30,12 @@ agents:
 
   home-server:
     type: SERVER
-    url: http://100.80.223.7:8013
-    description: "Home server agent (Tailscale)"
+    url: http://192.168.1.100:8013
+    description: "Home server agent"
 
   work-laptop:
     type: SERVER
-    url: http://100.92.176.74:8013
+    url: http://192.168.1.200:8013
     description: "Work laptop agent"
 ```
 

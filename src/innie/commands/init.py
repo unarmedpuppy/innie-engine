@@ -115,28 +115,27 @@ def init(
 
     # ── Step 6: Update source ────────────────────────────────────────────
 
-    _GITEA_URL = "git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git"
     _GITHUB_URL = "git+https://github.com/joshuajenquist/innie-engine.git"
 
     if yes or local:
-        update_source = _GITEA_URL
+        update_source = _GITHUB_URL
         update_installer = "uv"
     else:
         console.print("\n  [bold]Update source for `innie update`[/bold]")
-        console.print(f"  [1] Gitea (homelab)  {_GITEA_URL}")
-        console.print(f"  [2] GitHub           {_GITHUB_URL}")
+        console.print(f"  [1] GitHub           {_GITHUB_URL}")
+        console.print("  [2] Custom git URL   (private Gitea, GitLab, etc.)")
         console.print("  [3] Local path       (editable install — auto-updates from source)")
         console.print("  [4] Skip             (configure later in config.toml)")
         src_choice = typer.prompt("  Choice", default="1")
 
         if src_choice == "2":
-            update_source = _GITHUB_URL
+            update_source = typer.prompt("  Git URL", default="")
         elif src_choice == "3":
             update_source = typer.prompt("  Path to local clone", default=str(Path.home() / "workspace/innie-engine"))
         elif src_choice == "4":
             update_source = ""
         else:
-            update_source = _GITEA_URL
+            update_source = _GITHUB_URL
 
         if update_source and not update_source.startswith("/") and not update_source.startswith("~"):
             update_installer = "uv" if typer.confirm("  Use uv (recommended)?", default=True) else "pip"

@@ -281,7 +281,7 @@ When a job is created with `reply_to`, the server delivers the result asynchrono
 
 | Scheme | Example | Behavior |
 |---|---|---|
-| `mattermost://{channel-id}` | `mattermost://nytinkdkttfo8rcxm8i4gg7uwr` | POST to Mattermost channel |
+| `mattermost://{channel-id}` | `mattermost://your-channel-id-here` | POST to Mattermost channel |
 | `https://...` | Any webhook URL | HTTP POST with JSON payload |
 | `openclaw://{agent}` | `openclaw://avery` | POST to OpenClaw agent harness |
 

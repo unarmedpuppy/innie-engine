@@ -28,7 +28,7 @@ def update(
         console.print("[red]No update source configured.[/red]")
         console.print("  Set it in ~/.innie/config.toml:")
         console.print("  [dim][update]")
-        console.print("  source = \"git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git\"[/dim]")
+        console.print("  source = \"git+https://github.com/joshuajenquist/innie-engine.git\"[/dim]")
         console.print("  Or re-run: [bold]innie init[/bold]")
         raise typer.Exit(1)
 

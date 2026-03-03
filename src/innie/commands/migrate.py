@@ -1,8 +1,8 @@
 """innie migrate — import data from other AI memory systems.
 
 Supports:
-  - agent-harness (homelab): ~/.agent-harness/ + ~/workspace/agent-harness/profiles/
-  - openclaw (work): ~/.openclaw/
+  - agent-harness: ~/.agent-harness/
+  - openclaw: ~/.openclaw/
   - Generic directory: any directory with .md files, session logs, etc.
 """
 
@@ -194,7 +194,7 @@ def _migrate_agent_harness(
 # ── openclaw migration ──────────────────────────────────────────────────────
 
 
-def _migrate_openclaw(source: dict, agent_name: str = "avery", dry_run: bool = False):
+def _migrate_openclaw(source: dict, agent_name: str = "innie", dry_run: bool = False):
     """Migrate from openclaw to innie-engine."""
     openclaw_home = Path(source["home"])
     workspace = openclaw_home / "workspace"
@@ -545,5 +545,5 @@ def _dispatch_migrate(
         _migrate_agent_harness(source, agents_list, dry_run)
 
     elif source["type"] == "openclaw":
-        target = agent or "avery"
+        target = agent or "innie"
         _migrate_openclaw(source, target, dry_run)

@@ -31,7 +31,7 @@ Every session with an AI coding assistant starts cold. The assistant has no memo
 ## Quick Start
 
 ```bash
-uv tool install git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
+uv tool install git+https://github.com/joshuajenquist/innie-engine.git
 innie init                    # interactive wizard
 innie backend install         # wire hooks into your AI assistant
 ```

@@ -263,7 +263,7 @@ Switch the active agent for CLI commands:
 
 ```bash
 innie switch avery
-innie search "oliver's school schedule"    # searches avery's knowledge base
+innie search "weekly planning checklist"   # searches avery's knowledge base
 ```
 
 Or use shell aliases to launch different agents directly:

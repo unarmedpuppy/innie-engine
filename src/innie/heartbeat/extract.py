@@ -135,8 +135,8 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
                 "heartbeat.provider = \"external\" requires heartbeat.external_url to be set.\n"
                 "Example:\n"
                 "  [heartbeat]\n"
-                "  external_url = \"http://homelab-ai.server.unarmedpuppy.com/v1\"\n"
-                "  model = \"qwen3-32b-awq\""
+                "  external_url = \"http://localhost:11434/v1\"\n"
+                "  model = \"llama3.1:8b\""
             )
         text = _call_openai_compatible(prompt, model, external_url)
     else:

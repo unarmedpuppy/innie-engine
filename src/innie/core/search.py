@@ -359,7 +359,8 @@ def search_semantic(conn: sqlite3.Connection, query: str, limit: int = 10) -> li
 
 def _expand_query(query: str) -> str | None:
     """Generate one alternative phrasing via LLM. Returns None on any failure."""
-    if not get("search.query_expansion", False):
+    import os
+    if not get("search.query_expansion", False) and not os.environ.get("INNIE_QUERY_EXPANSION"):
         return None
     try:
         import httpx

@@ -15,8 +15,11 @@ def search(
     keyword: bool = typer.Option(False, "--keyword", "-k", help="FTS5 keyword search only"),
     semantic: bool = typer.Option(False, "--semantic", "-s", help="Vector search only"),
     limit: int = typer.Option(5, "--limit", "-n", help="Max results"),
+    expand: bool = typer.Option(False, "--expand", "-e", help="Generate alt query phrasing via LLM before searching (overrides config)"),
 ):
     """Search the knowledge base (hybrid keyword + semantic by default)."""
+    import os
+
     from innie.core.search import (
         format_results,
         open_db,
@@ -32,12 +35,19 @@ def search(
 
     conn = open_db(db_path)
 
+    # --expand temporarily sets the env-level override without mutating config on disk
+    if expand:
+        os.environ["INNIE_QUERY_EXPANSION"] = "1"
+
     if keyword:
         results = search_keyword(conn, query, limit)
     elif semantic:
         results = search_semantic(conn, query, limit)
     else:
         results = search_hybrid(conn, query, limit)
+
+    if expand:
+        os.environ.pop("INNIE_QUERY_EXPANSION", None)
 
     conn.close()
 

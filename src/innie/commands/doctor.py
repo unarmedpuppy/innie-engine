@@ -1,5 +1,6 @@
 """Health check and status commands."""
 
+import typer
 from rich.console import Console
 
 from innie.core import paths
@@ -183,9 +184,9 @@ def doctor():
 
 
 def decay(
-    dry_run: bool = False,
-    context_days: int = 30,
-    session_days: int = 90,
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without applying them"),
+    context_days: int = typer.Option(30, "--context-days", help="Archive context items older than N days"),
+    session_days: int = typer.Option(90, "--session-days", help="Compress/remove session logs older than N days"),
 ):
     """Run memory decay — archive old context items, compress sessions, deindex stale files."""
 

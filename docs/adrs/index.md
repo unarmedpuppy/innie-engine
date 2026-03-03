@@ -36,3 +36,4 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0024](0024-context-injection-token-budget.md) | Context Injection with Token Budget | Accepted | 2026-03 |
 | [0025](0025-uv-primary-distribution.md) | uv as Primary Distribution Method | Accepted | 2026-03 |
 | [0026](0026-search-pipeline-improvements.md) | Search Pipeline Improvements: Chunking + Query Expansion | Accepted | 2026-03 |
+| [0027](0027-cli-surface-area-audit.md) | CLI Surface Area Audit: Exposing Hidden Functionality | Accepted | 2026-03 |

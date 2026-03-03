@@ -47,6 +47,29 @@ def list_backends():
     console.print(table)
 
 
+def uninstall(
+    name: str = typer.Argument(..., help="Backend name (claude-code, opencode, cursor)"),
+    yes: bool = typer.Option(False, "-y", "--yes", help="Skip confirmation"),
+):
+    """Remove innie hooks from a backend."""
+    from innie.backends.registry import get_backend
+
+    backend = get_backend(name)
+    hooks = backend.check_hooks()
+    installed = [event for event, ok in hooks.items() if ok]
+
+    if not installed:
+        console.print(f"[dim]No innie hooks installed for {name}.[/dim]")
+        return
+
+    console.print(f"  Hooks to remove from [bold]{name}[/bold]: {', '.join(installed)}")
+    if not yes and not typer.confirm("  Remove?", default=False):
+        raise typer.Abort()
+
+    backend.uninstall_hooks()
+    console.print(f"  [green]✓[/green] Hooks removed from [bold]{name}[/bold].")
+
+
 def check(
     name: str = typer.Argument("claude-code", help="Backend to check"),
 ):

@@ -12,10 +12,13 @@ from innie.core import paths
 console = Console()
 
 
-def run():
+def run(
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview what would be collected and extracted without writing anything"),
+):
     """Run one heartbeat cycle: collect → extract → route."""
     agent = paths.active_agent()
-    console.print(f"Running heartbeat for agent: [bold]{agent}[/bold]")
+    mode = " [dim](dry run)[/dim]" if dry_run else ""
+    console.print(f"Running heartbeat for agent: [bold]{agent}[/bold]{mode}")
 
     # Phase 1: Collect
     console.print("  Phase 1: Collecting data...")
@@ -28,6 +31,19 @@ def run():
 
     if session_count == 0 and git_count == 0:
         console.print("  [dim]Nothing new to process.[/dim]")
+        return
+
+    if dry_run:
+        console.print("\n  [bold]Sessions that would be processed:[/bold]")
+        for s in collected.get("sessions", {}).get("sessions", []):
+            ts = datetime.fromtimestamp(s.get("started", 0)).strftime("%Y-%m-%d %H:%M") if s.get("started") else "unknown"
+            preview = s.get("content", "")[:120].replace("\n", " ")
+            console.print(f"    [{ts}] {s['id'][:16]}...  {preview}...")
+        if git_count:
+            console.print(f"\n  [bold]Git activity:[/bold]")
+            for g in collected.get("git_activity", []):
+                console.print(f"    [{g['repo']}] {g['commit']}")
+        console.print("\n  [dim]Dry run — no extraction, routing, or state changes.[/dim]")
         return
 
     # Phase 2: Extract
@@ -126,6 +142,16 @@ def _git_autocommit():
 
 def enable():
     """Install cron job for automatic heartbeat (every 30 min)."""
+    import os
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        console.print("[yellow]ANTHROPIC_API_KEY is not set in the current environment.[/yellow]")
+        console.print("  The heartbeat cron will fail silently without it.")
+        console.print("  Make sure it's exported in your shell profile (e.g. ~/.zshrc).")
+        if not typer.confirm("  Enable cron anyway?", default=False):
+            raise typer.Abort()
+
     from innie.commands.init import _install_cron
 
     _install_cron()
@@ -176,3 +202,30 @@ def hb_status():
     result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
     has_cron = result.returncode == 0 and "innie" in result.stdout
     console.print(f"Cron: {'[green]enabled[/green]' if has_cron else '[dim]disabled[/dim]'}")
+
+    # API key check
+    import os
+    has_key = bool(os.environ.get("ANTHROPIC_API_KEY", ""))
+    console.print(f"ANTHROPIC_API_KEY: {'[green]set[/green]' if has_key else '[red]not set[/red]'}")
+
+
+def reset_state(
+    yes: bool = typer.Option(False, "-y", "--yes", help="Skip confirmation"),
+):
+    """Reset heartbeat state so all sessions are re-processed on next run."""
+    agent = paths.active_agent()
+    state_file = paths.heartbeat_state(agent)
+
+    if not state_file.exists():
+        console.print("[dim]No heartbeat state found — nothing to reset.[/dim]")
+        return
+
+    state = json.loads(state_file.read_text())
+    processed = len(state.get("processed_sessions", []))
+    console.print(f"  Current state: {processed} sessions marked as processed.")
+
+    if not yes and not typer.confirm("  Reset? All sessions will be re-processed on next run.", default=False):
+        raise typer.Abort()
+
+    state_file.write_text(json.dumps({"last_run": 0, "processed_sessions": []}, indent=2))
+    console.print("  [green]✓[/green] Heartbeat state reset.")

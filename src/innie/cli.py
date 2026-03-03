@@ -21,6 +21,7 @@ def _register_commands():
         init,
         migrate,
         search,
+        secrets,
         serve,
         skills,
         trace,
@@ -43,6 +44,7 @@ def _register_commands():
     app.command("decay")(doctor.decay)
     app.command("migrate")(migrate.migrate)
     app.command("update")(update.update)
+    app.command("secrets")(secrets.scan)
 
     # Embeddings subcommands
     emb_app = typer.Typer(help="Manage the local embedding service (Docker).")
@@ -62,6 +64,7 @@ def _register_commands():
     # Backend subcommands
     backend_app = typer.Typer(help="Manage AI backend integrations.")
     backend_app.command("install")(backend.install)
+    backend_app.command("uninstall")(backend.uninstall)
     backend_app.command("list")(backend.list_backends)
     backend_app.command("check")(backend.check)
     app.add_typer(backend_app, name="backend")
@@ -72,6 +75,7 @@ def _register_commands():
     hb_app.command("enable")(heartbeat.enable)
     hb_app.command("disable")(heartbeat.disable)
     hb_app.command("status")(heartbeat.hb_status)
+    hb_app.command("reset-state")(heartbeat.reset_state)
     app.add_typer(hb_app, name="heartbeat")
 
     # Fleet subcommands

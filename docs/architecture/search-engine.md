@@ -47,21 +47,22 @@ The `chunks` table is the canonical record. `chunk_fts` and `chunk_embeddings` a
 
 ## Chunking
 
-Files are split into overlapping word-window chunks before indexing.
+Files are split into chunks before indexing. By default, splitting is markdown-aware:
+documents are divided on `##`/`###` headers first, then word-window sliding is applied within
+any section that exceeds the chunk size.
 
 | Config key | Default | Description |
 |---|---|---|
-| `index.chunk_words` | 100 | Words per chunk |
-| `index.chunk_overlap` | 15 | Overlap words between adjacent chunks |
+| `index.chunk_words` | 300 | Words per chunk |
+| `index.chunk_overlap` | 60 | Overlap words between adjacent chunks (20%) |
+| `index.chunk_markdown_aware` | true | Split on markdown headers before word-windowing |
 
-```python
-def chunk_text(text: str) -> list[str]:
-    # Strip YAML frontmatter (--- ... ---)
-    # Split on whitespace
-    # Slide window: [0:100], [85:185], [170:270], ...
-```
+A 1000-word document with 3 sections produces 3–4 chunks (one per section, with word-window
+fallback on oversized sections). Set `chunk_markdown_aware = false` to restore pure word-window
+behavior.
 
-A 1000-word document produces approximately 11 chunks. Overlap ensures sentences that span a chunk boundary are still findable.
+When a section exceeds `chunk_words`, it's split by word-window and the section header is
+prepended to each sub-chunk so the reranker and reader have topic context.
 
 ---
 
@@ -148,6 +149,32 @@ def search_hybrid(conn, query: str, limit: int = 5) -> list[dict]:
 **Why k=60?** This is the standard RRF constant from the original Cormack, Clarke & Buettcher paper (2009). It balances weight between top-ranked results and deeper results. Values 40–80 all perform similarly.
 
 **Why RRF instead of score normalization?** Score normalization requires knowing the max/min of each list, which varies query to query. RRF only needs rank positions and consistently outperforms linear score combination in practice.
+
+---
+
+## Query Expansion (opt-in)
+
+When `search.query_expansion = true`, `search_hybrid()` generates one alternative phrasing
+of the query before searching. Both queries are fused via RRF with the original query weighted 2x.
+
+```toml
+[search]
+query_expansion = true
+expansion_model = "auto"   # "auto" = uses heartbeat.model and heartbeat.external_url
+```
+
+**How it works:**
+1. Original query → FTS5 + semantic → RRF scored at 2x weight
+2. Alt query (LLM-generated) → FTS5 + semantic → RRF scored at 1x weight
+3. All results fused into single ranked list
+
+Alt query generation uses a lightweight LLM call (10s timeout). On any failure — network error,
+model unavailable, empty response — the function silently returns `None` and the search proceeds
+with only the original query. Graceful degradation is preserved.
+
+**When to enable:** Useful when your knowledge base uses different vocabulary than your searches.
+For example, if you indexed "JWT authentication" but search for "login flow", expansion generates
+a rephrasing that bridges the vocabulary gap. Adds ~1-2s latency per search call.
 
 ---
 

@@ -44,8 +44,15 @@ collect_sessions = true     # Include session logs in collection
 # ── Index ─────────────────────────────────────────────────────────────────────
 
 [index]
-chunk_words = 100           # Words per text chunk
-chunk_overlap = 15          # Overlap words between chunks
+chunk_words = 300           # Words per text chunk
+chunk_overlap = 60          # Overlap words between chunks (20%)
+chunk_markdown_aware = true # Split on markdown headers before word-windowing
+
+# ── Search ────────────────────────────────────────────────────────────────────
+
+[search]
+query_expansion = false     # Generate alt query phrasing via LLM (adds ~1-2s)
+expansion_model = "auto"    # "auto" = uses heartbeat.model and heartbeat.external_url
 
 # ── Context ───────────────────────────────────────────────────────────────────
 
@@ -117,10 +124,20 @@ auto_push = false           # Auto git push after commit (requires remote)
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `chunk_words` | int | `100` | Target words per chunk |
-| `chunk_overlap` | int | `15` | Overlap words between adjacent chunks |
+| `chunk_words` | int | `300` | Target words per chunk |
+| `chunk_overlap` | int | `60` | Overlap words between adjacent chunks (20%) |
+| `chunk_markdown_aware` | bool | `true` | Split on `##`/`###` headers before word-windowing |
 
-**Tuning:** Smaller chunks = more precise retrieval but more storage. Larger chunks = more context per result but less precise. 100/15 is a good starting point.
+**Tuning:** Smaller chunks = more precise retrieval but less context per result. 300/60 targets the useful embedding range for BGE-base-en (~225 tokens). Set `chunk_markdown_aware = false` to restore pure word-window behavior.
+
+### `[search]`
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `query_expansion` | bool | `false` | Generate one alt phrasing via LLM before searching |
+| `expansion_model` | string | `"auto"` | `"auto"` uses `heartbeat.model` and `heartbeat.external_url` |
+
+**query_expansion:** Bridges vocabulary mismatch (e.g., searching "login" when content says "authentication"). Adds ~1-2s latency. Silent no-op if the LLM endpoint is unavailable.
 
 ### `[context]`
 

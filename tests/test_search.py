@@ -23,12 +23,16 @@ def test_open_db_creates_tables(db):
 
 
 def test_chunk_text_basic():
+    # 250 words < default chunk_words (300), so it's one chunk
     text = " ".join(f"word{i}" for i in range(250))
     chunks = search.chunk_text(text)
-    assert len(chunks) >= 2
-    # Each chunk should have roughly chunk_words words
-    for c in chunks:
-        assert len(c.split()) <= 110  # 100 + some tolerance
+    assert len(chunks) >= 1
+    # A 500-word doc should produce multiple chunks
+    long_text = " ".join(f"word{i}" for i in range(500))
+    long_chunks = search.chunk_text(long_text)
+    assert len(long_chunks) >= 2
+    for c in long_chunks:
+        assert len(c.split()) <= 330  # 300 + tolerance
 
 
 def test_chunk_text_empty():
@@ -86,3 +90,79 @@ def test_format_results():
     formatted = search.format_results(results)
     assert "0.95" in formatted
     assert "Hello world" in formatted
+
+
+def test_chunk_text_markdown_sections():
+    """Markdown headers trigger section splits."""
+    text = (
+        "## Authentication\n"
+        + " ".join(f"auth{i}" for i in range(50)) + "\n\n"
+        "## Deployment\n"
+        + " ".join(f"deploy{i}" for i in range(50))
+    )
+    chunks = search.chunk_text(text)
+    assert len(chunks) == 2
+    assert any("Authentication" in c for c in chunks)
+    assert any("Deployment" in c for c in chunks)
+
+
+def test_chunk_text_oversized_section_splits():
+    """Section > chunk_words falls back to word-window within section."""
+    header = "## Big Section\n"
+    body = " ".join(f"word{i}" for i in range(400))
+    text = header + body
+    chunks = search.chunk_text(text)
+    assert len(chunks) >= 2
+    # Header should appear in later sub-chunks for context
+    assert any("Big Section" in c for c in chunks[1:])
+
+
+def test_chunk_text_plain_text_fallback():
+    """No headers → falls back to word-window chunking."""
+    text = " ".join(f"word{i}" for i in range(700))
+    chunks = search.chunk_text(text)
+    assert len(chunks) >= 2
+    for c in chunks:
+        assert len(c.split()) <= 330
+
+
+def test_expand_query_disabled_by_default():
+    """Query expansion is off by default — returns None."""
+    result = search._expand_query("authentication flow")
+    assert result is None
+
+
+def test_expand_query_graceful_failure(monkeypatch):
+    """LLM failure during expansion returns None, doesn't raise."""
+    monkeypatch.setattr(
+        "innie.core.config.get",
+        lambda key, default=None: {
+            "search.query_expansion": True,
+            "search.expansion_model": "auto",
+            "heartbeat.external_url": "http://localhost:9999",  # nothing running
+            "heartbeat.model": "test-model",
+        }.get(key, default),
+    )
+    result = search._expand_query("authentication flow")
+    assert result is None  # connection error swallowed
+
+
+def test_search_hybrid_with_expansion_uses_both_queries(monkeypatch, db, tmp_path):
+    """With expansion enabled, both original and alt query results are merged."""
+    f = tmp_path / "auth.md"
+    f.write_text("JWT authentication with refresh tokens and session management.")
+    search.index_files(db, [f], use_embeddings=False)
+
+    queries_searched = []
+    original_keyword = search.search_keyword
+
+    def tracking_keyword(conn, q, limit=10):
+        queries_searched.append(q)
+        return original_keyword(conn, q, limit)
+
+    monkeypatch.setattr(search, "search_keyword", tracking_keyword)
+    monkeypatch.setattr(search, "_expand_query", lambda q: "login mechanism")
+
+    search.search_hybrid(db, "authentication flow")
+    assert "authentication flow" in queries_searched
+    assert "login mechanism" in queries_searched

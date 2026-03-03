@@ -118,15 +118,25 @@ def embed_all(texts: list[str], batch_size: int = 32) -> list[list[float]]:
 
 
 def chunk_text(text: str) -> list[str]:
-    chunk_words = get("index.chunk_words", 100)
-    overlap = get("index.chunk_overlap", 15)
+    chunk_words = get("index.chunk_words", 300)
+    overlap = get("index.chunk_overlap", 60)
+    markdown_aware = get("index.chunk_markdown_aware", True)
 
     # Strip YAML frontmatter
     text = re.sub(r"^---\n.*?\n---\n", "", text, flags=re.DOTALL)
+    if not text.strip():
+        return []
+
+    if markdown_aware:
+        return _chunk_markdown(text, chunk_words, overlap)
+    return _chunk_words(text, chunk_words, overlap)
+
+
+def _chunk_words(text: str, chunk_words: int, overlap: int) -> list[str]:
+    """Sliding word-window chunking (original algorithm)."""
     words = text.split()
     if not words:
         return []
-
     chunks = []
     start = 0
     while start < len(words):
@@ -138,6 +148,32 @@ def chunk_text(text: str) -> list[str]:
             break
         start = end - overlap
     return chunks
+
+
+def _chunk_markdown(text: str, chunk_words: int, overlap: int) -> list[str]:
+    """Split on ## / ### headers first; word-window within oversized sections."""
+    # Split into sections on h2/h3 headers, keeping the header text
+    sections = re.split(r"(?m)(?=^#{2,3} )", text)
+    chunks = []
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+        words = section.split()
+        if len(words) <= chunk_words:
+            chunks.append(section)
+        else:
+            # Extract header (first line) and prefix it on each sub-chunk
+            lines = section.splitlines()
+            header = lines[0] if lines[0].startswith("#") else ""
+            sub_chunks = _chunk_words(section, chunk_words, overlap)
+            for i, sub in enumerate(sub_chunks):
+                # Prefix header on all sub-chunks after the first (first already has it)
+                if i > 0 and header and not sub.startswith(header):
+                    chunks.append(f"{header}\n{sub}")
+                else:
+                    chunks.append(sub)
+    return chunks if chunks else _chunk_words(text, chunk_words, overlap)
 
 
 # ── Indexing ─────────────────────────────────────────────────────────────────
@@ -321,41 +357,91 @@ def search_semantic(conn: sqlite3.Connection, query: str, limit: int = 10) -> li
     ]
 
 
+def _expand_query(query: str) -> str | None:
+    """Generate one alternative phrasing via LLM. Returns None on any failure."""
+    if not get("search.query_expansion", False):
+        return None
+    try:
+        import httpx
+
+        model_cfg = get("search.expansion_model", "auto")
+        if model_cfg == "auto":
+            url = get("heartbeat.external_url", None)
+            model = get("heartbeat.model", None)
+        else:
+            url = get("search.expansion_url", None)
+            model = model_cfg
+
+        if not url or not model:
+            return None
+
+        prompt = (
+            f"Rephrase this search query for a personal AI memory system. "
+            f"Return ONLY the alternative phrasing, nothing else.\n\nQuery: {query}"
+        )
+        resp = httpx.post(
+            f"{url}/chat/completions",
+            json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 60},
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        alt = resp.json()["choices"][0]["message"]["content"].strip()
+        return alt if alt and alt != query else None
+    except Exception:
+        return None
+
+
 def search_hybrid(conn: sqlite3.Connection, query: str, limit: int = 5) -> list[dict[str, Any]]:
     """Hybrid search using Reciprocal Rank Fusion (RRF).
 
-    Combines FTS5 keyword results with vector similarity results.
+    When search.query_expansion is enabled, generates one alternative query phrasing
+    and fuses results from both queries via RRF, with the original query weighted 2x.
     Falls back to keyword-only if embeddings are unavailable.
     """
-    k = 60  # RRF constant
+    k = 60
 
-    # Keyword results
+    alt_query = _expand_query(query)
+
+    def _rrf_add(
+        scores: dict[str, float],
+        best_content: dict[str, dict[str, Any]],
+        results: list[dict[str, Any]],
+        weight: float = 1,
+    ) -> None:
+        for rank, r in enumerate(results):
+            key = f"{r['file_path']}:{r['chunk_idx']}"
+            scores[key] = scores.get(key, 0) + weight * (1.0 / (k + rank))
+            if key not in best_content:
+                best_content[key] = r
+
+    # Original query
     kw_results = search_keyword(conn, query, limit=limit * 2)
-
-    # Semantic results (graceful fallback)
     sem_results: list[dict[str, Any]] = []
     try:
         sem_results = search_semantic(conn, query, limit=limit * 2)
     except Exception:
         pass
 
-    if not sem_results:
+    if not sem_results and not alt_query:
         return kw_results[:limit]
 
-    # RRF: score = sum(1 / (k + rank)) across result lists
     scores: dict[str, float] = {}
     best_content: dict[str, dict[str, Any]] = {}
 
-    for rank, r in enumerate(kw_results):
-        key = f"{r['file_path']}:{r['chunk_idx']}"
-        scores[key] = scores.get(key, 0) + 1.0 / (k + rank)
-        best_content[key] = r
+    # Original query at 2x weight
+    _rrf_add(scores, best_content, kw_results, weight=2)
+    _rrf_add(scores, best_content, sem_results, weight=2)
 
-    for rank, r in enumerate(sem_results):
-        key = f"{r['file_path']}:{r['chunk_idx']}"
-        scores[key] = scores.get(key, 0) + 1.0 / (k + rank)
-        if key not in best_content:
-            best_content[key] = r
+    # Alt query at 1x weight
+    if alt_query:
+        alt_kw = search_keyword(conn, alt_query, limit=limit * 2)
+        _rrf_add(scores, best_content, alt_kw, weight=1)
+        alt_sem: list[dict[str, Any]] = []
+        try:
+            alt_sem = search_semantic(conn, alt_query, limit=limit * 2)
+        except Exception:
+            pass
+        _rrf_add(scores, best_content, alt_sem, weight=1)
 
     ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]
     return [{**best_content[key], "score": round(score, 4)} for key, score in ranked]

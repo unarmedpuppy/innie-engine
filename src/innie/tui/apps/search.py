@@ -20,10 +20,10 @@ class ResultItem(ListItem):
 
     def compose(self) -> ComposeResult:
         bar_len = int(self.result_score * 10)
-        bar = "█" * bar_len + "▉" if bar_len < 10 else "██████████"
+        bar = "█" * bar_len + ("▉" if bar_len < 10 else "")
         score_str = f"{self.result_score:.2f}"
         yield Label(
-            f"[dim]{self.result_path}[/dim]  [bold]{score_str}[/bold]  [{score_str}]{bar}[/]",
+            f"[dim]{self.result_path}[/dim]  [bold]{score_str}[/bold]  [cyan]{bar}[/cyan]",
             markup=True,
         )
 
@@ -111,7 +111,7 @@ class SearchApp(App):
     )
 
     BINDINGS = [
-        Binding("q,escape", "quit", "Quit"),
+        Binding("escape", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit", show=False),
         Binding("up", "move_up", "Up", show=True),
         Binding("down", "move_down", "Down", show=True),
@@ -211,10 +211,10 @@ class SearchApp(App):
             preview.update(event.item.result_snippet[:500] or "*No preview*")
 
     def action_move_up(self) -> None:
-        self.query_one("#result-list", ListView).action_scroll_up()
+        self.query_one("#result-list", ListView).action_cursor_up()
 
     def action_move_down(self) -> None:
-        self.query_one("#result-list", ListView).action_scroll_down()
+        self.query_one("#result-list", ListView).action_cursor_down()
 
     def action_open_file(self) -> None:
         import subprocess

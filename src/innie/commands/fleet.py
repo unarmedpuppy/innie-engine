@@ -4,7 +4,7 @@ import typer
 
 
 def start(
-    host: str = typer.Option("0.0.0.0", help="Bind address"),
+    host: str = typer.Option("127.0.0.1", help="Bind address"),
     port: int = typer.Option(8080, help="Port number"),
     config: str = typer.Option(None, help="Path to fleet config YAML"),
     reload: bool = typer.Option(False, help="Auto-reload on code changes"),

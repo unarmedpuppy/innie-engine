@@ -71,8 +71,15 @@ def _prompt_reindex(yes: bool) -> None:
     console.print("  Chunk configuration may have changed. Old chunks may be stale.")
     if yes or typer.confirm("  Run `innie index` now?", default=True):
         console.print()
-        result = subprocess.run(["innie", "index"], text=True)
-        if result.returncode != 0:
-            console.print("[yellow]Index rebuild failed — run `innie index` manually.[/yellow]")
-        else:
-            console.print("  [green]✓[/green] Index rebuilt.")
+        try:
+            from innie.core import paths
+            from innie.core.search import collect_files, index_files, open_db
+
+            agent = paths.active_agent()
+            conn = open_db(agent=agent)
+            files = collect_files(agent)
+            indexed = index_files(conn, files, changed_only=False)
+            conn.close()
+            console.print(f"  [green]✓[/green] Index rebuilt ({indexed} files).")
+        except Exception as e:
+            console.print(f"[yellow]Index rebuild failed: {e} — run `innie index` manually.[/yellow]")

@@ -12,9 +12,10 @@ import time
 import uuid
 from datetime import datetime
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from innie.core import paths
 from innie.core.context import build_session_context
@@ -38,16 +39,31 @@ logger = logging.getLogger(__name__)
 SYNC_TIMEOUT = int(os.environ.get("INNIE_SYNC_TIMEOUT", 1800))
 ASYNC_TIMEOUT = int(os.environ.get("INNIE_ASYNC_TIMEOUT", 7200))
 
+_bearer = HTTPBearer(auto_error=False)
+
+
+async def _require_auth(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> None:
+    token = os.environ.get("INNIE_API_TOKEN", "")
+    if not token or request.url.path == "/health":
+        return
+    if credentials is None or credentials.credentials != token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+
 app = FastAPI(
     title="innie-engine",
     description="Persistent memory and identity for AI coding assistants",
     version="0.2.0",
+    dependencies=[Depends(_require_auth)],
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -152,7 +168,7 @@ async def execute_job(job_id: str) -> None:
 
     working_dir = _resolve_working_dir(job.working_directory)
     context = _resolve_context(job.agent, job.include_memory)
-    perm = job.permission_mode or "yolo"
+    perm = job.permission_mode or "default"
 
     # Inject semantic search if available
     try:
@@ -232,7 +248,7 @@ async def chat_completions(request: ChatCompletionRequest):
     prompt = _format_messages(request.messages)
     working_dir = _resolve_working_dir(request.working_directory)
     context = _resolve_context(None, True)
-    perm = request.permission_mode or "yolo"
+    perm = request.permission_mode or "default"
 
     if request.stream:
 
@@ -325,6 +341,14 @@ async def create_job(
     request: JobCreateRequest,
     background_tasks: BackgroundTasks,
 ):
+    if request.reply_to:
+        scheme = request.reply_to.split("://")[0] if "://" in request.reply_to else ""
+        if scheme not in {"mattermost", "https"}:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported reply_to scheme '{scheme}'. Use mattermost:// or https://",
+            )
+
     job_id = f"job-{uuid.uuid4().hex[:12]}"
 
     prompt = request.prompt

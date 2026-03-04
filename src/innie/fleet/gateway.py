@@ -8,12 +8,14 @@ Provides:
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from innie.fleet.config import load_fleet_config
 from innie.fleet.health import HealthMonitor
@@ -25,6 +27,20 @@ from innie.fleet.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+_fleet_bearer = HTTPBearer(auto_error=False)
+
+
+async def _require_fleet_auth(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_fleet_bearer),
+) -> None:
+    token = os.environ.get("INNIE_FLEET_TOKEN", "")
+    if not token or request.url.path == "/health":
+        return
+    if credentials is None or credentials.credentials != token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
 
 # Module-level state
 health_monitor: HealthMonitor | None = None
@@ -69,12 +85,13 @@ app = FastAPI(
     description="Fleet gateway for multi-machine agent coordination",
     version="0.2.0",
     lifespan=lifespan,
+    dependencies=[Depends(_require_fleet_auth)],
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

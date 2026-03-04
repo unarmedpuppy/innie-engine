@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -287,10 +288,11 @@ def _execute_setup(
     if embed_provider == "docker":
         _setup_docker_embeddings(innie_home)
 
-    # 6. Heartbeat cron
+    # 6. Heartbeat scheduler
     if enable_heartbeat:
-        _install_cron()
-        console.print("  [green]✓[/green] Installed heartbeat cron (every 30 min)")
+        _install_scheduler()
+        scheduler = "launchd" if sys.platform == "darwin" else "cron"
+        console.print(f"  [green]✓[/green] Installed heartbeat {scheduler} (every 30 min)")
 
     # 7. Git init
     if enable_git:
@@ -483,8 +485,82 @@ def _create_agent(name: str, role: str):
     console.print(f"  [green]✓[/green] Created agent: {name}")
 
 
+def _install_scheduler():
+    """Install heartbeat scheduler (launchd on macOS, cron elsewhere)."""
+    if sys.platform == "darwin":
+        _install_launchd()
+    else:
+        _install_cron()
+
+
+def _install_launchd():
+    """Install heartbeat as a launchd plist (macOS)."""
+    import os
+
+    innie_path = Path(sys.executable).parent / "innie"
+    log_dir = Path.home() / ".innie" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "heartbeat.log"
+
+    # Build PATH with common tool locations
+    path_extras = [
+        str(Path.home() / ".local" / "bin"),
+        str(Path.home() / ".opencode" / "bin"),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/usr/bin",
+        "/bin",
+    ]
+    path_str = ":".join([p for p in path_extras if p not in os.environ.get("PATH", "")])
+    full_path = f"{path_str}:{os.environ.get('PATH', '/usr/bin:/bin')}"
+
+    plist_label = "com.innie-engine.heartbeat"
+    plist_path = Path.home() / "Library" / "LaunchAgents" / f"{plist_label}.plist"
+    plist_path.parent.mkdir(parents=True, exist_ok=True)
+
+    plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{plist_label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{innie_path}</string>
+        <string>heartbeat</string>
+        <string>run</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>{full_path}</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>{log_path}</string>
+    <key>StandardErrorPath</key>
+    <string>{log_path}</string>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
+"""
+    plist_path.write_text(plist_content)
+
+    # Unload existing (ignore errors) then load
+    subprocess.run(
+        ["launchctl", "unload", str(plist_path)],
+        capture_output=True,
+    )
+    subprocess.run(
+        ["launchctl", "load", str(plist_path)],
+        check=True,
+    )
+
+
 def _install_cron():
-    """Install heartbeat cron job."""
+    """Install heartbeat cron job (non-macOS)."""
     innie_path = Path(sys.executable).parent / "innie"
 
     cron_line = f"*/30 * * * * {innie_path} heartbeat run 2>&1 | logger -t innie-heartbeat"
@@ -534,14 +610,18 @@ def handle(event: str):
             pass  # Never block the backend
 
         # Background index refresh
-        try:
-            subprocess.Popen(
-                [sys.executable, "-m", "innie.cli", "index", "--changed-only"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except Exception:
-            pass
+        def _run_index():
+            try:
+                from innie.core.search import collect_files, index_files, open_db
+
+                conn = open_db(agent=paths.active_agent())
+                files = collect_files(paths.active_agent())
+                index_files(conn, files, changed_only=True)
+                conn.close()
+            except Exception:
+                pass
+
+        threading.Thread(target=_run_index, daemon=True).start()
 
     elif event == "pre-compact":
         try:

@@ -1,6 +1,7 @@
 """Heartbeat pipeline commands."""
 
 import json
+import sys
 import time
 from datetime import datetime
 
@@ -16,6 +17,14 @@ def run(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview what would be collected and extracted without writing anything"),
 ):
     """Run one heartbeat cycle: collect → extract → route."""
+    sys.argv[0] = "innie-heartbeat"
+    try:
+        import ctypes
+
+        ctypes.CDLL(None).setproctitle(b"innie-heartbeat")
+    except Exception:
+        pass
+
     from innie.tui.detect import is_interactive
 
     if is_interactive():
@@ -170,15 +179,32 @@ def enable():
         if not typer.confirm("  Enable cron anyway?", default=False):
             raise typer.Abort()
 
-    from innie.commands.init import _install_cron
+    import sys
 
-    _install_cron()
-    console.print("Heartbeat cron installed (every 30 min).")
+    from innie.commands.init import _install_scheduler
+
+    _install_scheduler()
+    scheduler = "launchd" if sys.platform == "darwin" else "cron"
+    console.print(f"Heartbeat {scheduler} installed (every 30 min).")
 
 
 def disable():
-    """Remove heartbeat cron job."""
+    """Remove heartbeat scheduler (launchd on macOS, cron elsewhere)."""
     import subprocess
+    import sys
+    from pathlib import Path
+
+    if sys.platform == "darwin":
+        plist_path = (
+            Path.home() / "Library" / "LaunchAgents" / "com.innie-engine.heartbeat.plist"
+        )
+        if not plist_path.exists():
+            console.print("[dim]No launchd plist found.[/dim]")
+            return
+        subprocess.run(["launchctl", "unload", str(plist_path)], capture_output=True)
+        plist_path.unlink(missing_ok=True)
+        console.print("Heartbeat launchd agent removed.")
+        return
 
     result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
     if result.returncode != 0:
@@ -218,12 +244,21 @@ def hb_status():
         console.print(f"Last run: {dt.strftime('%Y-%m-%d %H:%M')} ({ago}s ago)")
     console.print(f"Sessions processed (total): {processed}")
 
-    # Check cron
+    # Check scheduler
     import subprocess
+    import sys
+    from pathlib import Path
 
-    result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-    has_cron = result.returncode == 0 and "innie" in result.stdout
-    console.print(f"Cron: {'[green]enabled[/green]' if has_cron else '[dim]disabled[/dim]'}")
+    if sys.platform == "darwin":
+        plist_path = (
+            Path.home() / "Library" / "LaunchAgents" / "com.innie-engine.heartbeat.plist"
+        )
+        has_scheduler = plist_path.exists()
+        console.print(f"Launchd: {'[green]enabled[/green]' if has_scheduler else '[dim]disabled[/dim]'}")
+    else:
+        result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+        has_scheduler = result.returncode == 0 and "innie" in result.stdout
+        console.print(f"Cron: {'[green]enabled[/green]' if has_scheduler else '[dim]disabled[/dim]'}")
 
     # Provider + credential check
     import os

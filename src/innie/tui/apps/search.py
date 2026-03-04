@@ -140,13 +140,23 @@ class SearchApp(App):
                     value=self._initial_query,
                     id="query-input",
                 )
-            yield Static(
-                "[H] hybrid  [K] keyword  [S] semantic", id="mode-bar", markup=True
-            )
+            yield Static("", id="mode-bar", markup=True)
             yield ListView(id="result-list")
             yield Markdown("", id="preview")
 
+    def _update_mode_bar(self) -> None:
+        labels = {"hybrid": "ctrl+h", "keyword": "ctrl+k", "semantic": "ctrl+s"}
+        parts = []
+        for mode, key in labels.items():
+            k = key.replace("ctrl+", "^")
+            if mode == self.search_mode:
+                parts.append(f"[bold cyan reverse] {k} {mode} [/bold cyan reverse]")
+            else:
+                parts.append(f"[dim] {k} {mode} [/dim]")
+        self.query_one("#mode-bar", Static).update("  ".join(parts))
+
     def on_mount(self) -> None:
+        self._update_mode_bar()
         self.query_one("#query-input", Input).focus()
         if self._initial_query:
             self._run_search(self._initial_query)
@@ -238,14 +248,17 @@ class SearchApp(App):
 
     def action_mode_keyword(self) -> None:
         self.search_mode = "keyword"
+        self._update_mode_bar()
         self._rerun_search()
 
     def action_mode_semantic(self) -> None:
         self.search_mode = "semantic"
+        self._update_mode_bar()
         self._rerun_search()
 
     def action_mode_hybrid(self) -> None:
         self.search_mode = "hybrid"
+        self._update_mode_bar()
         self._rerun_search()
 
     def _rerun_search(self) -> None:

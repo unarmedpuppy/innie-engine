@@ -53,6 +53,7 @@ def _register_commands():
         doctor,
         edit,
         fleet,
+        git_cmd,
         heartbeat,
         init,
         migrate,
@@ -121,6 +122,13 @@ def _register_commands():
     fleet_app.command("agents")(fleet.agents)
     fleet_app.command("stats")(fleet.stats)
     app.add_typer(fleet_app, name="fleet")
+
+    # Git subcommands
+    git_app = typer.Typer(help="Manage git backup settings (auto-commit, auto-push).")
+    git_app.command("auto-push")(git_cmd.auto_push)
+    git_app.command("auto-commit")(git_cmd.auto_commit)
+    git_app.command("status")(git_cmd.status)
+    app.add_typer(git_app, name="git")
 
     # Edit subcommands
     edit_app = typer.Typer(help="Edit agent identity files (SOUL.md, CONTEXT.md, user.md).")

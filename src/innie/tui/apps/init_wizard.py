@@ -171,6 +171,7 @@ class InitWizardApp(App):
             "embed_provider": "none",
             "enable_heartbeat": False,
             "enable_git": False,
+            "auto_push": False,
             "selected_backends": [],
             "install_alias": True,
             "alias_text": "",
@@ -291,6 +292,22 @@ class InitWizardApp(App):
                     id="f-mode",
                 )
             )
+            step_body.mount(Label("Git backup for knowledge base?", classes="field-label"))
+            step_body.mount(
+                Select(
+                    [("Yes — init git repo in ~/.innie", "yes"), ("No", "no")],
+                    value="yes" if self._data["enable_git"] else "no",
+                    id="f-git",
+                )
+            )
+            step_body.mount(Label("Auto-push to remote after heartbeat?", classes="field-label"))
+            step_body.mount(
+                Select(
+                    [("Yes — push on every heartbeat commit", "yes"), ("No — commit only", "no")],
+                    value="yes" if self._data["auto_push"] else "no",
+                    id="f-auto-push",
+                )
+            )
 
         elif step == 3:
             step_body.mount(Label("Select AI tools to integrate:", classes="field-label"))
@@ -331,10 +348,14 @@ class InitWizardApp(App):
         elif step == 5:
             backends_str = ", ".join(self._data["selected_backends"]) or "none"
             alias_note = "yes" if self._data["install_alias"] else "no"
+            git_note = ("yes" if self._data["enable_git"] else "no") + (
+                " + auto-push" if self._data["auto_push"] else ""
+            )
             summary = (
                 f"[b]Identity:[/b] {self._data['name']} / {self._data['tz']}\n"
                 f"[b]Agent:[/b] {self._data['agent_name']} — {self._data['role']}\n"
                 f"[b]Mode:[/b] {self._data['mode']}\n"
+                f"[b]Git:[/b] {git_note}\n"
                 f"[b]Backends:[/b] {backends_str}\n"
                 f"[b]Alias:[/b] {alias_note}\n\n"
                 "Press Continue to set up."
@@ -375,11 +396,18 @@ class InitWizardApp(App):
                     self._data["embed_provider"] = "docker"
                     self._data["enable_heartbeat"] = True
                     self._data["enable_git"] = True
+                    self._data["auto_push"] = True
                 elif mode == "lightweight":
                     self._data["embed_provider"] = "none"
                     self._data["enable_heartbeat"] = False
+                    self._data["enable_git"] = False
+                    self._data["auto_push"] = False
                 else:
                     self._data["embed_provider"] = "none"
+                git_val = self.query_one("#f-git", Select).value
+                self._data["enable_git"] = git_val == "yes"
+                push_val = self.query_one("#f-auto-push", Select).value
+                self._data["auto_push"] = push_val == "yes"
             elif step == 3:
                 selected = []
                 for bname in self._backends:
@@ -428,7 +456,20 @@ class InitWizardApp(App):
             pass
 
     def on_select_changed(self, event: Select.Changed) -> None:
-        pass  # handled in _collect_step
+        if event.select.id == "f-mode" and self.current_step == 2:
+            mode = event.value
+            try:
+                git_select = self.query_one("#f-git", Select)
+                push_select = self.query_one("#f-auto-push", Select)
+                if mode == "full":
+                    git_select.value = "yes"
+                    push_select.value = "yes"
+                elif mode == "lightweight":
+                    git_select.value = "no"
+                    push_select.value = "no"
+                # custom: leave as-is, let user decide
+            except Exception:
+                pass
 
     def watch_current_step(self, step: int) -> None:
         pass

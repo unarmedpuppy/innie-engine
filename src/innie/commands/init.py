@@ -223,7 +223,8 @@ def _execute_setup(
     embed_provider: str,
     enable_heartbeat: bool,
     enable_git: bool,
-    selected_backends: list[str],
+    auto_push: bool = False,
+    selected_backends: list[str] | None = None,
     install_alias: bool = False,
     alias_text: str = "",
     user_md: str = "",
@@ -250,10 +251,14 @@ def _execute_setup(
         f"enabled = {'true' if enable_heartbeat else 'false'}",
         1,
     )
-    # git.auto_commit is the only "auto_commit = false"
     config_content = config_content.replace(
         "auto_commit = false",
         f"auto_commit = {'true' if enable_git else 'false'}",
+        1,
+    )
+    config_content = config_content.replace(
+        "auto_push = false",
+        f"auto_push = {'true' if auto_push else 'false'}",
         1,
     )
     config_content = config_content.replace(
@@ -278,7 +283,7 @@ def _execute_setup(
 
     # 4. Install hooks for selected backends
     hooks_dir = Path(__file__).parent.parent / "hooks"
-    for bname in selected_backends:
+    for bname in (selected_backends or []):
         try:
             from innie.backends.registry import get_backend
 

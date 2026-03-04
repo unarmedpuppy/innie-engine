@@ -226,6 +226,9 @@ def _execute_setup(
     selected_backends: list[str],
     install_alias: bool = False,
     alias_text: str = "",
+    user_md: str = "",
+    soul_content: str = "",
+    context_content: str = "",
     update_source: str = "",
     update_installer: str = "uv",
 ):
@@ -267,12 +270,11 @@ def _execute_setup(
     console.print("  [green]✓[/green] Created config.toml")
 
     # 2. User profile
-    user_md = f"# {name}\n\nTimezone: {tz}\n"
-    (innie_home / "user.md").write_text(user_md)
+    (innie_home / "user.md").write_text(user_md or f"# {name}\n\nTimezone: {tz}\n")
     console.print("  [green]✓[/green] Created user.md")
 
     # 3. Create default agent
-    _create_agent(agent_name, role)
+    _create_agent(agent_name, role, soul_content=soul_content or None, context_content=context_content or None)
 
     # 4. Install hooks for selected backends
     hooks_dir = Path(__file__).parent.parent / "hooks"
@@ -479,7 +481,12 @@ docker-compose.yml
         console.print(f"  [yellow]![/yellow] git init failed: {result.stderr[:100]}")
 
 
-def _create_agent(name: str, role: str):
+def _create_agent(
+    name: str,
+    role: str,
+    soul_content: str | None = None,
+    context_content: str | None = None,
+):
     """Scaffold a new agent with all template files and directories."""
     from jinja2 import Environment, FileSystemLoader
 
@@ -492,15 +499,22 @@ def _create_agent(name: str, role: str):
     today = datetime.now().strftime("%Y-%m-%d")
     ctx = {"name": name, "role": role, "date": today}
 
-    # Render templates
+    # Render templates (allow caller-provided content to override SOUL/CONTEXT)
+    overrides = {
+        "SOUL.md": soul_content,
+        "CONTEXT.md": context_content,
+    }
     for tmpl_name, dest in [
         ("profile.yaml.j2", "profile.yaml"),
         ("SOUL.md.j2", "SOUL.md"),
         ("CONTEXT.md.j2", "CONTEXT.md"),
         ("HEARTBEAT.md.j2", "HEARTBEAT.md"),
     ]:
-        template = env.get_template(tmpl_name)
-        (agent / dest).write_text(template.render(**ctx))
+        if dest in overrides and overrides[dest]:
+            (agent / dest).write_text(overrides[dest])
+        else:
+            template = env.get_template(tmpl_name)
+            (agent / dest).write_text(template.render(**ctx))
 
     # Create data/ directory structure
     for subdir in [

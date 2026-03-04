@@ -8,7 +8,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
-from textual.widgets import Button, Checkbox, Input, Label, Select, Static
+from textual.widgets import Button, Checkbox, Input, Label, Select, Static, TextArea
 
 from innie.tui.theme import LUMON_CSS
 from innie.tui.widgets.floating_numbers import FloatingNumbers
@@ -111,6 +111,16 @@ class InitWizardApp(App):
     Checkbox:focus {
         border: solid #00d4c8;
     }
+    TextArea {
+        height: 10;
+        border: solid #1a1a35;
+        background: #050510;
+        color: #c8d8e8;
+        margin-top: 1;
+    }
+    TextArea:focus {
+        border: solid #00d4c8;
+    }
     #hint {
         color: #2a3a4a;
         margin-top: 2;
@@ -148,11 +158,15 @@ class InitWizardApp(App):
         super().__init__(**kwargs)
         self._local = local
         self._backends: dict = backends or {}
+        _default_name = os.environ.get("USER", "")
         self._data: dict[str, Any] = {
-            "name": os.environ.get("USER", ""),
+            "name": _default_name,
             "tz": "America/Chicago",
+            "user_md": f"# {_default_name}\n\nTimezone: America/Chicago\n",
             "agent_name": "innie",
             "role": "Work Second Brain",
+            "soul_content": "",
+            "context_content": "",
             "mode": "lightweight",
             "embed_provider": "none",
             "enable_heartbeat": False,
@@ -180,6 +194,25 @@ class InitWizardApp(App):
 
     def on_mount(self) -> None:
         self._render_step()
+
+    def _render_template(self, tmpl_name: str) -> str:
+        """Render a Jinja2 template with current wizard data."""
+        try:
+            from datetime import date
+            from pathlib import Path as _Path
+
+            from jinja2 import Environment, FileSystemLoader
+
+            templates_dir = _Path(__file__).parent.parent.parent / "templates"
+            env = Environment(loader=FileSystemLoader(str(templates_dir)))
+            tmpl = env.get_template(tmpl_name)
+            return tmpl.render(
+                name=self._data["agent_name"],
+                role=self._data["role"],
+                date=date.today().isoformat(),
+            )
+        except Exception:
+            return ""
 
     def _preview_alias(self) -> str:
         """Build a shell alias preview from collected wizard data."""
@@ -230,6 +263,8 @@ class InitWizardApp(App):
             step_body.mount(Input(value=self._data["name"], placeholder="name", id="f-name"))
             step_body.mount(Label("Timezone", classes="field-label"))
             step_body.mount(Input(value=self._data["tz"], placeholder="America/Chicago", id="f-tz"))
+            step_body.mount(Label("user.md — your identity for the agent (edit freely)", classes="field-label"))
+            step_body.mount(TextArea(self._data["user_md"], id="f-user-md"))
 
         elif step == 1:
             step_body.mount(Label("Agent name", classes="field-label"))
@@ -240,6 +275,12 @@ class InitWizardApp(App):
             step_body.mount(
                 Input(value=self._data["role"], placeholder="Work Second Brain", id="f-role")
             )
+            soul = self._data["soul_content"] or self._render_template("SOUL.md.j2")
+            step_body.mount(Label("SOUL.md — who this agent is", classes="field-label"))
+            step_body.mount(TextArea(soul, id="f-soul"))
+            ctx = self._data["context_content"] or self._render_template("CONTEXT.md.j2")
+            step_body.mount(Label("CONTEXT.md — working memory template", classes="field-label"))
+            step_body.mount(TextArea(ctx, id="f-context"))
 
         elif step == 2:
             step_body.mount(Label("Setup mode", classes="field-label"))
@@ -315,6 +356,7 @@ class InitWizardApp(App):
             if step == 0:
                 self._data["name"] = self.query_one("#f-name", Input).value or self._data["name"]
                 self._data["tz"] = self.query_one("#f-tz", Input).value or self._data["tz"]
+                self._data["user_md"] = self.query_one("#f-user-md", TextArea).text
             elif step == 1:
                 self._data["agent_name"] = (
                     self.query_one("#f-agent", Input).value or self._data["agent_name"]
@@ -322,6 +364,10 @@ class InitWizardApp(App):
                 self._data["role"] = (
                     self.query_one("#f-role", Input).value or self._data["role"]
                 )
+                self._data["soul_content"] = self.query_one("#f-soul", TextArea).text
+                self._data["context_content"] = self.query_one("#f-context", TextArea).text
+                # Reset alias preview if agent name changed
+                self._data["alias_text"] = ""
             elif step == 2:
                 mode = self.query_one("#f-mode", Select).value
                 self._data["mode"] = mode

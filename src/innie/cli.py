@@ -51,6 +51,7 @@ def _register_commands():
         backend,
         docker_services,
         doctor,
+        edit,
         fleet,
         heartbeat,
         init,
@@ -120,6 +121,13 @@ def _register_commands():
     fleet_app.command("agents")(fleet.agents)
     fleet_app.command("stats")(fleet.stats)
     app.add_typer(fleet_app, name="fleet")
+
+    # Edit subcommands
+    edit_app = typer.Typer(help="Edit agent identity files (SOUL.md, CONTEXT.md, user.md).")
+    edit_app.command("soul")(edit.soul)
+    edit_app.command("context")(edit.context)
+    edit_app.command("user")(edit.user)
+    app.add_typer(edit_app, name="edit")
 
     # Skill subcommands
     skill_app = typer.Typer(help="Knowledge base skills (slash commands).")

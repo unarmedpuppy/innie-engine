@@ -318,12 +318,22 @@ def _execute_setup(
 
 def _setup_docker_embeddings(innie_home: Path):
     """Copy docker-compose and start embedding service."""
-    compose_src = Path(__file__).parent.parent.parent.parent / "docker-compose.yml"
-    compose_dst = innie_home / "docker-compose.yml"
-    if compose_src.exists():
-        import shutil
+    import importlib.resources
 
-        shutil.copy2(compose_src, compose_dst)
+    compose_dst = innie_home / "docker-compose.yml"
+    try:
+        compose_data = importlib.resources.files("innie").joinpath("docker-compose.yml").read_text()
+        compose_src = None
+    except Exception:
+        compose_src = Path(__file__).parent.parent / "docker-compose.yml"
+        compose_data = None
+
+    if compose_data or (compose_src and compose_src.exists()):
+        if compose_data:
+            compose_dst.write_text(compose_data)
+        else:
+            import shutil
+            shutil.copy2(compose_src, compose_dst)
         console.print("  [green]✓[/green] Copied docker-compose.yml")
 
         # Check if Docker is available

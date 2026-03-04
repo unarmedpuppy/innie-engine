@@ -224,6 +224,8 @@ def _execute_setup(
     enable_heartbeat: bool,
     enable_git: bool,
     selected_backends: list[str],
+    install_alias: bool = False,
+    alias_text: str = "",
     update_source: str = "",
     update_installer: str = "uv",
 ):
@@ -284,17 +286,33 @@ def _execute_setup(
         except Exception as e:
             console.print(f"  [yellow]![/yellow] Failed to install {bname} hooks: {e}")
 
-    # 5. Docker compose for embeddings
+    # 5. Shell alias
+    if install_alias and alias_text:
+        try:
+            from innie.commands.alias import _get_rc_file
+
+            rc_file = _get_rc_file()
+            content = rc_file.read_text() if rc_file.exists() else ""
+            prefix = f"alias {agent_name}="
+            lines = [ln for ln in content.split("\n") if not ln.strip().startswith(prefix)]
+            lines.append(alias_text)
+            rc_file.write_text("\n".join(lines))
+            console.print(f"  [green]✓[/green] Alias '{agent_name}' added to {rc_file}")
+            console.print(f"  [dim]Run: source {rc_file}[/dim]")
+        except Exception as e:
+            console.print(f"  [yellow]![/yellow] Could not write alias: {e}")
+
+    # 7. Docker compose for embeddings
     if embed_provider == "docker":
         _setup_docker_embeddings(innie_home)
 
-    # 6. Heartbeat scheduler
+    # 8. Heartbeat scheduler
     if enable_heartbeat:
         _install_scheduler()
         scheduler = "launchd" if sys.platform == "darwin" else "cron"
         console.print(f"  [green]✓[/green] Installed heartbeat {scheduler} (every 30 min)")
 
-    # 7. Git init
+    # 9. Git init
     if enable_git:
         _setup_git(innie_home)
 

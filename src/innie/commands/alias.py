@@ -104,18 +104,25 @@ def add(name: str = typer.Argument(..., help="Agent name to create alias for")):
     rc_file = _get_rc_file()
     alias = _build_alias(name)
 
+    console.print(f"\n[dim]Generated alias:[/dim]")
+    console.print(f"  {alias}\n")
+
+    final = typer.prompt(
+        "Press Enter to install as-is, or paste an edited alias",
+        default=alias,
+        show_default=False,
+    )
+
+    prefix = f"alias {name}="
     if rc_file.exists():
         content = rc_file.read_text()
-        # Remove existing alias for this name
-        prefix = f"alias {name}="
         lines = [ln for ln in content.split("\n") if not ln.strip().startswith(prefix)]
-        lines.append(alias)
+        lines.append(final)
         rc_file.write_text("\n".join(lines))
     else:
-        rc_file.write_text(alias + "\n")
+        rc_file.write_text(final + "\n")
 
     console.print(f"Added alias [bold]{name}[/bold] to {rc_file}")
-    console.print(f"  [dim]{alias}[/dim]")
     console.print(f"\nRun: [dim]source {rc_file}[/dim]")
 
 

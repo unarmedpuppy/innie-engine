@@ -7,20 +7,19 @@ from typing import Any
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
-from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.widgets import Button, Checkbox, Input, Label, Select, Static
 
 from innie.tui.theme import LUMON_CSS
 from innie.tui.widgets.floating_numbers import FloatingNumbers
 
 _STEPS = [
-    "Identity",
-    "Agent",
-    "Mode",
-    "Backend",
-    "Backup",
-    "Confirm",
+    "Identity",  # 0
+    "Agent",     # 1
+    "Mode",      # 2
+    "Backend",   # 3 — which AI tools to integrate
+    "Alias",     # 4 — shell alias config
+    "Confirm",   # 5
 ]
 
 _SETUP_MODES = [
@@ -85,6 +84,11 @@ class InitWizardApp(App):
         color: #4a5a7a;
         margin-top: 1;
     }
+    .backend-label {
+        color: #4a5a7a;
+        margin-top: 1;
+        margin-bottom: 0;
+    }
     Input {
         background: #050510;
         border: solid #1a1a35;
@@ -97,6 +101,15 @@ class InitWizardApp(App):
         background: #050510;
         border: solid #1a1a35;
         color: #c8d8e8;
+    }
+    Checkbox {
+        background: #050510;
+        border: solid #1a1a35;
+        color: #c8d8e8;
+        margin: 0 0 0 1;
+    }
+    Checkbox:focus {
+        border: solid #00d4c8;
     }
     #hint {
         color: #2a3a4a;
@@ -131,9 +144,10 @@ class InitWizardApp(App):
 
     current_step: reactive[int] = reactive(0)
 
-    def __init__(self, local: bool = False, **kwargs) -> None:
+    def __init__(self, local: bool = False, backends: dict | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._local = local
+        self._backends: dict = backends or {}
         self._data: dict[str, Any] = {
             "name": os.environ.get("USER", ""),
             "tz": "America/Chicago",
@@ -144,10 +158,11 @@ class InitWizardApp(App):
             "enable_heartbeat": False,
             "enable_git": False,
             "selected_backends": [],
+            "install_alias": True,
+            "alias_text": "",
             "update_source": "",
             "update_installer": "uv",
         }
-        self._completed = False
 
     def compose(self) -> ComposeResult:
         yield FloatingNumbers(intensity="very_dim", id="numbers")
@@ -166,6 +181,28 @@ class InitWizardApp(App):
     def on_mount(self) -> None:
         self._render_step()
 
+    def _preview_alias(self) -> str:
+        """Build a shell alias preview from collected wizard data."""
+        agent = self._data["agent_name"]
+        backends = self._data["selected_backends"]
+
+        if "claude-code" in backends:
+            cmd = "claude"
+        elif "opencode" in backends:
+            cmd = "opencode"
+        elif "cursor" in backends:
+            cmd = "cursor ."
+        else:
+            cmd = "claude"
+
+        soul = f"~/.innie/agents/{agent}/SOUL.md"
+        ctx = f"~/.innie/agents/{agent}/CONTEXT.md"
+        return (
+            f"alias {agent}="
+            f"'INNIE_AGENT=\"{agent}\" {cmd}"
+            f" --append-system-prompt \"$(cat {soul} {ctx} 2>/dev/null)\"'"
+        )
+
     def _render_step(self) -> None:
         step = self.current_step
 
@@ -183,15 +220,9 @@ class InitWizardApp(App):
                 label.update(f"○ {_STEPS[i]}")
 
         title = self.query_one("#step-title", Static)
-        body = self.query_one("#step-body", Static)
         title.update(f"Step {step + 1} of {len(_STEPS)} — {_STEPS[step]}")
 
-        # Remove old inputs
-        for widget in self.query("#step-body Input, #step-body Select"):
-            widget.remove()
-
         step_body = self.query_one("#step-body")
-        # Clear and re-mount inputs for this step
         step_body.remove_children()
 
         if step == 0:
@@ -199,6 +230,7 @@ class InitWizardApp(App):
             step_body.mount(Input(value=self._data["name"], placeholder="name", id="f-name"))
             step_body.mount(Label("Timezone", classes="field-label"))
             step_body.mount(Input(value=self._data["tz"], placeholder="America/Chicago", id="f-tz"))
+
         elif step == 1:
             step_body.mount(Label("Agent name", classes="field-label"))
             step_body.mount(
@@ -208,6 +240,7 @@ class InitWizardApp(App):
             step_body.mount(
                 Input(value=self._data["role"], placeholder="Work Second Brain", id="f-role")
             )
+
         elif step == 2:
             step_body.mount(Label("Setup mode", classes="field-label"))
             step_body.mount(
@@ -217,30 +250,52 @@ class InitWizardApp(App):
                     id="f-mode",
                 )
             )
+
         elif step == 3:
-            step_body.mount(Label("Git backup for knowledge base?", classes="field-label"))
+            step_body.mount(Label("Select AI tools to integrate:", classes="field-label"))
+            if self._backends:
+                for bname, cls in self._backends.items():
+                    detected = cls().detect()
+                    label = bname if not detected else f"{bname}  [detected]"
+                    checked = bname in self._data["selected_backends"] or detected
+                    step_body.mount(
+                        Checkbox(label, value=checked, id=f"f-backend-{bname}")
+                    )
+            else:
+                step_body.mount(
+                    Static(
+                        "[dim]No backends discovered. Install Claude Code, OpenCode, or Cursor first.[/dim]",
+                        markup=True,
+                    )
+                )
+
+        elif step == 4:
+            # Build preview from current data if not yet set
+            if not self._data["alias_text"]:
+                self._data["alias_text"] = self._preview_alias()
+            step_body.mount(Label("Shell alias (edit if needed):", classes="field-label"))
+            step_body.mount(Input(value=self._data["alias_text"], id="f-alias-text"))
+            step_body.mount(Label("Install to shell rc file?", classes="field-label"))
             step_body.mount(
                 Select(
-                    [("Yes — initialize git repo in ~/.innie", "yes"), ("No", "no")],
-                    value="yes" if self._data["enable_git"] else "no",
-                    id="f-git",
+                    [
+                        ("Yes — add to .zshrc / .bashrc", "yes"),
+                        ("No — skip", "no"),
+                    ],
+                    value="yes" if self._data["install_alias"] else "no",
+                    id="f-install-alias",
                 )
             )
-        elif step == 4:
-            step_body.mount(Label("Update source", classes="field-label"))
-            step_body.mount(
-                Input(
-                    value=self._data["update_source"],
-                    placeholder="git+https://github.com/joshuajenquist/innie-engine.git",
-                    id="f-update-source",
-                )
-            )
+
         elif step == 5:
+            backends_str = ", ".join(self._data["selected_backends"]) or "none"
+            alias_note = "yes" if self._data["install_alias"] else "no"
             summary = (
                 f"[b]Identity:[/b] {self._data['name']} / {self._data['tz']}\n"
                 f"[b]Agent:[/b] {self._data['agent_name']} — {self._data['role']}\n"
                 f"[b]Mode:[/b] {self._data['mode']}\n"
-                f"[b]Git:[/b] {'yes' if self._data['enable_git'] else 'no'}\n\n"
+                f"[b]Backends:[/b] {backends_str}\n"
+                f"[b]Alias:[/b] {alias_note}\n\n"
                 "Press Continue to set up."
             )
             step_body.mount(Static(summary, markup=True))
@@ -280,11 +335,21 @@ class InitWizardApp(App):
                 else:
                     self._data["embed_provider"] = "none"
             elif step == 3:
-                git_val = self.query_one("#f-git", Select).value
-                self._data["enable_git"] = git_val == "yes"
+                selected = []
+                for bname in self._backends:
+                    try:
+                        cb = self.query_one(f"#f-backend-{bname}", Checkbox)
+                        if cb.value:
+                            selected.append(bname)
+                    except Exception:
+                        pass
+                self._data["selected_backends"] = selected
+                # Reset alias_text so it regenerates from new backend selection
+                self._data["alias_text"] = ""
             elif step == 4:
-                src = self.query_one("#f-update-source", Input).value
-                self._data["update_source"] = src
+                self._data["alias_text"] = self.query_one("#f-alias-text", Input).value
+                val = self.query_one("#f-install-alias", Select).value
+                self._data["install_alias"] = val == "yes"
         except Exception:
             pass
 
@@ -292,7 +357,7 @@ class InitWizardApp(App):
         self.exit(self._data)
 
     def on_select_changed(self, event: Select.Changed) -> None:
-        pass  # reactive updates handled in _collect_step
+        pass  # handled in _collect_step
 
     def watch_current_step(self, step: int) -> None:
         pass
@@ -300,6 +365,9 @@ class InitWizardApp(App):
 
 def run_init_wizard(local: bool = False) -> dict[str, Any] | None:
     """Run the wizard and return collected data, or None if cancelled."""
-    app = InitWizardApp(local=local)
+    from innie.backends.registry import discover_backends
+
+    backends = discover_backends()
+    app = InitWizardApp(local=local, backends=backends)
     result = app.run()
     return result

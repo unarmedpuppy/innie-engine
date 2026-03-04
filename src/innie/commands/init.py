@@ -318,6 +318,18 @@ def _execute_setup(
     console.print("  Run: [bold]innie status[/bold] to verify everything\n")
 
 
+def _docker_env() -> dict:
+    """Return environment dict for Docker subprocess calls, setting DOCKER_HOST for Colima if needed."""
+    env = os.environ.copy()
+    if "DOCKER_HOST" in env:
+        return env
+    colima_sock = Path.home() / ".colima" / "default" / "docker.sock"
+    if colima_sock.exists():
+        env["DOCKER_HOST"] = f"unix://{colima_sock}"
+        env.setdefault("DOCKER_API_VERSION", "1.43")
+    return env
+
+
 def _setup_docker_embeddings(innie_home: Path):
     """Copy docker-compose and start embedding service."""
     import importlib.resources
@@ -339,7 +351,9 @@ def _setup_docker_embeddings(innie_home: Path):
         console.print("  [green]✓[/green] Copied docker-compose.yml")
 
         # Ensure Docker daemon is running — try Colima first, then Docker Desktop
-        docker_check = subprocess.run(["docker", "info"], capture_output=True, text=True)
+        docker_check = subprocess.run(
+            ["docker", "info"], capture_output=True, text=True, env=_docker_env()
+        )
         if docker_check.returncode != 0:
             started = False
             # Try Colima
@@ -382,6 +396,7 @@ def _setup_docker_embeddings(innie_home: Path):
             cwd=innie_home,
             capture_output=True,
             text=True,
+            env=_docker_env(),
         )
         if result.returncode == 0:
             console.print("  [green]✓[/green] Embedding service started")

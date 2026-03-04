@@ -21,6 +21,20 @@ def _compose_file() -> Path:
     return paths.home() / "docker-compose.yml"
 
 
+def _docker_env() -> dict:
+    """Return environment dict for Docker subprocess calls, setting DOCKER_HOST for Colima if needed."""
+    import os
+
+    env = os.environ.copy()
+    if "DOCKER_HOST" in env:
+        return env
+    colima_sock = Path.home() / ".colima" / "default" / "docker.sock"
+    if colima_sock.exists():
+        env["DOCKER_HOST"] = f"unix://{colima_sock}"
+        env.setdefault("DOCKER_API_VERSION", "1.43")
+    return env
+
+
 def _run_compose(*args: str, capture: bool = False, profile: bool = False) -> subprocess.CompletedProcess:
     compose = _compose_file()
     if not compose.exists():
@@ -31,7 +45,7 @@ def _run_compose(*args: str, capture: bool = False, profile: bool = False) -> su
     if profile:
         cmd += ["--profile", "serve"]
     cmd += list(args)
-    return subprocess.run(cmd, capture_output=capture, text=True)
+    return subprocess.run(cmd, capture_output=capture, text=True, env=_docker_env())
 
 
 def _container_states() -> dict[str, dict]:

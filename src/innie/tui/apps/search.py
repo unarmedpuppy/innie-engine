@@ -1,8 +1,11 @@
-"""Interactive search browser — floating numbers idle state, live results."""
+"""Interactive search browser — side-by-side results + file preview."""
+
+import os
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.timer import Timer
 from textual.widgets import Footer, Input, Label, ListItem, ListView, Markdown, Static
@@ -19,13 +22,14 @@ class ResultItem(ListItem):
         self.result_snippet = snippet
 
     def compose(self) -> ComposeResult:
-        bar_len = int(self.result_score * 10)
-        bar = "█" * bar_len + ("▉" if bar_len < 10 else "")
+        # Show a shortened path + first line of snippet
+        home = str(Path.home())
+        display_path = self.result_path.replace(home, "~")
+        first_line = self.result_snippet.strip().splitlines()[0][:80] if self.result_snippet.strip() else ""
         score_str = f"{self.result_score:.2f}"
-        yield Label(
-            f"[dim]{self.result_path}[/dim]  [bold]{score_str}[/bold]  [cyan]{bar}[/cyan]",
-            markup=True,
-        )
+        yield Label(f"[bold]{display_path}[/bold]  [dim cyan]{score_str}[/dim cyan]", markup=True)
+        if first_line:
+            yield Label(f"[dim]{first_line}[/dim]", markup=True)
 
 
 class SearchApp(App):
@@ -69,19 +73,24 @@ class SearchApp(App):
         color: #4a5a7a;
         padding: 0 1;
     }
-    #results {
+    #content-area {
         height: 1fr;
+    }
+    #result-pane {
+        width: 35;
+        border-right: solid #1a1a35;
         background: #0d0d1a;
-        border: none;
     }
     ListView {
         background: transparent;
         border: none;
+        height: 1fr;
     }
     ListItem {
         background: transparent;
         padding: 0 1;
         color: #c8d8e8;
+        height: auto;
     }
     ListItem:hover {
         background: #1a1a35;
@@ -90,22 +99,21 @@ class SearchApp(App):
         background: #1a1a35;
         border-left: solid #00d4c8;
     }
-    #preview {
-        height: 10;
-        background: #0d0d1a;
-        border-top: solid #1a1a35;
+    #preview-pane {
+        width: 1fr;
+        background: #050510;
         padding: 1 2;
+        overflow-y: auto;
+    }
+    Markdown {
+        background: transparent;
         color: #c8d8e8;
     }
-    #no-query {
+    #no-results {
         width: 100%;
         height: 100%;
         align: center middle;
         color: #1a2a3a;
-        display: none;
-    }
-    #no-query.visible {
-        display: block;
     }
     """
     )
@@ -113,22 +121,22 @@ class SearchApp(App):
     BINDINGS = [
         Binding("escape", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit", show=False),
-        Binding("up", "move_up", "Up", show=True),
-        Binding("down", "move_down", "Down", show=True),
-        Binding("o", "open_file", "Open"),
+        Binding("up", "move_up", "Up", show=False),
+        Binding("down", "move_down", "Down", show=False),
+        Binding("enter", "open_file", "Open"),
+        Binding("o", "open_file", "Open", show=False),
         Binding("c", "copy_path", "Copy path"),
-        Binding("ctrl+k", "mode_keyword", "[K]eyword"),
-        Binding("ctrl+s", "mode_semantic", "[S]emantic"),
-        Binding("ctrl+h", "mode_hybrid", "[H]ybrid"),
+        Binding("ctrl+k", "mode_keyword", "Keyword"),
+        Binding("ctrl+s", "mode_semantic", "Semantic"),
+        Binding("ctrl+h", "mode_hybrid", "Hybrid"),
     ]
 
-    query_text: reactive[str] = reactive("")
     search_mode: reactive[str] = reactive("hybrid")
 
     def __init__(self, initial_query: str | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self._initial_query = initial_query or ""
-        self._results: list[dict] = []
+        self._results: list = []
         self._debounce_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
@@ -141,25 +149,26 @@ class SearchApp(App):
                     id="query-input",
                 )
             yield Static("", id="mode-bar", markup=True)
-            yield ListView(id="result-list")
-            yield Markdown("", id="preview")
-
-    def _update_mode_bar(self) -> None:
-        labels = {"hybrid": "ctrl+h", "keyword": "ctrl+k", "semantic": "ctrl+s"}
-        parts = []
-        for mode, key in labels.items():
-            k = key.replace("ctrl+", "^")
-            if mode == self.search_mode:
-                parts.append(f"[bold cyan reverse] {k} {mode} [/bold cyan reverse]")
-            else:
-                parts.append(f"[dim] {k} {mode} [/dim]")
-        self.query_one("#mode-bar", Static).update("  ".join(parts))
+            with Horizontal(id="content-area"):
+                with Vertical(id="result-pane"):
+                    yield ListView(id="result-list")
+                yield Markdown("*Type a query to search...*", id="preview")
 
     def on_mount(self) -> None:
         self._update_mode_bar()
         self.query_one("#query-input", Input).focus()
         if self._initial_query:
             self._run_search(self._initial_query)
+
+    def _update_mode_bar(self) -> None:
+        modes = [("hybrid", "^h"), ("keyword", "^k"), ("semantic", "^s")]
+        parts = []
+        for mode, key in modes:
+            if mode == self.search_mode:
+                parts.append(f"[bold cyan reverse] {key} {mode} [/bold cyan reverse]")
+            else:
+                parts.append(f"[dim] {key} {mode} [/dim]")
+        self.query_one("#mode-bar", Static).update("  ".join(parts))
 
     def on_input_changed(self, event: Input.Changed) -> None:
         q = event.value.strip()
@@ -169,7 +178,7 @@ class SearchApp(App):
         else:
             numbers.set_intensity("full")
             self.query_one("#result-list", ListView).clear()
-            self.query_one("#preview", Markdown).update("")
+            self.query_one("#preview", Markdown).update("*Type a query to search...*")
             return
 
         if self._debounce_timer:
@@ -180,7 +189,6 @@ class SearchApp(App):
         try:
             from innie.core import paths
             from innie.core.search import (
-                format_results,
                 open_db,
                 search_hybrid,
                 search_keyword,
@@ -189,6 +197,9 @@ class SearchApp(App):
 
             db_path = paths.index_db()
             if not db_path.exists():
+                self.query_one("#preview", Markdown).update(
+                    "*No index found. Run `innie index` first.*"
+                )
                 return
 
             conn = open_db(db_path)
@@ -209,16 +220,25 @@ class SearchApp(App):
     def _update_results(self, results: list) -> None:
         lv = self.query_one("#result-list", ListView)
         lv.clear()
+        if not results:
+            self.query_one("#preview", Markdown).update("*No results.*")
+            return
         for r in results:
             path = getattr(r, "path", str(r))
             score = getattr(r, "score", 0.0)
             snippet = getattr(r, "chunk", getattr(r, "content", ""))
-            lv.append(ResultItem(path=path, score=score, snippet=snippet[:200]))
+            lv.append(ResultItem(path=path, score=score, snippet=snippet))
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        if event.item and isinstance(event.item, ResultItem):
-            preview = self.query_one("#preview", Markdown)
-            preview.update(event.item.result_snippet[:500] or "*No preview*")
+        if not (event.item and isinstance(event.item, ResultItem)):
+            return
+        path = event.item.result_path
+        preview = self.query_one("#preview", Markdown)
+        try:
+            content = Path(path).read_text(encoding="utf-8", errors="ignore")
+            preview.update(content)
+        except OSError:
+            preview.update(f"*Could not read: {path}*")
 
     def action_move_up(self) -> None:
         self.query_one("#result-list", ListView).action_cursor_up()
@@ -227,10 +247,17 @@ class SearchApp(App):
         self.query_one("#result-list", ListView).action_cursor_down()
 
     def action_open_file(self) -> None:
-        import subprocess
         lv = self.query_one("#result-list", ListView)
-        if lv.highlighted_child and isinstance(lv.highlighted_child, ResultItem):
-            path = lv.highlighted_child.result_path
+        if not (lv.highlighted_child and isinstance(lv.highlighted_child, ResultItem)):
+            return
+        path = lv.highlighted_child.result_path
+        editor = os.environ.get("EDITOR", "")
+        if editor:
+            with self.suspend():
+                import subprocess
+                subprocess.run([editor, path])
+        else:
+            import subprocess
             try:
                 subprocess.Popen(["open", path])
             except Exception:

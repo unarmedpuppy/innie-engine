@@ -371,7 +371,7 @@ def _setup_docker_embeddings(innie_home: Path):
                         console.print("  [green]✓[/green] Docker Desktop ready")
             if not started:
                 console.print("  [yellow]![/yellow] Docker unavailable. Start it manually, then run:")
-                console.print("    innie embeddings up")
+                console.print("    innie docker up")
                 return
 
         console.print("  Starting embedding service...")
@@ -383,10 +383,10 @@ def _setup_docker_embeddings(innie_home: Path):
         )
         if result.returncode == 0:
             console.print("  [green]✓[/green] Embedding service started")
-            console.print("  Manage it later with: [bold]innie embeddings up/down/status[/bold]")
+            console.print("  Manage it later with: [bold]innie docker up/down/status[/bold]")
         else:
             console.print(f"  [yellow]![/yellow] Docker compose failed: {result.stderr[:200]}")
-            console.print("  You can start it later: [bold]innie embeddings up[/bold]")
+            console.print("  You can start it later: [bold]innie docker up[/bold]")
     else:
         console.print(
             "  [yellow]![/yellow] docker-compose.yml not found in package — "

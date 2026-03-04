@@ -14,8 +14,8 @@ def _register_commands():
         agent,
         alias,
         backend,
+        docker_services,
         doctor,
-        embeddings,
         fleet,
         heartbeat,
         init,
@@ -46,13 +46,14 @@ def _register_commands():
     app.command("update")(update.update)
     app.command("secrets")(secrets.scan)
 
-    # Embeddings subcommands
-    emb_app = typer.Typer(help="Manage the local embedding service (Docker).")
-    emb_app.command("up")(embeddings.up)
-    emb_app.command("down")(embeddings.down)
-    emb_app.command("status")(embeddings.emb_status)
-    emb_app.command("logs")(embeddings.logs)
-    app.add_typer(emb_app, name="embeddings")
+    # Docker subcommands
+    docker_app = typer.Typer(help="Manage the full Docker services stack (embeddings, heartbeat, serve).")
+    docker_app.command("up")(docker_services.up)
+    docker_app.command("down")(docker_services.down)
+    docker_app.command("restart")(docker_services.restart)
+    docker_app.command("status")(docker_services.docker_status)
+    docker_app.command("logs")(docker_services.logs)
+    app.add_typer(docker_app, name="docker")
 
     # Alias subcommands
     alias_app = typer.Typer(help="Manage shell aliases.")

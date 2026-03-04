@@ -216,7 +216,7 @@ def _setup_docker_embeddings(innie_home: Path):
                         console.print("  [green]✓[/green] Docker Desktop ready")
             if not started:
                 console.print("  [yellow]![/yellow] Docker unavailable. Start it manually, then run:")
-                console.print("    innie embeddings up")
+                console.print("    innie docker up")
                 return
 
         console.print("  Starting embedding service...")
@@ -228,10 +228,10 @@ def _setup_docker_embeddings(innie_home: Path):
         )
         if result.returncode == 0:
             console.print("  [green]✓[/green] Embedding service started")
-            console.print("  Manage it later with: [bold]innie embeddings up/down/status[/bold]")
+            console.print("  Manage it later with: [bold]innie docker up/down/status[/bold]")
         else:
             console.print(f"  [yellow]![/yellow] Docker compose failed: {result.stderr[:200]}")
-            console.print("  You can start it later: [bold]innie embeddings up[/bold]")
+            console.print("  You can start it later: [bold]innie docker up[/bold]")
     else:
         console.print(
             "  [yellow]![/yellow] docker-compose.yml not found in package — "
@@ -983,11 +983,19 @@ innie search "jwt" 2>/dev/null     # plain Rich output
 # 4. Docker exec has no TTY — plain output
 docker compose exec heartbeat innie heartbeat run
 
-# 5. Serve profile
+# 5. Docker command group (replaces `innie embeddings`)
+innie docker status              # table: embeddings / heartbeat / serve
+innie docker up                  # starts embeddings + heartbeat
+innie docker up --serve          # also starts serve on port 8013
+innie docker logs embeddings     # filter to one service
+innie docker restart heartbeat   # restart one service
+innie docker down                # stop stack
+
+# 6. Serve profile
 docker compose --profile serve up -d
 curl http://localhost:8013/health   # should respond
 
-# 6. Full init with Docker
+# 7. Full init with Docker
 innie init  # select Full — should start Colima or Docker Desktop automatically
 innie status  # Embeddings: healthy
 ```
@@ -1023,3 +1031,359 @@ innie status  # Embeddings: healthy
 | `docs/adrs/index.md` | Add row |
 | `docs/getting-started.md` | TUI section |
 | `docs/architecture/overview.md` | 9th subsystem, serve in Docker table |
+| `src/innie/commands/docker_services.py` | New — replaces `embeddings.py` |
+| `src/innie/commands/embeddings.py` | Retired (file kept, no longer imported) |
+| `src/innie/cli.py` | Replace `embeddings` typer group with `docker` |
+| `src/innie/commands/doctor.py` | Fix hint: `innie embeddings up` → `innie docker up` |
+| `src/innie/commands/init.py` | Fix 3 hint strings: `innie embeddings` → `innie docker` |
+
+---
+
+## Part 17: `innie docker` — Full Stack Command Group
+
+`innie embeddings` only managed the embedding container and carried a `provider != "docker"` guard. With the compose stack now having 3 services (embeddings, heartbeat, serve), the command group was misnamed and incomplete. Replace it with `innie docker`.
+
+### Why replace instead of extend
+
+- `innie embeddings up` would start all compose services but was named as if it only managed embeddings
+- The `serve` profile service needs `--serve` flags on `up` and `down`
+- A `restart` subcommand was missing
+- The `status` command needed to show all 3 services in a table
+- The provider guard (`if provider != "docker": exit`) is wrong — `innie docker` is always about the Docker stack
+
+### New file: `src/innie/commands/docker_services.py`
+
+```python
+"""innie docker — manage the full Docker services stack (embeddings, heartbeat, serve)."""
+
+import json
+import subprocess
+from pathlib import Path
+from typing import Optional
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from innie.core import paths
+from innie.core.config import get
+
+console = Console()
+
+_SERVICES = ["embeddings", "heartbeat", "serve"]
+
+
+def _compose_file() -> Path:
+    return paths.home() / "docker-compose.yml"
+
+
+def _run_compose(*args: str, capture: bool = False, profile: bool = False) -> subprocess.CompletedProcess:
+    compose = _compose_file()
+    if not compose.exists():
+        console.print("[red]docker-compose.yml not found at ~/.innie/docker-compose.yml[/red]")
+        console.print("  Re-run [bold]innie init[/bold] and select Docker embedding provider.")
+        raise typer.Exit(1)
+    cmd = ["docker", "compose", "-f", str(compose)]
+    if profile:
+        cmd += ["--profile", "serve"]
+    cmd += list(args)
+    return subprocess.run(cmd, capture_output=capture, text=True)
+
+
+def _container_states() -> dict[str, dict]:
+    """Return {service_name: {status, health}} from `docker compose ps`."""
+    result = _run_compose("ps", "--format", "json", capture=True, profile=True)
+    states: dict[str, dict] = {}
+    if result.returncode != 0 or not result.stdout.strip():
+        return states
+    for line in result.stdout.strip().splitlines():
+        try:
+            obj = json.loads(line)
+            svc = obj.get("Service", "")
+            if svc:
+                states[svc] = {
+                    "status": obj.get("State", "unknown"),
+                    "health": obj.get("Health", ""),
+                }
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return states
+
+
+def up(
+    serve: bool = typer.Option(False, "--serve", help="Also start the API server (serve profile)"),
+    build: bool = typer.Option(False, "--build", help="Rebuild images before starting"),
+):
+    """Start Docker services (embeddings + heartbeat, optionally + serve)."""
+    args = ["up", "-d"]
+    if build:
+        args.append("--build")
+
+    result = _run_compose(*args, profile=serve)
+    if result.returncode != 0:
+        console.print(result.stderr)
+        raise typer.Exit(result.returncode)
+
+    services_started = ["embeddings", "heartbeat"]
+    if serve:
+        services_started.append("serve")
+    console.print(f"  Started: {', '.join(services_started)}")
+
+    import time
+    import httpx
+
+    emb_url = get("embedding.docker.url", "http://localhost:8766")
+    console.print(f"  Waiting for embeddings at {emb_url} ...", end=" ")
+    for _ in range(20):
+        try:
+            resp = httpx.get(f"{emb_url}/health", timeout=2.0)
+            if resp.status_code == 200:
+                console.print("[green]ready[/green]")
+                break
+        except Exception:
+            pass
+        time.sleep(1)
+    else:
+        console.print("[yellow]timeout[/yellow]")
+        console.print("  Embeddings may still be starting (model download can take a few minutes).")
+
+    if serve:
+        serve_port = 8013
+        console.print(f"  API server: http://localhost:{serve_port}")
+
+    console.print("  Run [bold]innie docker status[/bold] to check all services.")
+
+
+def down(
+    serve: bool = typer.Option(False, "--serve", help="Include serve profile containers"),
+):
+    """Stop all Docker services."""
+    result = _run_compose("down", profile=serve)
+    if result.returncode == 0:
+        console.print("  [green]✓[/green] All Docker services stopped.")
+    else:
+        console.print(result.stderr)
+        raise typer.Exit(result.returncode)
+
+
+def restart(
+    service: Optional[str] = typer.Argument(
+        None, help="Service to restart: embeddings, heartbeat, serve (default: all)"
+    ),
+):
+    """Restart one or all Docker services."""
+    args = ["restart"]
+    if service:
+        if service not in _SERVICES:
+            console.print(f"[red]Unknown service '{service}'. Choose from: {', '.join(_SERVICES)}[/red]")
+            raise typer.Exit(1)
+        args.append(service)
+    result = _run_compose(*args, profile=(service == "serve" or service is None))
+    if result.returncode == 0:
+        target = service or "all services"
+        console.print(f"  [green]✓[/green] Restarted {target}.")
+    else:
+        console.print(result.stderr)
+        raise typer.Exit(result.returncode)
+
+
+def docker_status():
+    """Show status of all Docker services."""
+    compose = _compose_file()
+    if not compose.exists():
+        console.print("[dim]No docker-compose.yml at ~/.innie/ — Docker stack not configured.[/dim]")
+        console.print("  Run [bold]innie init[/bold] and select Docker embedding provider.")
+        return
+
+    states = _container_states()
+
+    table = Table(title="Docker Services", show_header=True, header_style="bold")
+    table.add_column("Service", style="bold")
+    table.add_column("State")
+    table.add_column("Health")
+    table.add_column("Notes")
+
+    # Embeddings
+    emb = states.get("embeddings", {})
+    emb_state = emb.get("status", "stopped")
+    emb_health = ""
+    emb_note = ""
+    if emb_state == "running":
+        import httpx
+        emb_url = get("embedding.docker.url", "http://localhost:8766")
+        try:
+            resp = httpx.get(f"{emb_url}/health", timeout=2.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                emb_health = "[green]healthy[/green]"
+                emb_note = f"model: {data.get('model', 'unknown')}"
+            else:
+                emb_health = f"[yellow]{resp.status_code}[/yellow]"
+        except Exception:
+            emb_health = "[red]unreachable[/red]"
+            emb_note = "http://localhost:8766"
+        state_str = "[green]running[/green]"
+    else:
+        state_str = "[dim]stopped[/dim]"
+        emb_note = "innie docker up"
+    table.add_row("embeddings", state_str, emb_health, emb_note)
+
+    # Heartbeat
+    hb = states.get("heartbeat", {})
+    hb_state = hb.get("status", "stopped")
+    hb_health = ""
+    hb_note = ""
+    if hb_state == "running":
+        hb_state_str = "[green]running[/green]"
+        try:
+            import json as _json
+            import time
+
+            state_file = paths.heartbeat_state(paths.active_agent())
+            if state_file.exists():
+                hb_data = _json.loads(state_file.read_text())
+                last_run = hb_data.get("last_run", 0)
+                if last_run:
+                    ago = int(time.time() - last_run)
+                    if ago < 60:
+                        hb_note = f"last run: {ago}s ago"
+                    elif ago < 3600:
+                        hb_note = f"last run: {ago // 60}m ago"
+                    else:
+                        hb_note = f"last run: {ago // 3600}h ago"
+        except Exception:
+            pass
+    else:
+        hb_state_str = "[dim]stopped[/dim]"
+        hb_note = "innie docker up"
+    table.add_row("heartbeat", hb_state_str, hb_health, hb_note)
+
+    # Serve
+    srv = states.get("serve", {})
+    srv_state = srv.get("status", "stopped")
+    if srv_state == "running":
+        srv_state_str = "[green]running[/green]"
+        serve_port = 8013
+        import httpx
+        try:
+            resp = httpx.get(f"http://localhost:{serve_port}/health", timeout=2.0)
+            srv_health = "[green]healthy[/green]" if resp.status_code == 200 else f"[yellow]{resp.status_code}[/yellow]"
+        except Exception:
+            srv_health = "[red]unreachable[/red]"
+        srv_note = f"http://localhost:{serve_port}"
+    else:
+        srv_state_str = "[dim]stopped[/dim]"
+        srv_health = ""
+        srv_note = "innie docker up --serve"
+    table.add_row("serve", srv_state_str, srv_health, srv_note)
+
+    console.print(table)
+
+
+def logs(
+    service: Optional[str] = typer.Argument(
+        None, help="Service to show logs for: embeddings, heartbeat, serve (default: all)"
+    ),
+    follow: bool = typer.Option(False, "-f", "--follow", help="Stream logs"),
+    tail: int = typer.Option(50, "--tail", help="Number of lines to show"),
+):
+    """Show container logs (all services or one)."""
+    if service and service not in _SERVICES:
+        console.print(f"[red]Unknown service '{service}'. Choose from: {', '.join(_SERVICES)}[/red]")
+        raise typer.Exit(1)
+
+    args = ["logs", f"--tail={tail}"]
+    if follow:
+        args.append("-f")
+    if service:
+        args.append(service)
+
+    result = _run_compose(*args, profile=True)
+    if result.returncode != 0:
+        raise typer.Exit(result.returncode)
+```
+
+Key differences from `embeddings.py`:
+- No `provider != "docker"` guard — `innie docker` always operates the compose stack
+- `--serve` flag on `up` and `down` passes `--profile serve` to docker compose
+- `restart` subcommand (new) — restarts one service or all
+- `docker_status()` shows all 3 services with container state + HTTP health check
+- `logs` takes optional service name to filter; defaults to all with `profile=True`
+- `_container_states()` parses `docker compose ps --format json` as NDJSON (one JSON object per line)
+- `_run_compose(..., profile=True)` adds `--profile serve` so the serve container appears in ps/logs output even when not running
+
+### Register in `cli.py`
+
+Replace the `emb_app` block with:
+
+```python
+# Before:
+from innie.commands import (
+    ...
+    embeddings,
+    ...
+)
+
+emb_app = typer.Typer(help="Manage the local embedding service (Docker).")
+emb_app.command("up")(embeddings.up)
+emb_app.command("down")(embeddings.down)
+emb_app.command("status")(embeddings.emb_status)
+emb_app.command("logs")(embeddings.logs)
+app.add_typer(emb_app, name="embeddings")
+
+# After:
+from innie.commands import (
+    ...
+    docker_services,
+    ...
+)
+
+docker_app = typer.Typer(help="Manage the full Docker services stack (embeddings, heartbeat, serve).")
+docker_app.command("up")(docker_services.up)
+docker_app.command("down")(docker_services.down)
+docker_app.command("restart")(docker_services.restart)
+docker_app.command("status")(docker_services.docker_status)
+docker_app.command("logs")(docker_services.logs)
+app.add_typer(docker_app, name="docker")
+```
+
+Remove `embeddings` from the import list. The old `embeddings.py` file can be left in place (it is no longer imported).
+
+### Fix error references
+
+In `commands/doctor.py` line ~178:
+```python
+# Before:
+check("Embedding service healthy", False, "Run: innie embeddings up")
+
+# After:
+check("Embedding service healthy", False, "Run: innie docker up")
+```
+
+In `commands/init.py` (3 occurrences in `_setup_docker_embeddings`):
+```python
+# Before:
+console.print("    innie embeddings up")
+console.print("  Manage it later with: [bold]innie embeddings up/down/status[/bold]")
+console.print("  You can start it later: [bold]innie embeddings up[/bold]")
+
+# After:
+console.print("    innie docker up")
+console.print("  Manage it later with: [bold]innie docker up/down/status[/bold]")
+console.print("  You can start it later: [bold]innie docker up[/bold]")
+```
+
+### Updated verification (add to Part 15)
+
+```bash
+# Docker command group
+innie docker status          # table showing embeddings / heartbeat / serve
+innie docker up              # starts embeddings + heartbeat
+innie docker up --serve      # also starts serve on port 8013
+innie docker logs            # all container logs
+innie docker logs embeddings # embeddings container only
+innie docker restart         # restart all
+innie docker restart heartbeat  # restart one service
+innie docker down            # stops embeddings + heartbeat
+innie docker down --serve    # also stops serve container
+```

@@ -175,7 +175,7 @@ def doctor():
             resp = httpx.get(f"{url}/health", timeout=3.0)
             check("Embedding service healthy", resp.status_code == 200)
         except Exception:
-            check("Embedding service healthy", False, "Run: innie embeddings up")
+            check("Embedding service healthy", False, "Run: innie docker up")
 
     # 11. Index exists
     check("Semantic index exists", paths.index_db(agent).exists(), "Run: innie index")

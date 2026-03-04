@@ -12,46 +12,5 @@ services:
       timeout: 5s
       retries: 3
 
-  heartbeat:
-    build:
-      context: .
-      dockerfile: services/scheduler/Dockerfile
-    volumes:
-      - ${INNIE_HOME:-~/.innie}:/root/.innie
-    environment:
-      - INNIE_HOME=/root/.innie
-      - INNIE_AGENT=${INNIE_AGENT:-innie}
-      - INNIE_HEARTBEAT_INTERVAL=${INNIE_HEARTBEAT_INTERVAL:-1800}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-    env_file:
-      - path: .env.heartbeat
-        required: false
-    restart: unless-stopped
-    depends_on:
-      embeddings:
-        condition: service_healthy
-
-  serve:
-    profiles: ["serve"]
-    build:
-      context: .
-      dockerfile: services/serve/Dockerfile
-    volumes:
-      - ${INNIE_HOME:-~/.innie}:/root/.innie
-    ports:
-      - "${INNIE_SERVE_PORT:-8013}:8013"
-    environment:
-      - INNIE_HOME=/root/.innie
-      - INNIE_AGENT=${INNIE_AGENT:-innie}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-    env_file:
-      - path: .env.heartbeat
-        required: false
-    restart: unless-stopped
-    depends_on:
-      embeddings:
-        condition: service_healthy
-
 volumes:
   embeddings-cache:

@@ -71,9 +71,8 @@ def _build_alias(name: str) -> str:
     if model:
         parts.append(f"--model {model}")
 
-    # Permissions
-    if profile.permissions == "yolo":
-        parts.append("--dangerously-skip-permissions")
+    # Always accept permissions for unattended use
+    parts.append("--dangerously-skip-permissions")
 
     # System prompt injection — assemble SOUL + CONTEXT + user.md
     inject_files = []

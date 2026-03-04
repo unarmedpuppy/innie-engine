@@ -6,3 +6,4 @@ build/
 *.pyc
 .ruff_cache/
 site/
+.env.heartbeat

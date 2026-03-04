@@ -189,10 +189,46 @@ innie heartbeat run --agent mybot --dry-run   # preview only
 
 # See what would be processed
 innie heartbeat status
+```
 
-# As a cron job (every 30 minutes)
+### Scheduling Options
+
+**Option 1: Docker scheduler (recommended for Docker users)**
+
+If you're already running the embedding service via Docker, add the heartbeat scheduler to the same stack:
+
+```bash
+cp .env.heartbeat.example .env.heartbeat   # fill in ANTHROPIC_API_KEY or leave blank for Ollama
+docker compose up -d
+```
+
+The `heartbeat` container mounts `~/.innie` directly and runs `innie heartbeat run` every 30 minutes (configurable via `INNIE_HEARTBEAT_INTERVAL`). The container and host CLI share the same files — no sync required.
+
+**Constraint:** The Docker scheduler only works with HTTP inference backends (`provider = "anthropic"` or `provider = "external"`). Subprocess-based inference (local `claude`, `opencode`) cannot run inside a container. Use host cron for those cases.
+
+**Ollama on host + Docker scheduler:**
+```toml
+# ~/.innie/config.toml
+[heartbeat]
+provider = "external"
+external_url = "http://host.docker.internal:11434/v1"   # Mac/Windows
+# external_url = "http://172.17.0.1:11434/v1"           # Linux
+model = "qwen3:4b"
+```
+
+**Option 2: Host cron**
+
+```bash
+# Enable (registers the cron entry)
+innie heartbeat enable
+
+# Equivalent cron entry
 */30 * * * * innie heartbeat run --agent innie >> ~/.innie/heartbeat.log 2>&1
 ```
+
+Works with any inference backend, including subprocess-based ones.
+
+See [ADR-0029](../adrs/0029-containerized-heartbeat-scheduler.md) for the Docker scheduler design decisions.
 
 ---
 

@@ -510,6 +510,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#terminal-ui-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminal UI (TUI)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#initialize" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -550,6 +561,67 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#containerized-heartbeat-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Containerized Heartbeat (Recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Containerized Heartbeat (Recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ollama-external-inference-no-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama / External Inference (No API Key)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2140,6 +2212,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#terminal-ui-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Terminal UI (TUI)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#initialize" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2180,6 +2263,67 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#containerized-heartbeat-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Containerized Heartbeat (Recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Containerized Heartbeat (Recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ollama-external-inference-no-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama / External Inference (No API Key)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2289,6 +2433,46 @@
 </div>
 <p><strong>Requirements:</strong> Python 3.12+, a terminal, an AI coding assistant. See <a href="../adrs/0025-uv-primary-distribution/">ADR-0025</a> for why uv is the primary distribution method.</p>
 <hr />
+<h2 id="terminal-ui-tui">Terminal UI (TUI)<a class="headerlink" href="#terminal-ui-tui" title="Permanent link">&para;</a></h2>
+<p>innie-engine includes an optional interactive terminal UI built on <a href="https://textual.textualize.io/">Textual</a>. The design language is the Lumon MDR terminal from Severance — dark, corporate, CRT phosphor teal on near-black. The centrepiece is a floating numbers ambient background that appears across all screens.</p>
+<p><strong>Auto-detection:</strong> TUI activates automatically when stdout and stdin are TTYs (same pattern as <code>bat</code>/<code>delta</code>). Piped output, Docker exec, and scripts always get plain Rich output — no flag needed.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>TTY (interactive)</th>
+<th>Piped (non-interactive)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>innie init</code></td>
+<td>Boot animation + wizard</td>
+<td>Plain prompts</td>
+</tr>
+<tr>
+<td><code>innie search</code></td>
+<td>Floating numbers browser</td>
+<td>Plain results table</td>
+</tr>
+<tr>
+<td><code>innie search "query"</code></td>
+<td>Pre-filled browser</td>
+<td>Plain results</td>
+</tr>
+<tr>
+<td><code>innie heartbeat run</code></td>
+<td>Live phase progress</td>
+<td>Plain console output</td>
+</tr>
+<tr>
+<td><code>innie trace list</code></td>
+<td>Interactive session browser</td>
+<td>Plain table</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h2 id="initialize">Initialize<a class="headerlink" href="#initialize" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>innie<span class="w"> </span>init
 </code></pre></div>
@@ -2386,68 +2570,118 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># cron: every 30 minutes</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>*/30<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>innie<span class="w"> </span>heartbeat<span class="w"> </span>run<span class="w"> </span>--agent<span class="w"> </span>innie
 </code></pre></div></p>
+<p>Or use the containerized scheduler (see below).</p>
+<hr />
+<h2 id="containerized-heartbeat-recommended">Containerized Heartbeat (Recommended)<a class="headerlink" href="#containerized-heartbeat-recommended" title="Permanent link">&para;</a></h2>
+<p>The heartbeat scheduler runs as a Docker container alongside the embedding service — no host cron, no daemon required.</p>
+<p><strong>Prerequisite:</strong> The container can only reach HTTP inference backends. Supported:</p>
+<ul>
+<li><code>provider = "anthropic"</code> → <code>ANTHROPIC_API_KEY</code> in env</li>
+<li><code>provider = "external"</code> → any OpenAI-compatible URL (e.g. local Ollama)</li>
+</ul>
+<p>If your inference backend is a local CLI tool (<code>claude</code>, <code>opencode</code>, etc.), use host cron instead: <code>innie heartbeat enable</code>.</p>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># 1. Copy the example env file and fill in your API key</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>cp<span class="w"> </span>.env.heartbeat.example<span class="w"> </span>.env.heartbeat
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># edit .env.heartbeat: set ANTHROPIC_API_KEY=sk-ant-...</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># 2. Start both services</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<h3 id="ollama-external-inference-no-api-key">Ollama / External Inference (No API Key)<a class="headerlink" href="#ollama-external-inference-no-api-key" title="Permanent link">&para;</a></h3>
+<p>If Ollama is running natively on your host:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># .env.heartbeat — leave API keys empty</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># ~/.innie/config.toml</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">[heartbeat]</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;external&quot;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">external_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://host.docker.internal:11434/v1&quot;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;qwen3:4b&quot;</span>
+</code></pre></div>
+<blockquote>
+<p><strong>Linux note:</strong> <code>host.docker.internal</code> doesn't resolve automatically on Linux. Use <code>172.17.0.1</code> or add <code>--add-host=host.docker.internal:host-gateway</code> to the compose service.</p>
+</blockquote>
+<h3 id="operations">Operations<a class="headerlink" href="#operations" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># View scheduler logs</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>heartbeat
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Trigger a heartbeat manually</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>heartbeat<span class="w"> </span>innie<span class="w"> </span>heartbeat<span class="w"> </span>run
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Check agent status</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>heartbeat<span class="w"> </span>innie<span class="w"> </span>heartbeat<span class="w"> </span>status
+</code></pre></div>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p>The container mounts <code>~/.innie</code> from your host as <code>/root/.innie</code>. The container and host CLI share the exact same files — no sync required. Sessions written by your Stop hook are picked up by the container on its next interval, and journal entries written by the container are immediately readable by your host CLI.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>Host: ~/.innie/agents/innie/state/sessions/2026-03-04.md  ← written by Stop hook
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>Container: every 30 min → innie heartbeat run
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  → reads  /root/.innie/agents/innie/state/sessions/
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>  → writes /root/.innie/agents/innie/data/journal/
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>  → calls  http://embeddings:8766 (internal Docker network)
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>Host: innie search &quot;...&quot; → reads the newly indexed journal entries
+</code></pre></div>
 <hr />
 <h2 id="use-skills">Use Skills<a class="headerlink" href="#use-skills" title="Permanent link">&para;</a></h2>
 <p>Skills are structured knowledge entry commands. Run them from inside your AI assistant session:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>/daily Built the auth system today, hit a JWT edge case with refresh tokens
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>/learn patterns &quot;RRF Search&quot; &quot;Reciprocal rank fusion combines keyword and vector results&quot;
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>/adr &quot;Use SQLite for local storage&quot; &quot;Need zero-dependency embedded storage&quot;
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>/meeting &quot;Team sync&quot; --attendees &quot;alice bob&quot; --notes &quot;Decided to ship Friday&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>/daily Built the auth system today, hit a JWT edge case with refresh tokens
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>/learn patterns &quot;RRF Search&quot; &quot;Reciprocal rank fusion combines keyword and vector results&quot;
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>/adr &quot;Use SQLite for local storage&quot; &quot;Need zero-dependency embedded storage&quot;
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>/meeting &quot;Team sync&quot; --attendees &quot;alice bob&quot; --notes &quot;Decided to ship Friday&quot;
 </code></pre></div>
 <p>Or from the CLI:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>innie<span class="w"> </span>skill<span class="w"> </span>run<span class="w"> </span>daily<span class="w"> </span>--args<span class="w"> </span><span class="s1">&#39;{&quot;summary&quot;: &quot;Shipped the auth feature&quot;}&#39;</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>innie<span class="w"> </span>skill<span class="w"> </span>list
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>innie<span class="w"> </span>skill<span class="w"> </span>run<span class="w"> </span>daily<span class="w"> </span>--args<span class="w"> </span><span class="s1">&#39;{&quot;summary&quot;: &quot;Shipped the auth feature&quot;}&#39;</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>innie<span class="w"> </span>skill<span class="w"> </span>list
 </code></pre></div></p>
 <hr />
 <h2 id="search-the-knowledge-base">Search the Knowledge Base<a class="headerlink" href="#search-the-knowledge-base" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>innie<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;JWT refresh token edge cases&quot;</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>innie<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;database schema decisions&quot;</span><span class="w"> </span>--mode<span class="w"> </span>keyword
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>innie<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;what did we decide about caching&quot;</span><span class="w"> </span>--mode<span class="w"> </span>semantic
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>innie<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;JWT refresh token edge cases&quot;</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>innie<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;database schema decisions&quot;</span><span class="w"> </span>--mode<span class="w"> </span>keyword
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>innie<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;what did we decide about caching&quot;</span><span class="w"> </span>--mode<span class="w"> </span>semantic
 </code></pre></div>
 <hr />
 <h2 id="view-session-traces">View Session Traces<a class="headerlink" href="#view-session-traces" title="Permanent link">&para;</a></h2>
 <p>Every session and tool call is automatically traced to a SQLite database. Query traces from the CLI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>innie<span class="w"> </span>trace<span class="w"> </span>list<span class="w">                    </span><span class="c1"># Recent sessions with cost/tokens</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>innie<span class="w"> </span>trace<span class="w"> </span>list<span class="w"> </span>--agent<span class="w"> </span>mybot<span class="w">      </span><span class="c1"># Filter by agent</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>innie<span class="w"> </span>trace<span class="w"> </span>show<span class="w"> </span>&lt;session-id&gt;<span class="w">       </span><span class="c1"># Session detail with all tool spans</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>innie<span class="w"> </span>trace<span class="w"> </span>stats<span class="w">                   </span><span class="c1"># Aggregate stats, tool usage, daily activity</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>innie<span class="w"> </span>trace<span class="w"> </span>list<span class="w">                    </span><span class="c1"># Recent sessions with cost/tokens</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>innie<span class="w"> </span>trace<span class="w"> </span>list<span class="w"> </span>--agent<span class="w"> </span>mybot<span class="w">      </span><span class="c1"># Filter by agent</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>innie<span class="w"> </span>trace<span class="w"> </span>show<span class="w"> </span>&lt;session-id&gt;<span class="w">       </span><span class="c1"># Session detail with all tool spans</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>innie<span class="w"> </span>trace<span class="w"> </span>stats<span class="w">                   </span><span class="c1"># Aggregate stats, tool usage, daily activity</span>
 </code></pre></div>
 <p>Traces are stored at <code>~/.innie/agents/&lt;name&gt;/state/trace/traces.db</code>. See <a href="../adrs/0019-sqlite-tracing/">Tracing (ADR-0019)</a> for architecture details.</p>
 <hr />
 <h2 id="start-the-api-server">Start the API Server<a class="headerlink" href="#start-the-api-server" title="Permanent link">&para;</a></h2>
 <p>For server-mode use (receives jobs from other agents, exposes memory API):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>innie<span class="w"> </span>serve<span class="w"> </span>--port<span class="w"> </span><span class="m">8013</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>innie<span class="w"> </span>serve<span class="w"> </span>--port<span class="w"> </span><span class="m">8013</span>
 </code></pre></div>
 <p>See <a href="../reference/api-server/">API Server reference</a> for endpoint documentation.</p>
 <hr />
 <h2 id="fleet-multi-machine">Fleet (Multi-Machine)<a class="headerlink" href="#fleet-multi-machine" title="Permanent link">&para;</a></h2>
 <p>If you run multiple agents across machines, the fleet gateway coordinates them:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Create fleet.yaml</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.innie/fleet.yaml<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="s">health_check:</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="s">  interval_seconds: 30</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="s">  failure_threshold: 3</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="s">agents:</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="s">  local:</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="s">    type: CLI</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="s">    description: &quot;Local Claude Code&quot;</span>
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="s">  server-agent:</span>
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="s">    type: SERVER</span>
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="s">    url: http://192.168.1.100:8013</span>
-<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="s">    description: &quot;Home server agent&quot;</span>
-<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="s">EOF</span>
-<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>
-<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>innie<span class="w"> </span>fleet<span class="w"> </span>start<span class="w"> </span>--port<span class="w"> </span><span class="m">8020</span>
-<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>innie<span class="w"> </span>fleet<span class="w"> </span>agents<span class="w">          </span><span class="c1"># check status</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Create fleet.yaml</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>~/.innie/fleet.yaml<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="s">health_check:</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="s">  interval_seconds: 30</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="s">  failure_threshold: 3</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="s">agents:</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="s">  local:</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="s">    type: CLI</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="s">    description: &quot;Local Claude Code&quot;</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="s">  server-agent:</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="s">    type: SERVER</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="s">    url: http://192.168.1.100:8013</span>
+<a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="s">    description: &quot;Home server agent&quot;</span>
+<a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="s">EOF</span>
+<a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>
+<a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a>innie<span class="w"> </span>fleet<span class="w"> </span>start<span class="w"> </span>--port<span class="w"> </span><span class="m">8020</span>
+<a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a>innie<span class="w"> </span>fleet<span class="w"> </span>agents<span class="w">          </span><span class="c1"># check status</span>
 </code></pre></div>
 <hr />
 <h2 id="migrate-from-an-existing-setup">Migrate from an Existing Setup<a class="headerlink" href="#migrate-from-an-existing-setup" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Auto-detect agent-harness or openclaw</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>innie<span class="w"> </span>migrate<span class="w"> </span>--dry-run<span class="w">     </span><span class="c1"># preview</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>innie<span class="w"> </span>migrate<span class="w">               </span><span class="c1"># import</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="c1"># Specific source</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>innie<span class="w"> </span>migrate<span class="w"> </span>--source<span class="w"> </span>/path/to/my/agent/dir
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Auto-detect agent-harness or openclaw</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>innie<span class="w"> </span>migrate<span class="w"> </span>--dry-run<span class="w">     </span><span class="c1"># preview</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>innie<span class="w"> </span>migrate<span class="w">               </span><span class="c1"># import</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="c1"># Specific source</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>innie<span class="w"> </span>migrate<span class="w"> </span>--source<span class="w"> </span>/path/to/my/agent/dir
 </code></pre></div>
 
 

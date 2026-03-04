@@ -594,15 +594,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#eight-core-subsystems" class="md-nav__link">
+  <a href="#nine-core-subsystems" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Eight Core Subsystems
+        Nine Core Subsystems
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Eight Core Subsystems">
+    <nav class="md-nav" aria-label="Nine Core Subsystems">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -683,10 +683,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#8-destructive-command-guard-dcg" class="md-nav__link">
+  <a href="#8-tui-textual" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. Destructive Command Guard (dcg)
+        8. TUI (Textual)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-destructive-command-guard-dcg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Destructive Command Guard (dcg)
       
     </span>
   </a>
@@ -717,6 +728,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="What Touches the Host System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2160,15 +2188,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#eight-core-subsystems" class="md-nav__link">
+  <a href="#nine-core-subsystems" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Eight Core Subsystems
+        Nine Core Subsystems
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Eight Core Subsystems">
+    <nav class="md-nav" aria-label="Nine Core Subsystems">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2249,10 +2277,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#8-destructive-command-guard-dcg" class="md-nav__link">
+  <a href="#8-tui-textual" class="md-nav__link">
     <span class="md-ellipsis">
       
-        8. Destructive Command Guard (dcg)
+        8. TUI (Textual)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-destructive-command-guard-dcg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Destructive Command Guard (dcg)
       
     </span>
   </a>
@@ -2283,6 +2322,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="What Touches the Host System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2337,7 +2393,7 @@
 <a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>        └── state/           (operational cache — rebuildable)
 </code></pre></div>
 <hr />
-<h2 id="eight-core-subsystems">Eight Core Subsystems<a class="headerlink" href="#eight-core-subsystems" title="Permanent link">&para;</a></h2>
+<h2 id="nine-core-subsystems">Nine Core Subsystems<a class="headerlink" href="#nine-core-subsystems" title="Permanent link">&para;</a></h2>
 <h3 id="1-storage-two-layer">1. Storage (Two-Layer)<a class="headerlink" href="#1-storage-two-layer" title="Permanent link">&para;</a></h3>
 <p>The fundamental storage split: permanent knowledge vs. operational cache.</p>
 <ul>
@@ -2423,7 +2479,87 @@
 <p>Dual-write architecture: the PostToolUse bash hook writes JSONL (&lt;1ms fast path), then fires a background <code>innie handle tool-use</code> for SQLite. SessionStart creates the session row; Stop closes it with cost/token metadata.</p>
 <p>Query via <code>innie trace list|show|stats</code> or the API (<code>GET /v1/traces</code>). The fleet gateway aggregates traces across machines.</p>
 <p>See <a href="../../adrs/0019-sqlite-tracing/">ADR-0019</a> for rationale.</p>
-<h3 id="8-destructive-command-guard-dcg">8. Destructive Command Guard (dcg)<a class="headerlink" href="#8-destructive-command-guard-dcg" title="Permanent link">&para;</a></h3>
+<h3 id="8-tui-textual">8. TUI (Textual)<a class="headerlink" href="#8-tui-textual" title="Permanent link">&para;</a></h3>
+<p>When stdout and stdin are both TTYs and <code>textual</code> is installed, interactive commands launch full-screen Textual apps instead of plain Rich output. The design language is the Lumon MDR terminal from Severance — CRT phosphor teal on near-black.</p>
+<p><strong>FloatingNumbers widget</strong> — the core branding piece. Digits arranged in a grid, each drifting via layered sine waves at unique frequencies. 0.1% distortion probability per tick causes brief digit flickers. A slow scan line sweeps vertically every ~8 seconds. Appears at varying intensities across all screens:</p>
+<table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Intensity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intro boot</td>
+<td>Full</td>
+</tr>
+<tr>
+<td>Search — idle</td>
+<td>Full</td>
+</tr>
+<tr>
+<td>Search — active query</td>
+<td>Dim (20%)</td>
+</tr>
+<tr>
+<td>Heartbeat — extract phase</td>
+<td>Full</td>
+</tr>
+<tr>
+<td>Heartbeat — other phases</td>
+<td>Very dim</td>
+</tr>
+<tr>
+<td>Trace browser</td>
+<td>Very dim</td>
+</tr>
+<tr>
+<td>Init wizard</td>
+<td>Very dim</td>
+</tr>
+</tbody>
+</table>
+<p><strong>TUI apps:</strong></p>
+<table>
+<thead>
+<tr>
+<th>App</th>
+<th>Command</th>
+<th>Activates when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IntroApp</code></td>
+<td><code>innie init</code></td>
+<td>TTY, first step</td>
+</tr>
+<tr>
+<td><code>InitWizardApp</code></td>
+<td><code>innie init</code></td>
+<td>TTY, after intro</td>
+</tr>
+<tr>
+<td><code>SearchApp</code></td>
+<td><code>innie search [query]</code></td>
+<td>TTY</td>
+</tr>
+<tr>
+<td><code>HeartbeatApp</code></td>
+<td><code>innie heartbeat run</code></td>
+<td>TTY</td>
+</tr>
+<tr>
+<td><code>TraceApp</code></td>
+<td><code>innie trace list</code></td>
+<td>TTY</td>
+</tr>
+</tbody>
+</table>
+<p>TUI is presentation only — all business logic lives in <code>core/</code> and <code>heartbeat/</code>. The non-interactive Rich path is fully preserved for piped output, Docker containers, and scripts.</p>
+<p>See <a href="../../adrs/0030-textual-tui-framework/">ADR-0030</a> for the framework and design language decisions.</p>
+<h3 id="9-destructive-command-guard-dcg">9. Destructive Command Guard (dcg)<a class="headerlink" href="#9-destructive-command-guard-dcg" title="Permanent link">&para;</a></h3>
 <p>A PreToolUse hook that blocks dangerous commands before the AI assistant executes them. Pattern-matched against a configurable blocklist:</p>
 <ul>
 <li><code>rm -rf /</code>, <code>DROP TABLE</code>, <code>git push --force</code>, <code>:(){ :|:&amp; };:</code>, etc.</li>
@@ -2487,11 +2623,45 @@
 <tr>
 <td>Cron jobs</td>
 <td>crontab</td>
-<td>user manually</td>
+<td><code>innie heartbeat enable</code> (opt-in)</td>
 </tr>
 </tbody>
 </table>
 <p>The backend adapter uses a <strong>namespace-safe merge</strong> for hook installation. It reads the existing config, adds only <code>innie.*</code> scoped hooks, and writes back. It never overwrites non-innie hooks.</p>
+<h3 id="docker-services">Docker Services<a class="headerlink" href="#docker-services" title="Permanent link">&para;</a></h3>
+<p>For users running Docker, two optional services run alongside the host CLI:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Image</th>
+<th>Profile</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>embeddings</code></td>
+<td><code>services/embeddings</code></td>
+<td>default</td>
+<td>Semantic embedding via <code>bge-base-en-v1.5</code></td>
+</tr>
+<tr>
+<td><code>heartbeat</code></td>
+<td><code>services/scheduler</code></td>
+<td>default</td>
+<td>Scheduled heartbeat runner (replaces host cron)</td>
+</tr>
+<tr>
+<td><code>serve</code></td>
+<td><code>services/serve</code></td>
+<td><code>serve</code></td>
+<td>REST memory API (<code>innie serve</code>) — opt-in via <code>--profile serve</code></td>
+</tr>
+</tbody>
+</table>
+<p>Both services mount <code>~/.innie</code> as a volume. They read and write the same files as the host CLI — no sync layer. The host cron approach and the Docker scheduler are alternatives; you don't need both.</p>
+<p>See <a href="../../adrs/0018-dockerized-embedding-service/">ADR-0018</a> and <a href="../../adrs/0029-containerized-heartbeat-scheduler/">ADR-0029</a> for rationale.</p>
 <p>See <a href="../../diagrams/host-integration/">Host Integration diagram</a> for a full map.</p>
 
 

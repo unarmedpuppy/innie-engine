@@ -402,6 +402,31 @@ class InitWizardApp(App):
     def _execute(self) -> None:
         self.exit(self._data)
 
+    def on_input_changed(self, event: Input.Changed) -> None:
+        step = self.current_step
+        try:
+            if step == 0 and event.input.id in ("f-name", "f-tz"):
+                name = self.query_one("#f-name", Input).value or self._data["name"]
+                tz = self.query_one("#f-tz", Input).value or self._data["tz"]
+                self.query_one("#f-user-md", TextArea).load_text(
+                    f"# {name}\n\nTimezone: {tz}\n"
+                )
+            elif step == 1 and event.input.id in ("f-agent", "f-role"):
+                self._data["agent_name"] = (
+                    self.query_one("#f-agent", Input).value or self._data["agent_name"]
+                )
+                self._data["role"] = (
+                    self.query_one("#f-role", Input).value or self._data["role"]
+                )
+                self.query_one("#f-soul", TextArea).load_text(
+                    self._render_template("SOUL.md.j2")
+                )
+                self.query_one("#f-context", TextArea).load_text(
+                    self._render_template("CONTEXT.md.j2")
+                )
+        except Exception:
+            pass
+
     def on_select_changed(self, event: Select.Changed) -> None:
         pass  # handled in _collect_step
 

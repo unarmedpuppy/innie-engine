@@ -2,7 +2,7 @@
 
 **For:** agents implementing wizard identity editing + `innie edit` commands on a fork of innie-engine
 **Applies to:** the repo state after commit `2ad2d3a` (backend + alias wizard steps already in place)
-**What this produces:** commit `5f22f5d`
+**What this produces:** commits `5f22f5d` (initial) + `e89b8e6` (reactive update fix)
 
 ---
 
@@ -11,8 +11,9 @@
 This guide documents the complete implementation of:
 
 1. **Editable identity files in the init wizard** — `TextArea` inputs for `user.md` (step 0), `SOUL.md`, and `CONTEXT.md` (step 1), pre-filled with rendered defaults
-2. **Reusable `FileEditorApp` TUI** — full-screen TextArea editor shared across wizard and CLI commands
-3. **`innie edit` command group** — `soul`, `context`, `user` subcommands that open the editor TUI for the active agent's identity files
+2. **Reactive template updates** — TextAreas re-render live as name/timezone/agent name/role inputs change
+3. **Reusable `FileEditorApp` TUI** — full-screen TextArea editor shared across wizard and CLI commands
+4. **`innie edit` command group** — `soul`, `context`, `user` subcommands that open the editor TUI for the active agent's identity files
 
 ---
 
@@ -297,6 +298,50 @@ elif step == 1:
     self._data["alias_text"] = ""  # NEW
 ```
 
+### 2g — Add `on_input_changed()` for reactive TextArea updates
+
+The TextAreas are pre-filled on step render but don't update as the user types in the name/agent name fields. Fix this by adding an `on_input_changed` handler.
+
+Add this method directly before `on_select_changed`:
+
+```python
+def on_input_changed(self, event: Input.Changed) -> None:
+    step = self.current_step
+    try:
+        if step == 0 and event.input.id in ("f-name", "f-tz"):
+            name = self.query_one("#f-name", Input).value or self._data["name"]
+            tz = self.query_one("#f-tz", Input).value or self._data["tz"]
+            self.query_one("#f-user-md", TextArea).load_text(
+                f"# {name}\n\nTimezone: {tz}\n"
+            )
+        elif step == 1 and event.input.id in ("f-agent", "f-role"):
+            self._data["agent_name"] = (
+                self.query_one("#f-agent", Input).value or self._data["agent_name"]
+            )
+            self._data["role"] = (
+                self.query_one("#f-role", Input).value or self._data["role"]
+            )
+            self.query_one("#f-soul", TextArea).load_text(
+                self._render_template("SOUL.md.j2")
+            )
+            self.query_one("#f-context", TextArea).load_text(
+                self._render_template("CONTEXT.md.j2")
+            )
+    except Exception:
+        pass
+```
+
+**How it works:**
+- `on_input_changed` fires on every keystroke in any `Input` widget
+- The `event.input.id` check scopes the handler to only the relevant inputs per step
+- For step 0: rebuilds `user_md` from the name + tz values and calls `TextArea.load_text()` to replace the content without triggering a `TextArea.Changed` event loop
+- For step 1: updates `_data["agent_name"]` and `_data["role"]` first (so `_render_template` uses the latest values), then re-renders both SOUL.md and CONTEXT.md templates
+- `try/except` is intentional — the TextArea widgets may not exist if the user is on a different step; silently ignore
+
+**Behavior note:** When the user changes the name input, the TextArea is fully rebuilt from the template. Any edits the user typed directly into the TextArea are overwritten. This is by design — the name/role inputs should be finalized before customizing the TextArea content. Users who want custom content should type it into the TextArea *after* setting the name.
+
+**Why `load_text()` not `textarea.text = ...`:** `load_text()` is Textual's intended API for programmatic content replacement. Setting `.text` directly is not supported. `load_text()` also resets the undo history, which is appropriate here since we're replacing the whole template.
+
 ---
 
 ## Step 3 — Update `src/innie/commands/init.py`
@@ -515,7 +560,7 @@ app.add_typer(edit_app, name="edit")
 | File | Change type | What |
 |------|-------------|------|
 | `src/innie/tui/apps/editor.py` | New | `FileEditorApp` + `edit_file()` helper |
-| `src/innie/tui/apps/init_wizard.py` | Modified | `TextArea` import, CSS, `_data` fields, `_render_template()`, step 0+1 rendering and collection |
+| `src/innie/tui/apps/init_wizard.py` | Modified | `TextArea` import, CSS, `_data` fields, `_render_template()`, step 0+1 rendering and collection, `on_input_changed()` reactive handler |
 | `src/innie/commands/init.py` | Modified | `_execute_setup()` params, user.md write, `_create_agent()` override params |
 | `src/innie/commands/edit.py` | New | `soul()`, `context()`, `user()` commands |
 | `src/innie/cli.py` | Modified | `edit` import + subcommand group registration |
@@ -528,7 +573,10 @@ app.add_typer(edit_app, name="edit")
 # Reinstall after changes
 uv tool install --force git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/innie-engine.git
 
-# Run init — verify TextAreas appear on steps 0 and 1
+# Run init — verify:
+# 1. TextAreas appear on steps 0 and 1
+# 2. Typing in the name/tz fields (step 0) live-updates the user.md TextArea
+# 3. Typing in the agent name/role fields (step 1) live-updates SOUL.md and CONTEXT.md TextAreas
 innie init
 
 # Edit existing agent files

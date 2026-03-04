@@ -336,12 +336,43 @@ def _setup_docker_embeddings(innie_home: Path):
             shutil.copy2(compose_src, compose_dst)
         console.print("  [green]✓[/green] Copied docker-compose.yml")
 
-        # Check if Docker is available
+        # Ensure Docker daemon is running — try Colima first, then Docker Desktop
         docker_check = subprocess.run(["docker", "info"], capture_output=True, text=True)
         if docker_check.returncode != 0:
-            console.print("  [yellow]![/yellow] Docker not running — start it, then run:")
-            console.print("    cd ~/.innie && docker compose up -d")
-            return
+            started = False
+            # Try Colima
+            colima_check = subprocess.run(["which", "colima"], capture_output=True, text=True)
+            if colima_check.returncode == 0:
+                console.print("  Docker not running — starting Colima...")
+                start = subprocess.run(["colima", "start"], capture_output=True, text=True)
+                if start.returncode == 0:
+                    console.print("  [green]✓[/green] Colima started")
+                    started = True
+                else:
+                    console.print(f"  [yellow]![/yellow] Colima failed to start: {start.stderr[:120]}")
+            # Try Docker Desktop open (macOS)
+            if not started:
+                desktop_check = subprocess.run(
+                    ["open", "-a", "Docker"], capture_output=True, text=True
+                )
+                if desktop_check.returncode == 0:
+                    import time
+
+                    console.print("  Docker Desktop launching", end="")
+                    for _ in range(15):
+                        time.sleep(2)
+                        check = subprocess.run(["docker", "info"], capture_output=True, text=True)
+                        if check.returncode == 0:
+                            started = True
+                            break
+                        console.print(".", end="", flush=True)
+                    console.print()
+                    if started:
+                        console.print("  [green]✓[/green] Docker Desktop ready")
+            if not started:
+                console.print("  [yellow]![/yellow] Docker unavailable. Start it manually, then run:")
+                console.print("    innie embeddings up")
+                return
 
         console.print("  Starting embedding service...")
         result = subprocess.run(
@@ -352,9 +383,10 @@ def _setup_docker_embeddings(innie_home: Path):
         )
         if result.returncode == 0:
             console.print("  [green]✓[/green] Embedding service started")
+            console.print("  Manage it later with: [bold]innie embeddings up/down/status[/bold]")
         else:
             console.print(f"  [yellow]![/yellow] Docker compose failed: {result.stderr[:200]}")
-            console.print("  You can start it later: cd ~/.innie && docker compose up -d")
+            console.print("  You can start it later: [bold]innie embeddings up[/bold]")
     else:
         console.print(
             "  [yellow]![/yellow] docker-compose.yml not found in package — "

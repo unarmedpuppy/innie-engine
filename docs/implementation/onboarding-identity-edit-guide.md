@@ -1,8 +1,8 @@
 # Onboarding Identity Edit — Implementation Guide
 
-**For:** agents implementing wizard identity editing + `innie edit` commands on a fork of innie-engine
+**For:** agents implementing wizard identity editing + `innie edit` commands + `innie git` commands on a fork of innie-engine
 **Applies to:** the repo state after commit `2ad2d3a` (backend + alias wizard steps already in place)
-**What this produces:** commits `5f22f5d` (initial) + `e89b8e6` (reactive update fix)
+**What this produces:** commits `5f22f5d` (initial) + `e89b8e6` (reactive update fix) + `40dba7f` (auto_push + git commands)
 
 ---
 
@@ -14,6 +14,8 @@ This guide documents the complete implementation of:
 2. **Reactive template updates** — TextAreas re-render live as name/timezone/agent name/role inputs change
 3. **Reusable `FileEditorApp` TUI** — full-screen TextArea editor shared across wizard and CLI commands
 4. **`innie edit` command group** — `soul`, `context`, `user` subcommands that open the editor TUI for the active agent's identity files
+5. **`auto_push` toggle in wizard Mode step** — git backup + auto-push selects with reactive presets based on mode selection
+6. **`innie git` command group** — `auto-push`, `auto-commit`, `status` toggle commands for git config
 
 ---
 
@@ -207,6 +209,7 @@ self._data: dict[str, Any] = {
     "embed_provider": "none",
     "enable_heartbeat": False,
     "enable_git": False,
+    "auto_push": False,         # NEW
     "selected_backends": [],
     "install_alias": True,
     "alias_text": "",
@@ -215,7 +218,7 @@ self._data: dict[str, Any] = {
 }
 ```
 
-Note: `soul_content` and `context_content` start empty. They get populated on first render of step 1 via `_render_template()`.
+Note: `soul_content` and `context_content` start empty. They get populated on first render of step 1 via `_render_template()`. `auto_push` defaults to `False` and is set by the Mode step.
 
 ### 2d — Add `_render_template()` method
 
@@ -342,6 +345,61 @@ def on_input_changed(self, event: Input.Changed) -> None:
 
 **Why `load_text()` not `textarea.text = ...`:** `load_text()` is Textual's intended API for programmatic content replacement. Setting `.text` directly is not supported. `load_text()` also resets the undo history, which is appropriate here since we're replacing the whole template.
 
+### 2h — Add auto_push to the Mode step
+
+The Mode step (step 2) gets two additional `Select` widgets — one for git backup and one for auto-push. Selecting a mode preset updates both reactively.
+
+**In `_render_step()`, inside the `step == 2` block**, add after the existing mode Select:
+
+```python
+elif step == 2:
+    # ... existing mode Select ...
+    step_body.mount(Label("Git backup", classes="field-label"))
+    step_body.mount(
+        Select(
+            [("Yes — auto-commit after heartbeat", "yes"), ("No", "no")],
+            value="yes" if self._data["enable_git"] else "no",
+            id="f-git",
+        )
+    )
+    step_body.mount(Label("Auto-push to remote", classes="field-label"))
+    step_body.mount(
+        Select(
+            [("Yes — push after each commit", "yes"), ("No", "no")],
+            value="yes" if self._data["auto_push"] else "no",
+            id="f-auto-push",
+        )
+    )
+```
+
+**In `_collect_step()`, inside the `step == 2` block**, add after collecting `enable_git`:
+
+```python
+push_val = self.query_one("#f-auto-push", Select).value
+self._data["auto_push"] = push_val == "yes"
+```
+
+**In `on_select_changed()`**, add reactive mode preset logic:
+
+```python
+def on_select_changed(self, event: Select.Changed) -> None:
+    if event.select.id == "f-mode" and self.current_step == 2:
+        mode = event.value
+        try:
+            git_select = self.query_one("#f-git", Select)
+            push_select = self.query_one("#f-auto-push", Select)
+            if mode == "full":
+                git_select.value = "yes"
+                push_select.value = "yes"
+            elif mode == "lightweight":
+                git_select.value = "no"
+                push_select.value = "no"
+        except Exception:
+            pass
+```
+
+**Behavior:** Selecting "Full" mode pre-sets both git and auto-push to yes. Selecting "Lightweight" sets both to no. The user can still override either Select independently after the preset fires.
+
 ---
 
 ## Step 3 — Update `src/innie/commands/init.py`
@@ -367,6 +425,7 @@ def _execute_setup(
     user_md: str = "",          # NEW — wizard-provided user.md content
     soul_content: str = "",     # NEW — wizard-provided SOUL.md content
     context_content: str = "",  # NEW — wizard-provided CONTEXT.md content
+    auto_push: bool = False,    # NEW — whether to enable auto-push in config
     update_source: str = "",
     update_installer: str = "uv",
 ):
@@ -437,6 +496,18 @@ def _create_agent(
 ```
 
 `profile.yaml` and `HEARTBEAT.md` are never overridden — they always render from templates.
+
+### 3e — Write `auto_push` to config after init
+
+After the existing git config section in `_execute_setup()` (where `enable_git` is written), add:
+
+```python
+if auto_push:
+    content = config_path.read_text()
+    config_path.write_text(content.replace("auto_push = false", "auto_push = true", 1))
+```
+
+This works because the config template always writes `auto_push = false` as the default. The replace is safe to call only when `auto_push=True` since the default is already correct for the `False` case.
 
 ---
 
@@ -555,15 +626,173 @@ app.add_typer(edit_app, name="edit")
 
 ---
 
+## Step 6 — Create `src/innie/commands/git_cmd.py`
+
+This is a new file. It provides three commands: `auto_push`, `auto_commit`, and `status` — for toggling git backup settings without manually editing config.toml.
+
+```python
+"""Git config commands — toggle auto-commit and auto-push."""
+
+import typer
+from rich.console import Console
+
+from innie.core import paths
+
+console = Console()
+
+
+def _read_config() -> dict:
+    try:
+        import tomllib
+
+        with open(paths.home() / "config.toml", "rb") as f:
+            return tomllib.load(f)
+    except Exception:
+        return {}
+
+
+def _set_config_value(key: str, value: bool) -> None:
+    """Write a true/false value in the [git] section of config.toml."""
+    config_path = paths.home() / "config.toml"
+    if not config_path.exists():
+        console.print("[red]No config.toml found. Run `innie init` first.[/red]")
+        raise typer.Exit(1)
+
+    content = config_path.read_text()
+    old = f"{key} = {'true' if not value else 'false'}"
+    new = f"{key} = {'true' if value else 'false'}"
+
+    if old in content:
+        config_path.write_text(content.replace(old, new, 1))
+    elif f"{key} = " not in content:
+        # Key missing — append under [git] section
+        lines = content.splitlines()
+        out = []
+        in_git = False
+        inserted = False
+        for line in lines:
+            out.append(line)
+            if line.strip() == "[git]":
+                in_git = True
+            elif in_git and line.startswith("[") and not inserted:
+                out.insert(-1, f"{key} = {'true' if value else 'false'}")
+                inserted = True
+                in_git = False
+        if not inserted:
+            out.append(f"{key} = {'true' if value else 'false'}")
+        config_path.write_text("\n".join(out) + "\n")
+    else:
+        console.print(f"[yellow]Could not locate {key} in config.toml — edit manually.[/yellow]")
+        raise typer.Exit(1)
+
+
+def auto_push(
+    enable: bool = typer.Option(None, "--enable/--disable", help="Enable or disable auto-push"),
+):
+    """Toggle auto-push to remote after each heartbeat commit."""
+    cfg = _read_config()
+    current = cfg.get("git", {}).get("auto_push", False)
+
+    if enable is None:
+        # Toggle
+        enable = not current
+
+    _set_config_value("auto_push", enable)
+    state = "[green]enabled[/green]" if enable else "[dim]disabled[/dim]"
+    console.print(f"auto_push {state}")
+    if enable:
+        console.print("[dim]Heartbeat will push after each commit. Ensure a remote is configured.[/dim]")
+
+
+def auto_commit(
+    enable: bool = typer.Option(None, "--enable/--disable", help="Enable or disable auto-commit"),
+):
+    """Toggle auto-commit of knowledge base after heartbeat."""
+    cfg = _read_config()
+    current = cfg.get("git", {}).get("auto_commit", False)
+
+    if enable is None:
+        enable = not current
+
+    _set_config_value("auto_commit", enable)
+    state = "[green]enabled[/green]" if enable else "[dim]disabled[/dim]"
+    console.print(f"auto_commit {state}")
+
+
+def status():
+    """Show current git config (auto_commit, auto_push, remote)."""
+    cfg = _read_config().get("git", {})
+    commit = cfg.get("auto_commit", False)
+    push = cfg.get("auto_push", False)
+
+    def flag(v: bool) -> str:
+        return "[green]on[/green]" if v else "[dim]off[/dim]"
+
+    console.print(f"  auto_commit  {flag(commit)}")
+    console.print(f"  auto_push    {flag(push)}")
+    if push and not commit:
+        console.print("  [yellow]![/yellow] auto_push is on but auto_commit is off — push will never trigger")
+```
+
+**Design notes:**
+- No arg = toggle current value; `--enable`/`--disable` for explicit control
+- `_set_config_value` handles three cases: key exists with opposite value (replace), key missing from `[git]` section (insert), key exists with same value but can't pattern-match (warn + exit)
+- `status()` warns if `auto_push=true` but `auto_commit=false` — push never fires in that state
+- Uses `tomllib` (stdlib in Python 3.11+) for reading; uses raw string manipulation for writing to avoid reformatting the whole file
+
+---
+
+## Step 7 — Register `git` group in `src/innie/cli.py`
+
+### 7a — Add `git_cmd` to the import block in `_register_commands()`
+
+```python
+from innie.commands import (
+    agent,
+    alias,
+    backend,
+    docker_services,
+    doctor,
+    edit,
+    fleet,
+    git_cmd,    # ADD THIS
+    heartbeat,
+    init,
+    migrate,
+    search,
+    secrets,
+    serve,
+    skills,
+    trace,
+    update,
+)
+```
+
+### 7b — Register the subcommand group
+
+Add after the `# Edit subcommands` block:
+
+```python
+# Git subcommands
+git_app = typer.Typer(help="Manage git backup settings (auto-commit, auto-push).")
+git_app.command("auto-push")(git_cmd.auto_push)
+git_app.command("auto-commit")(git_cmd.auto_commit)
+git_app.command("status")(git_cmd.status)
+app.add_typer(git_app, name="git")
+```
+
+---
+
 ## Files Changed Summary
 
 | File | Change type | What |
 |------|-------------|------|
 | `src/innie/tui/apps/editor.py` | New | `FileEditorApp` + `edit_file()` helper |
-| `src/innie/tui/apps/init_wizard.py` | Modified | `TextArea` import, CSS, `_data` fields, `_render_template()`, step 0+1 rendering and collection, `on_input_changed()` reactive handler |
-| `src/innie/commands/init.py` | Modified | `_execute_setup()` params, user.md write, `_create_agent()` override params |
+| `src/innie/tui/apps/init_wizard.py` | Modified | `TextArea` import, CSS, `_data` fields (incl. `auto_push`), `_render_template()`, step 0+1 rendering and collection, `on_input_changed()` reactive handler, step 2 git+auto-push Selects, `on_select_changed()` mode preset |
+| `src/innie/commands/init.py` | Modified | `_execute_setup()` params (incl. `auto_push`), user.md write, `_create_agent()` override params, config auto_push write |
 | `src/innie/commands/edit.py` | New | `soul()`, `context()`, `user()` commands |
-| `src/innie/cli.py` | Modified | `edit` import + subcommand group registration |
+| `src/innie/commands/git_cmd.py` | New | `auto_push()`, `auto_commit()`, `status()` toggle commands |
+| `src/innie/cli.py` | Modified | `edit` + `git_cmd` imports + subcommand group registrations |
 
 ---
 
@@ -577,6 +806,8 @@ uv tool install --force git+ssh://gitea.server.unarmedpuppy.com:2223/homelab/inn
 # 1. TextAreas appear on steps 0 and 1
 # 2. Typing in the name/tz fields (step 0) live-updates the user.md TextArea
 # 3. Typing in the agent name/role fields (step 1) live-updates SOUL.md and CONTEXT.md TextAreas
+# 4. Mode step (step 2) shows git backup + auto-push selects
+# 5. Selecting "Full" mode presets both git and auto-push to yes
 innie init
 
 # Edit existing agent files
@@ -589,6 +820,15 @@ innie edit soul --agent myagent
 
 # Verify edit commands show in help
 innie edit --help
+
+# Git config toggle commands
+innie git status              # show current auto_commit + auto_push state
+innie git auto-commit         # toggle (if off → on, if on → off)
+innie git auto-push --enable  # explicitly enable
+innie git auto-push --disable # explicitly disable
+
+# Verify git commands show in help
+innie git --help
 ```
 
 ---

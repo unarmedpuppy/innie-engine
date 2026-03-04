@@ -28,6 +28,10 @@ Persistent memory and identity for AI coding assistants. Install on any machine,
 [uv](https://docs.astral.sh/uv/) is a fast Python package manager. If you don't have it:
 
 ```bash
+# macOS (Homebrew — recommended)
+brew install uv
+
+# Other platforms
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 

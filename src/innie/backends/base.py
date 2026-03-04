@@ -59,3 +59,13 @@ class Backend(ABC):
     def collect_sessions(self, since: float) -> list[SessionData]:
         """Collect session data since timestamp for heartbeat processing."""
         ...
+
+    @abstractmethod
+    def launch_cmd(self, agent: str) -> list[str]:
+        """Return the command to launch this backend."""
+        ...
+
+    @abstractmethod
+    def inject_context(self, agent: str, context: str) -> None:
+        """Write context to backend-specific location before launching."""
+        ...

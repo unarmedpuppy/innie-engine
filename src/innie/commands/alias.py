@@ -19,6 +19,46 @@ def _get_rc_file() -> Path:
     return Path.home() / ".bashrc"
 
 
+def build_context(agent: str) -> str:
+    """Build context for pre-launch injection: SOUL + CONTEXT + session status block."""
+    from datetime import date
+
+    parts = []
+    agent_dir = paths.agent_dir(agent)
+    for f in ["SOUL.md", "CONTEXT.md"]:
+        fpath = agent_dir / f
+        if fpath.exists():
+            parts.append(fpath.read_text())
+
+    user_file = paths.user_file()
+    if user_file.exists():
+        parts.append(user_file.read_text())
+
+    status_lines = [f"Date: {date.today().isoformat()}"]
+    try:
+        from innie.core.search import index_status, open_db
+
+        db_path = paths.index_db(agent)
+        if db_path.exists():
+            conn = open_db(db_path)
+            stats = index_status(conn)
+            conn.close()
+            status_lines.append(f"Index: {stats['files']} files, {stats['chunks']} chunks")
+    except Exception:
+        pass
+
+    try:
+        journal_dir = paths.journal_dir(agent)
+        if journal_dir.exists():
+            count = len(list(journal_dir.rglob("*.md")))
+            status_lines.append(f"Journal entries: {count}")
+    except Exception:
+        pass
+
+    parts.append("## Session Status\n\n" + "\n".join(status_lines))
+    return "\n\n---\n\n".join(parts)
+
+
 def _build_alias(name: str) -> str:
     """Build a shell alias from the agent's profile.yaml."""
     profile = load_profile(name)

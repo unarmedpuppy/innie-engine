@@ -27,5 +27,15 @@ class CursorBackend(Backend):
     def check_hooks(self) -> dict[str, bool]:
         return {}  # TODO
 
+    def launch_cmd(self, agent: str) -> list[str]:
+        return ["cursor", "."]
+
+    def inject_context(self, agent: str, context: str) -> None:
+        import os
+
+        rules_dir = Path(os.getcwd()) / ".cursor" / "rules"
+        rules_dir.mkdir(parents=True, exist_ok=True)
+        (rules_dir / f"{agent}-context.mdc").write_text(context)
+
     def collect_sessions(self, since: float) -> list[SessionData]:
         return []  # TODO

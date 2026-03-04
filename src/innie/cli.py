@@ -1,12 +1,47 @@
 """Typer CLI entry point for innie-engine."""
 
+import subprocess
+import sys
+
 import typer
 
 app = typer.Typer(
     name="innie",
     help="Persistent memory and identity for AI coding assistants.",
-    no_args_is_help=True,
+    no_args_is_help=False,
+    invoke_without_command=True,
 )
+
+
+def _launch() -> None:
+    """Detect active backend, inject context, and launch it."""
+    from innie.backends.registry import discover_backends
+    from innie.commands.alias import build_context
+    from innie.core import paths
+
+    agent = paths.active_agent()
+    backends = discover_backends()
+
+    for _name, cls in backends.items():
+        instance = cls()
+        if instance.detect():
+            try:
+                context = build_context(agent)
+                instance.inject_context(agent, context)
+            except Exception:
+                pass
+            cmd = instance.launch_cmd(agent)
+            result = subprocess.run(cmd)
+            sys.exit(result.returncode)
+
+    typer.echo("No AI backend detected. Install Claude Code, Cursor, or OpenCode.")
+    raise typer.Exit(1)
+
+
+@app.callback()
+def _main(ctx: typer.Context) -> None:
+    if ctx.invoked_subcommand is None:
+        _launch()
 
 
 def _register_commands():

@@ -133,6 +133,20 @@ class ClaudeCodeBackend(Backend):
             result[event] = any(self._is_innie_entry(h) for h in event_hooks)
         return result
 
+    def launch_cmd(self, agent: str) -> list[str]:
+        from innie.core import paths
+
+        ctx_file = paths.agent_dir(agent) / "launch-context.md"
+        if ctx_file.exists():
+            return ["claude", "--append-system-prompt", str(ctx_file)]
+        return ["claude"]
+
+    def inject_context(self, agent: str, context: str) -> None:
+        from innie.core import paths
+
+        ctx_file = paths.agent_dir(agent) / "launch-context.md"
+        ctx_file.write_text(context)
+
     def collect_sessions(self, since: float) -> list[SessionData]:
         """Parse JSONL session files from ~/.claude/projects/."""
         sessions: list[SessionData] = []

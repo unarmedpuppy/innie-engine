@@ -21,6 +21,22 @@
 
 ---
 
+## Terminal UI (TUI)
+
+innie-engine includes an optional interactive terminal UI built on [Textual](https://textual.textualize.io/). The design language is the Lumon MDR terminal from Severance — dark, corporate, CRT phosphor teal on near-black. The centrepiece is a floating numbers ambient background that appears across all screens.
+
+**Auto-detection:** TUI activates automatically when stdout and stdin are TTYs (same pattern as `bat`/`delta`). Piped output, Docker exec, and scripts always get plain Rich output — no flag needed.
+
+| Command | TTY (interactive) | Piped (non-interactive) |
+|---------|-------------------|------------------------|
+| `innie init` | Boot animation + wizard | Plain prompts |
+| `innie search` | Floating numbers browser | Plain results table |
+| `innie search "query"` | Pre-filled browser | Plain results |
+| `innie heartbeat run` | Live phase progress | Plain console output |
+| `innie trace list` | Interactive session browser | Plain table |
+
+---
+
 ## Initialize
 
 ```bash
@@ -92,6 +108,76 @@ Or run it on a schedule:
 ```bash
 # cron: every 30 minutes
 */30 * * * * innie heartbeat run --agent innie
+```
+
+Or use the containerized scheduler (see below).
+
+---
+
+## Containerized Heartbeat (Recommended)
+
+The heartbeat scheduler runs as a Docker container alongside the embedding service — no host cron, no daemon required.
+
+**Prerequisite:** The container can only reach HTTP inference backends. Supported:
+
+- `provider = "anthropic"` → `ANTHROPIC_API_KEY` in env
+- `provider = "external"` → any OpenAI-compatible URL (e.g. local Ollama)
+
+If your inference backend is a local CLI tool (`claude`, `opencode`, etc.), use host cron instead: `innie heartbeat enable`.
+
+### Setup
+
+```bash
+# 1. Copy the example env file and fill in your API key
+cp .env.heartbeat.example .env.heartbeat
+# edit .env.heartbeat: set ANTHROPIC_API_KEY=sk-ant-...
+
+# 2. Start both services
+docker compose up -d
+```
+
+### Ollama / External Inference (No API Key)
+
+If Ollama is running natively on your host:
+
+```bash
+# .env.heartbeat — leave API keys empty
+```
+
+```toml
+# ~/.innie/config.toml
+[heartbeat]
+provider = "external"
+external_url = "http://host.docker.internal:11434/v1"
+model = "qwen3:4b"
+```
+
+> **Linux note:** `host.docker.internal` doesn't resolve automatically on Linux. Use `172.17.0.1` or add `--add-host=host.docker.internal:host-gateway` to the compose service.
+
+### Operations
+
+```bash
+# View scheduler logs
+docker compose logs -f heartbeat
+
+# Trigger a heartbeat manually
+docker compose exec heartbeat innie heartbeat run
+
+# Check agent status
+docker compose exec heartbeat innie heartbeat status
+```
+
+### How It Works
+
+The container mounts `~/.innie` from your host as `/root/.innie`. The container and host CLI share the exact same files — no sync required. Sessions written by your Stop hook are picked up by the container on its next interval, and journal entries written by the container are immediately readable by your host CLI.
+
+```
+Host: ~/.innie/agents/innie/state/sessions/2026-03-04.md  ← written by Stop hook
+Container: every 30 min → innie heartbeat run
+  → reads  /root/.innie/agents/innie/state/sessions/
+  → writes /root/.innie/agents/innie/data/journal/
+  → calls  http://embeddings:8766 (internal Docker network)
+Host: innie search "..." → reads the newly indexed journal entries
 ```
 
 ---

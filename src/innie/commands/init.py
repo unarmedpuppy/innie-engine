@@ -22,6 +22,23 @@ def init(
     yes: bool = typer.Option(False, "-y", "--yes", help="Accept all defaults non-interactively"),
 ):
     """Create ~/.innie/, run setup wizard, install hooks, create default agent."""
+    if not yes and not local:
+        from innie.tui.detect import is_interactive
+
+        if is_interactive():
+            from innie.tui.apps.intro import IntroApp
+            from innie.tui.apps.init_wizard import run_init_wizard
+
+            IntroApp().run()
+            data = run_init_wizard(local=local)
+            if data is None:
+                raise typer.Abort()
+            _execute_setup(
+                innie_home=paths.home(),
+                **{k: v for k, v in data.items() if k not in ("mode",)},
+            )
+            return
+
     console.print("\n  [bold]innie-engine[/bold] — persistent memory for AI coding assistants\n")
 
     innie_home = paths.home()

@@ -19,6 +19,14 @@ def list_traces(
     days: int = typer.Option(0, "--days", "-d", help="Only show sessions from last N days"),
 ):
     """List recent trace sessions."""
+    from innie.tui.detect import is_interactive
+
+    if is_interactive():
+        from innie.tui.apps.trace import TraceApp
+
+        TraceApp(agent=agent, limit=limit).run()
+        return
+
     db = trace_db_path()
     if not db.exists():
         console.print("[dim]No trace data yet. Sessions are recorded automatically.[/dim]")

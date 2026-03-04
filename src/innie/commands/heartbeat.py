@@ -16,6 +16,14 @@ def run(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview what would be collected and extracted without writing anything"),
 ):
     """Run one heartbeat cycle: collect → extract → route."""
+    from innie.tui.detect import is_interactive
+
+    if is_interactive():
+        from innie.tui.apps.heartbeat import HeartbeatApp
+
+        HeartbeatApp(agent=paths.active_agent(), dry_run=dry_run).run()
+        return
+
     agent = paths.active_agent()
     mode = " [dim](dry run)[/dim]" if dry_run else ""
     console.print(f"Running heartbeat for agent: [bold]{agent}[/bold]{mode}")

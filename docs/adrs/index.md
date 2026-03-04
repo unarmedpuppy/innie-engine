@@ -38,3 +38,5 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0026](0026-search-pipeline-improvements.md) | Search Pipeline Improvements: Chunking + Query Expansion | Accepted | 2026-03 |
 | [0027](0027-cli-surface-area-audit.md) | CLI Surface Area Audit: Exposing Hidden Functionality | Accepted | 2026-03 |
 | [0028](0028-heartbeat-provider-abstraction.md) | Heartbeat Provider Abstraction: Remove Anthropic Hard Dependency | Accepted | 2026-03 |
+| [0029](0029-containerized-heartbeat-scheduler.md) | Containerized Heartbeat Scheduler | Accepted | 2026-03 |
+| [0030](0030-textual-tui-framework.md) | Textual TUI Framework + Lumon Design Language | Accepted | 2026-03 |

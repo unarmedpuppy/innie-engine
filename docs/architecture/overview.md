@@ -36,7 +36,7 @@ innie-engine is built around a single principle: **the AI assistant's memory sho
 
 ---
 
-## Eight Core Subsystems
+## Nine Core Subsystems
 
 ### 1. Storage (Two-Layer)
 
@@ -150,7 +150,37 @@ Query via `innie trace list|show|stats` or the API (`GET /v1/traces`). The fleet
 
 See [ADR-0019](../adrs/0019-sqlite-tracing.md) for rationale.
 
-### 8. Destructive Command Guard (dcg)
+### 8. TUI (Textual)
+
+When stdout and stdin are both TTYs and `textual` is installed, interactive commands launch full-screen Textual apps instead of plain Rich output. The design language is the Lumon MDR terminal from Severance — CRT phosphor teal on near-black.
+
+**FloatingNumbers widget** — the core branding piece. Digits arranged in a grid, each drifting via layered sine waves at unique frequencies. 0.1% distortion probability per tick causes brief digit flickers. A slow scan line sweeps vertically every ~8 seconds. Appears at varying intensities across all screens:
+
+| Screen | Intensity |
+|--------|-----------|
+| Intro boot | Full |
+| Search — idle | Full |
+| Search — active query | Dim (20%) |
+| Heartbeat — extract phase | Full |
+| Heartbeat — other phases | Very dim |
+| Trace browser | Very dim |
+| Init wizard | Very dim |
+
+**TUI apps:**
+
+| App | Command | Activates when |
+|-----|---------|----------------|
+| `IntroApp` | `innie init` | TTY, first step |
+| `InitWizardApp` | `innie init` | TTY, after intro |
+| `SearchApp` | `innie search [query]` | TTY |
+| `HeartbeatApp` | `innie heartbeat run` | TTY |
+| `TraceApp` | `innie trace list` | TTY |
+
+TUI is presentation only — all business logic lives in `core/` and `heartbeat/`. The non-interactive Rich path is fully preserved for piped output, Docker containers, and scripts.
+
+See [ADR-0030](../adrs/0030-textual-tui-framework.md) for the framework and design language decisions.
+
+### 9. Destructive Command Guard (dcg)
 
 A PreToolUse hook that blocks dangerous commands before the AI assistant executes them. Pattern-matched against a configurable blocklist:
 
@@ -196,8 +226,22 @@ innie decay
 | Claude Code hooks | `~/.claude/settings.json` | backend adapter (namespace-safe merge) |
 | Cursor hooks | `~/.cursor/` config | backend adapter |
 | Shell aliases | `~/.zshrc` or `~/.bashrc` | `innie alias` (opt-in) |
-| Cron jobs | crontab | user manually |
+| Cron jobs | crontab | `innie heartbeat enable` (opt-in) |
 
 The backend adapter uses a **namespace-safe merge** for hook installation. It reads the existing config, adds only `innie.*` scoped hooks, and writes back. It never overwrites non-innie hooks.
+
+### Docker Services
+
+For users running Docker, two optional services run alongside the host CLI:
+
+| Service | Image | Profile | Purpose |
+|---------|-------|---------|---------|
+| `embeddings` | `services/embeddings` | default | Semantic embedding via `bge-base-en-v1.5` |
+| `heartbeat` | `services/scheduler` | default | Scheduled heartbeat runner (replaces host cron) |
+| `serve` | `services/serve` | `serve` | REST memory API (`innie serve`) — opt-in via `--profile serve` |
+
+Both services mount `~/.innie` as a volume. They read and write the same files as the host CLI — no sync layer. The host cron approach and the Docker scheduler are alternatives; you don't need both.
+
+See [ADR-0018](../adrs/0018-dockerized-embedding-service.md) and [ADR-0029](../adrs/0029-containerized-heartbeat-scheduler.md) for rationale.
 
 See [Host Integration diagram](../diagrams/host-integration.md) for a full map.

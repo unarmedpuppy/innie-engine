@@ -1,6 +1,7 @@
 """Search, index, context, and log commands."""
 
 from datetime import datetime
+from typing import Optional
 
 import typer
 from rich.console import Console
@@ -11,13 +12,25 @@ console = Console()
 
 
 def search(
-    query: str = typer.Argument(..., help="Search query"),
+    query: Optional[str] = typer.Argument(None, help="Search query (omit for interactive browser)"),
     keyword: bool = typer.Option(False, "--keyword", "-k", help="FTS5 keyword search only"),
     semantic: bool = typer.Option(False, "--semantic", "-s", help="Vector search only"),
     limit: int = typer.Option(5, "--limit", "-n", help="Max results"),
     expand: bool = typer.Option(False, "--expand", "-e", help="Generate alt query phrasing via LLM before searching (overrides config)"),
 ):
     """Search the knowledge base (hybrid keyword + semantic by default)."""
+    from innie.tui.detect import is_interactive
+
+    if is_interactive():
+        from innie.tui.apps.search import SearchApp
+
+        SearchApp(initial_query=query).run()
+        return
+
+    if not query:
+        console.print("[red]Query required in non-interactive mode.[/red]")
+        raise typer.Exit(1)
+
     import os
 
     from innie.core.search import (

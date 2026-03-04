@@ -106,6 +106,38 @@ def _call_openai_compatible(prompt: str, model: str, url: str) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def _extract_json_object(text: str) -> dict | None:
+    """Walk text tracking brace depth to find the first complete JSON object."""
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text[start:], start):
+        if escape:
+            escape = False
+            continue
+        if ch == "\\" and in_string:
+            escape = True
+            continue
+        if ch == '"' and not escape:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start : i + 1])
+                except json.JSONDecodeError:
+                    return None
+    return None
+
+
 def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
     """Run AI extraction on collected data.
 
@@ -152,8 +184,11 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
 
     try:
         data = json.loads(text)
-    except json.JSONDecodeError as e:
-        raise RuntimeError(f"AI returned invalid JSON: {e}\nRaw output:\n{text[:500]}") from e
+    except json.JSONDecodeError:
+        # Attempt balanced-brace scan to find the first complete JSON object
+        data = _extract_json_object(text)
+        if data is None:
+            raise RuntimeError(f"AI returned invalid JSON.\nRaw output:\n{text[:500]}")
 
     try:
         return HeartbeatExtraction(**data)

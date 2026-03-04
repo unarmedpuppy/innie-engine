@@ -206,7 +206,11 @@ def hb_status():
         console.print("[yellow]Heartbeat state file is corrupted. Delete and re-run.[/yellow]")
         return
     last_run = state.get("last_run", 0)
-    processed = len(state.get("processed_sessions", []))
+    ps = state.get("processed_sessions", {})
+    if isinstance(ps, dict):
+        processed = sum(len(v) for v in ps.values())
+    else:
+        processed = len(ps)
 
     if last_run:
         dt = datetime.fromtimestamp(last_run)
@@ -250,11 +254,15 @@ def reset_state(
         return
 
     state = json.loads(state_file.read_text())
-    processed = len(state.get("processed_sessions", []))
+    ps = state.get("processed_sessions", {})
+    if isinstance(ps, dict):
+        processed = sum(len(v) for v in ps.values())
+    else:
+        processed = len(ps)
     console.print(f"  Current state: {processed} sessions marked as processed.")
 
     if not yes and not typer.confirm("  Reset? All sessions will be re-processed on next run.", default=False):
         raise typer.Abort()
 
-    state_file.write_text(json.dumps({"last_run": 0, "processed_sessions": []}, indent=2))
+    state_file.write_text(json.dumps({"last_run": 0, "processed_sessions": {}}, indent=2))
     console.print("  [green]✓[/green] Heartbeat state reset.")

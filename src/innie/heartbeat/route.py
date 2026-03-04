@@ -245,13 +245,21 @@ def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict
 
     route_metrics(extraction, agent)
 
-    # Update heartbeat state
+    # Update heartbeat state — processed_sessions is a per-backend dict {sid: timestamp}
     state = load_heartbeat_state(agent)
     state["last_run"] = time.time()
-    processed = state.get("processed_sessions", [])
-    processed.extend(extraction.processed_sessions.ids)
-    # Keep only last 1000 session IDs
-    state["processed_sessions"] = processed[-1000:]
+    processed: dict = state.get("processed_sessions", {})
+    if isinstance(processed, list):
+        # Migrate legacy flat list to dict
+        processed = {}
+    for sid in extraction.processed_sessions.ids:
+        backend = sid.split("-")[0] if "-" in sid else "unknown"
+        processed.setdefault(backend, {})[sid] = time.time()
+        # Trim per-backend to 1000 entries
+        if len(processed[backend]) > 1000:
+            oldest = sorted(processed[backend].items(), key=lambda x: x[1])
+            processed[backend] = dict(oldest[-1000:])
+    state["processed_sessions"] = processed
     save_heartbeat_state(state, agent)
 
     return results

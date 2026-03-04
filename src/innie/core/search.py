@@ -65,7 +65,7 @@ def open_db(db_path: Path | None = None, agent: str | None = None) -> sqlite3.Co
 
 
 def _get_embedding_url() -> str:
-    provider = get("embedding.provider", "docker")
+    provider = get("embedding.provider", "none")
     if provider == "docker":
         return get("embedding.docker.url", "http://localhost:8766")
     elif provider == "external":
@@ -75,7 +75,7 @@ def _get_embedding_url() -> str:
 
 def _get_embedding_headers() -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
-    provider = get("embedding.provider", "docker")
+    provider = get("embedding.provider", "none")
     if provider == "external":
         key_env = get("embedding.external.api_key_env")
         if key_env:

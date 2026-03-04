@@ -90,7 +90,7 @@ def status():
         console.print("Traces: [dim]no data yet[/dim]")
 
     # Embedding health
-    provider = get("embedding.provider", "docker")
+    provider = get("embedding.provider", "none")
     if provider != "none":
         url = get(f"embedding.{provider}.url", get("embedding.docker.url", "http://localhost:8766"))
         try:
@@ -166,7 +166,7 @@ def doctor():
             )
 
     # 10. Embedding service
-    provider = get("embedding.provider", "docker")
+    provider = get("embedding.provider", "none")
     if provider != "none":
         url = get(f"embedding.{provider}.url", get("embedding.docker.url", "http://localhost:8766"))
         try:

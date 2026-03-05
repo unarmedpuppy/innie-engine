@@ -68,5 +68,5 @@ Options for multi-machine coordination:
 - The gateway is a single point of failure for fleet-wide operations
 
 **Neutral:**
-- The fleet config YAML must be manually maintained when agents are added/removed
-- Future: agent self-registration (agents POST to the gateway at startup) would eliminate manual config
+- The fleet config YAML can still be used for agents that don't self-register (static entries)
+- Agent self-registration was implemented in ADR-0031 — dynamic agents no longer require fleet.yaml

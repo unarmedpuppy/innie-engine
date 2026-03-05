@@ -323,32 +323,32 @@ The fleet gateway coordinates agents running across multiple machines. Each mach
 
 ### Fleet setup
 
+Agents self-register with the fleet gateway on startup. The only config each machine needs is one env var pointing at the gateway.
+
 **On the gateway machine:**
 
-```yaml
-# fleet.yaml
-agents:
-  - name: innie
-    url: http://laptop.local:8013
-  - name: avery
-    url: http://laptop.local:8013
-  - name: gilfoyle
-    url: http://server.local:8013
-  - name: ralph
-    url: http://server.local:8013
-  - name: colin
-    url: http://desktop.local:8013
+```bash
+# Start the fleet gateway (one machine in your fleet)
+innie fleet start
 ```
+
+**On every other machine:**
 
 ```bash
-innie fleet start --config fleet.yaml
+export INNIE_FLEET_URL=https://fleet-gateway.example.com
+export INNIE_SERVE_HOST=100.x.x.x   # this machine's reachable IP (Tailscale IP recommended)
+export INNIE_AGENT=avery             # which agent this instance serves
+
+innie serve --port 8013
 ```
 
-**On each machine:**
+On startup, `innie serve` POSTs to `{INNIE_FLEET_URL}/api/agents/register` and the gateway adds it to the registry. No YAML, no manual config. Adding a new agent = start `innie serve` with `INNIE_FLEET_URL` set.
 
-```bash
-innie serve    # exposes local agents on port 8013
-```
+**Why `INNIE_SERVE_HOST`?** Machines with multiple interfaces (LAN + Tailscale) may auto-detect the wrong IP. Set this to your Tailscale or LAN IP to ensure other agents can reach you.
+
+Registrations persist to `~/.innie/fleet-registry.json` on the gateway machine, so dynamic agents survive gateway restarts.
+
+> **Fallback**: If the fleet gateway is unreachable, set `INNIE_AGENT_{NAME}_URL` as a static fallback on each machine. The system tries the gateway first and falls back to the env var.
 
 ### Fleet commands
 
@@ -378,6 +378,36 @@ innie fleet stats
        │  ◀────────────────────│──────│   Result: "85% used"     │
        │  { result: "85%..." } │      │                          │
 ```
+
+### Agent-to-agent (A2A) communication
+
+Agents can delegate work to each other using `reply_to: agents://<name>` on any job submission.
+
+```bash
+# Avery submits a job to Gilfoyle and wants the result back
+curl -X POST http://avery-host:8013/v1/jobs \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "prompt": "Check disk usage on /media and report back",
+    "reply_to": "agents://avery"
+  }'
+```
+
+When the job completes, Gilfoyle resolves `agents://avery` → Avery's endpoint → POSTs the result as
+a new inbound job to Avery. Avery's Claude instance reads the message and routes it (Mattermost,
+iMessage, etc.).
+
+The `reply_to` value is resolved in order:
+1. Fleet gateway (`GET {INNIE_FLEET_URL}/api/agents/avery`)
+2. `INNIE_AGENT_AVERY_URL` env var fallback
+
+**Supported `reply_to` schemes:**
+
+| Scheme | Delivers to |
+|--------|-------------|
+| `agents://name` | Another innie serve instance (A2A) |
+| `mattermost://channel-id` | Posts to a Mattermost channel |
+| `https://webhook-url` | Generic HTTP POST with job result JSON |
 
 ---
 
@@ -996,7 +1026,12 @@ Total: 2000 tokens (~8000 chars)
 | `INNIE_HOME` | Override `~/.innie/` location | `~/.innie` |
 | `INNIE_AGENT` | Current agent name (set by aliases) | from config.toml |
 | `ANTHROPIC_API_KEY` | Required for heartbeat extraction | — |
-| `INNIE_FLEET_CONFIG` | Fleet config file path | — |
+| `INNIE_FLEET_CONFIG` | Fleet config file path (static agents) | — |
+| `INNIE_FLEET_URL` | Fleet gateway URL — enables self-registration + A2A resolution | — |
+| `INNIE_SERVE_HOST` | This machine's reachable IP for fleet self-registration | auto-detect |
+| `INNIE_API_TOKEN` | Bearer token for inbound auth on `/v1/jobs` | — (no auth) |
+| `INNIE_AGENT_{NAME}_URL` | Static fallback URL for a specific agent (used when fleet gateway is unreachable) | — |
+| `INNIE_AGENT_{NAME}_TOKEN` | Bearer token for outbound A2A calls to a specific agent | — |
 
 ---
 

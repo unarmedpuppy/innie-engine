@@ -22,13 +22,13 @@ harness with a `reply_to` address so the result finds its way back.
    POST http://100.80.223.7:8018/v1/jobs
    {
      "prompt": "Check disk usage on /media",
-     "reply_to": "openclaw://avery"
+     "reply_to": "agents://avery"
    }
 
 2. Gilfoyle's harness accepts immediately, runs async
    { "job_id": "job-abc123", "status": "pending" }
 
-3. Job completes. Gilfoyle reads reply_to = "openclaw://avery"
+3. Job completes. Gilfoyle reads reply_to = "agents://avery"
    Looks up env var: AGENT_REMOTE_AVERY_URL = http://100.92.176.74:8013
 
    POST http://100.92.176.74:8013/v1/jobs
@@ -40,11 +40,11 @@ harness with a `reply_to` address so the result finds its way back.
 
 ### Key Points
 
-- **`openclaw://avery`** = "POST the result to Avery's `/v1/jobs` as a new job"
+- **`agents://avery`** = "POST the result to Avery's `/v1/jobs` as a new job"
 - **No dedicated inbound endpoint** — results arrive as new job prompts
 - **Fire-and-forget** — delivery never blocks or retries
 - **Agent URL resolution** = manual env var per agent, per machine (the problem)
-- The name "openclaw" is historical — it just means "route to that agent's harness"
+- The scheme is `agents://` — human-readable, no legacy baggage
 
 ---
 
@@ -63,7 +63,7 @@ With 4+ agents across 3 machines, this is O(agents × machines) maintenance.
 ## Proposed Architecture: Fleet Gateway as Registry
 
 **One env var per machine.** Each `innie serve` instance registers itself with the fleet
-gateway on startup. `openclaw://` resolution asks the fleet gateway instead of reading
+gateway on startup. `agents://` resolution asks the fleet gateway instead of reading
 local env vars.
 
 ```
@@ -74,7 +74,7 @@ On startup, innie serve posts:
   POST {INNIE_FLEET_URL}/api/agents/register
   { "agent": "avery", "endpoint": "http://100.92.176.74:8013" }
 
-When routing openclaw://avery:
+When routing agents://avery:
   GET {INNIE_FLEET_URL}/api/agents/avery  →  { "endpoint": "..." }
   POST {endpoint}/v1/jobs  { "prompt": "[from gilfoyle]..." }
 ```
@@ -110,8 +110,8 @@ This means the system degrades gracefully and can work without the fleet gateway
 
 | # | Feature | Blocking? | Effort |
 |---|---------|-----------|--------|
-| 1 | `reply_to: openclaw://` in `notify_reply_to` | **Yes** | ~20 lines |
-| 2 | SSRF allowlist rejects `openclaw://` at creation | **Yes** | 1 line |
+| 1 | `reply_to: agents://` in `notify_reply_to` | **Yes** | ~20 lines |
+| 2 | SSRF allowlist rejects `agents://` at creation | **Yes** | 1 line |
 | 3 | `POST /api/agents/register` on fleet gateway | **Yes** | ~40 lines |
 | 4 | Fleet gateway persists registrations | **Yes** | ~20 lines |
 | 5 | `innie serve` registers itself on startup | **Yes** | ~20 lines |
@@ -239,7 +239,7 @@ innie serve
 
 ---
 
-### Change 3 — `notify_reply_to`: add `openclaw://` resolution
+### Change 3 — `notify_reply_to`: add `agents://` resolution
 
 **File:** `src/innie/serve/app.py`
 
@@ -251,17 +251,17 @@ Two sub-changes:
 if scheme not in {"mattermost", "https"}:
 
 # After
-if scheme not in {"mattermost", "https", "openclaw"}:
+if scheme not in {"mattermost", "https", "agents"}:
 ```
 
 **3b — `notify_reply_to` handler:**
 ```python
-elif job.reply_to.startswith("openclaw://"):
-    target_agent = job.reply_to.removeprefix("openclaw://")
+elif job.reply_to.startswith("agents://"):
+    target_agent = job.reply_to.removeprefix("agents://")
     endpoint = await _resolve_agent_endpoint(target_agent)
     if not endpoint:
         logger.warning(
-            f"Cannot resolve openclaw://{target_agent} — "
+            f"Cannot resolve agents://{target_agent} — "
             f"set INNIE_FLEET_URL or INNIE_AGENT_{target_agent.upper()}_URL"
         )
         return
@@ -410,7 +410,7 @@ curl https://fleet-gateway.server.unarmedpuppy.com/api/agents
 
 # Test A2A: submit job with openclaw reply_to
 curl -X POST http://100.92.176.74:8013/v1/jobs \
-  -d '{"prompt":"ping","reply_to":"openclaw://gilfoyle"}'
+  -d '{"prompt":"ping","reply_to":"agents://gilfoyle"}'
 
 # Gilfoyle should receive a new job
 curl http://100.80.223.7:8018/v1/jobs
@@ -423,7 +423,7 @@ curl http://100.80.223.7:8018/v1/jobs
 | File | Changes |
 |------|---------|
 | `src/innie/fleet/gateway.py` | `POST /api/agents/register`, load persisted registry on startup |
-| `src/innie/serve/app.py` | `openclaw://` in `notify_reply_to`, SSRF allowlist, `_resolve_agent_endpoint()`, `GET /v1/jobs/{id}/events` |
+| `src/innie/serve/app.py` | `agents://` in `notify_reply_to`, SSRF allowlist, `_resolve_agent_endpoint()`, `GET /v1/jobs/{id}/events` |
 | `src/innie/commands/serve.py` | Self-register with fleet on startup |
 
 Three files. ~120 lines total.

@@ -68,7 +68,7 @@ class JobCreateRequest(BaseModel):
     agent: str | None = Field(default=None, description="Target agent name")
     reply_to: str | None = Field(
         default=None,
-        description="Where to POST result: openclaw://, mattermost://, https://",
+        description="Where to POST result: agents://<name>, mattermost://<channel>, https://<url>",
     )
 
 

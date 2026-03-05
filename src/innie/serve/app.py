@@ -10,8 +10,10 @@ import logging
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 
+import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -53,10 +55,66 @@ async def _require_auth(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 
+async def _register_with_fleet() -> None:
+    """Register this serve instance with the fleet gateway on startup."""
+    fleet_url = os.environ.get("INNIE_FLEET_URL", "")
+    if not fleet_url:
+        return
+    agent = paths.active_agent()
+    if not agent:
+        return
+    host = os.environ.get("INNIE_SERVE_HOST", "")
+    if not host:
+        import socket
+        try:
+            host = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            return
+    port = int(os.environ.get("INNIE_SERVE_PORT", "8013"))
+    endpoint = f"http://{host}:{port}"
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{fleet_url}/api/agents/register",
+                json={"agent": agent, "endpoint": endpoint},
+                timeout=5.0,
+            )
+        logger.info(f"Registered with fleet gateway as {agent} @ {endpoint}")
+    except Exception as e:
+        logger.warning(f"Fleet registration failed (non-fatal): {e}")
+
+
+async def _resolve_agent_endpoint(agent_name: str) -> str:
+    """Resolve agent name to endpoint URL. Fleet gateway first, env var fallback."""
+    fleet_url = os.environ.get("INNIE_FLEET_URL", "")
+    if fleet_url:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{fleet_url}/api/agents/{agent_name}",
+                    timeout=3.0,
+                )
+                if resp.status_code == 200:
+                    endpoint = resp.json().get("endpoint", "")
+                    if endpoint:
+                        return endpoint.rstrip("/")
+        except Exception:
+            pass
+    env_key = f"INNIE_AGENT_{agent_name.upper()}_URL"
+    return os.environ.get(env_key, "").rstrip("/")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await _register_with_fleet()
+    yield
+
+
 app = FastAPI(
     title="innie-engine",
     description="Persistent memory and identity for AI coding assistants",
     version="0.2.0",
+    lifespan=lifespan,
     dependencies=[Depends(_require_auth)],
 )
 
@@ -114,8 +172,6 @@ async def notify_reply_to(job: Job) -> None:
     if not job.reply_to:
         return
     try:
-        import httpx
-
         payload = {
             "event": "job_complete",
             "job_id": job.id,
@@ -142,6 +198,30 @@ async def notify_reply_to(job: Job) -> None:
                         json={"channel_id": channel_id, "message": msg},
                         timeout=5.0,
                     )
+
+        elif job.reply_to.startswith("agents://"):
+            target_agent = job.reply_to.removeprefix("agents://")
+            endpoint = await _resolve_agent_endpoint(target_agent)
+            if not endpoint:
+                logger.warning(
+                    f"Cannot resolve agents://{target_agent} — "
+                    f"set INNIE_FLEET_URL or INNIE_AGENT_{target_agent.upper()}_URL"
+                )
+                return
+            from_agent = job.agent or paths.active_agent()
+            result_text = (job.result or job.error or "")[:40_000]
+            new_prompt = f"[Message from {from_agent}]\n\n{result_text}"
+            token = os.environ.get(f"INNIE_AGENT_{target_agent.upper()}_TOKEN", "")
+            headers = {"Content-Type": "application/json"}
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{endpoint}/v1/jobs",
+                    json={"prompt": new_prompt},
+                    headers=headers,
+                    timeout=10.0,
+                )
 
         elif job.reply_to.startswith(("https://", "http://")):
             async with httpx.AsyncClient() as client:
@@ -343,10 +423,10 @@ async def create_job(
 ):
     if request.reply_to:
         scheme = request.reply_to.split("://")[0] if "://" in request.reply_to else ""
-        if scheme not in {"mattermost", "https"}:
+        if scheme not in {"mattermost", "https", "agents"}:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported reply_to scheme '{scheme}'. Use mattermost:// or https://",
+                detail=f"Unsupported reply_to scheme '{scheme}'. Use mattermost://, https://, or agents://",
             )
 
     job_id = f"job-{uuid.uuid4().hex[:12]}"
@@ -411,6 +491,18 @@ async def get_job_status(job_id: str):
         output_tokens=job.output_tokens,
         num_turns=job.num_turns,
     )
+
+
+@app.get("/v1/jobs/{job_id}/events")
+async def get_job_events(job_id: str, types: str | None = None):
+    job = jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    events = list(job.events or [])
+    if types:
+        allowed = set(types.split(","))
+        events = [e for e in events if e.get("type") in allowed]
+    return {"job_id": job_id, "status": job.status, "events": events, "count": len(events)}
 
 
 @app.get("/v1/jobs")

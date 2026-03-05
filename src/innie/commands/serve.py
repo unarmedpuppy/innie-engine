@@ -1,5 +1,7 @@
 """innie serve — start the FastAPI server."""
 
+import os
+
 import typer
 
 
@@ -14,6 +16,9 @@ def serve(
     except ImportError:
         typer.echo("Missing serve dependencies. Install with: pip install innie-engine[serve]")
         raise typer.Exit(1)
+
+    # Expose port to the app so it can self-register with the fleet gateway
+    os.environ["INNIE_SERVE_PORT"] = str(port)
 
     typer.echo(f"Starting innie server on {host}:{port}")
     uvicorn.run(

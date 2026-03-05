@@ -7,15 +7,18 @@ Provides:
   - Statistics
 """
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 
 from innie.fleet.config import load_fleet_config
 from innie.fleet.health import HealthMonitor
@@ -25,6 +28,29 @@ from innie.fleet.models import (
     JobCreateRequest,
     JobResponse,
 )
+
+REGISTRY_PATH = Path.home() / ".innie" / "fleet-registry.json"
+
+
+class AgentRegistration(BaseModel):
+    agent: str
+    endpoint: str
+    capabilities: list[str] = []
+    version: str = ""
+
+
+def _load_registry() -> dict:
+    if REGISTRY_PATH.exists():
+        try:
+            return json.loads(REGISTRY_PATH.read_text())
+        except Exception:
+            pass
+    return {}
+
+
+def _save_registry(reg: dict) -> None:
+    REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    REGISTRY_PATH.write_text(json.dumps(reg, indent=2))
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +90,19 @@ async def lifespan(app: FastAPI):
             expected_online=agent_cfg.expected_online,
             tags=agent_cfg.tags,
         )
+
+    # Load dynamically registered agents (persisted across gateway restarts)
+    for agent_id, data in _load_registry().items():
+        if agent_id not in agents:
+            agents[agent_id] = Agent(
+                id=agent_id,
+                name=agent_id.capitalize(),
+                description="Self-registered agent",
+                endpoint=data["endpoint"],
+                agent_type="server",
+                expected_online=True,
+                tags=data.get("capabilities", []),
+            )
 
     # Start health monitor
     health_monitor = HealthMonitor(
@@ -142,6 +181,32 @@ async def get_agent(agent_id: str):
     if not agent:
         raise HTTPException(404, f"Agent '{agent_id}' not found")
     return agent.model_dump()
+
+
+@app.post("/api/agents/register")
+async def register_agent(reg: AgentRegistration):
+    """Called by innie serve on startup to register itself with the fleet."""
+    if reg.agent not in agents:
+        agents[reg.agent] = Agent(
+            id=reg.agent,
+            name=reg.agent.capitalize(),
+            description="Self-registered agent",
+            endpoint=reg.endpoint,
+            agent_type="server",
+            expected_online=True,
+            tags=reg.capabilities,
+        )
+    else:
+        agents[reg.agent].endpoint = reg.endpoint
+        if reg.capabilities:
+            agents[reg.agent].tags = reg.capabilities
+
+    registry = _load_registry()
+    registry[reg.agent] = {"endpoint": reg.endpoint, "capabilities": reg.capabilities}
+    _save_registry(registry)
+
+    logger.info(f"Agent registered: {reg.agent} @ {reg.endpoint}")
+    return {"status": "registered", "agent": reg.agent}
 
 
 @app.post("/api/agents/{agent_id}/check")

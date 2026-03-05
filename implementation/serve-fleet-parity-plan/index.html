@@ -2117,10 +2117,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#change-3-notify_reply_to-add-openclaw-resolution" class="md-nav__link">
+  <a href="#change-3-notify_reply_to-add-agents-resolution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Change 3 — notify_reply_to: add openclaw:// resolution
+        Change 3 — notify_reply_to: add agents:// resolution
       
     </span>
   </a>
@@ -2262,13 +2262,13 @@ harness with a <code>reply_to</code> address so the result finds its way back.</
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>   POST http://100.80.223.7:8018/v1/jobs
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   {
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>     &quot;prompt&quot;: &quot;Check disk usage on /media&quot;,
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>     &quot;reply_to&quot;: &quot;openclaw://avery&quot;
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>     &quot;reply_to&quot;: &quot;agents://avery&quot;
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   }
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>2. Gilfoyle&#39;s harness accepts immediately, runs async
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>   { &quot;job_id&quot;: &quot;job-abc123&quot;, &quot;status&quot;: &quot;pending&quot; }
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>3. Job completes. Gilfoyle reads reply_to = &quot;openclaw://avery&quot;
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>3. Job completes. Gilfoyle reads reply_to = &quot;agents://avery&quot;
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>   Looks up env var: AGENT_REMOTE_AVERY_URL = http://100.92.176.74:8013
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>   POST http://100.92.176.74:8013/v1/jobs
@@ -2279,11 +2279,11 @@ harness with a <code>reply_to</code> address so the result finds its way back.</
 </code></pre></div>
 <h3 id="key-points">Key Points<a class="headerlink" href="#key-points" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>openclaw://avery</code></strong> = "POST the result to Avery's <code>/v1/jobs</code> as a new job"</li>
+<li><strong><code>agents://avery</code></strong> = "POST the result to Avery's <code>/v1/jobs</code> as a new job"</li>
 <li><strong>No dedicated inbound endpoint</strong> — results arrive as new job prompts</li>
 <li><strong>Fire-and-forget</strong> — delivery never blocks or retries</li>
 <li><strong>Agent URL resolution</strong> = manual env var per agent, per machine (the problem)</li>
-<li>The name "openclaw" is historical — it just means "route to that agent's harness"</li>
+<li>The scheme is <code>agents://</code> — human-readable, no legacy baggage</li>
 </ul>
 <hr />
 <h2 id="the-architecture-problem-static-config-everywhere">The Architecture Problem: Static Config Everywhere<a class="headerlink" href="#the-architecture-problem-static-config-everywhere" title="Permanent link">&para;</a></h2>
@@ -2296,7 +2296,7 @@ on every machine whenever:
 <hr />
 <h2 id="proposed-architecture-fleet-gateway-as-registry">Proposed Architecture: Fleet Gateway as Registry<a class="headerlink" href="#proposed-architecture-fleet-gateway-as-registry" title="Permanent link">&para;</a></h2>
 <p><strong>One env var per machine.</strong> Each <code>innie serve</code> instance registers itself with the fleet
-gateway on startup. <code>openclaw://</code> resolution asks the fleet gateway instead of reading
+gateway on startup. <code>agents://</code> resolution asks the fleet gateway instead of reading
 local env vars.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Every machine only needs:
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  INNIE_FLEET_URL=https://fleet-gateway.server.unarmedpuppy.com
@@ -2305,7 +2305,7 @@ local env vars.</p>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  POST {INNIE_FLEET_URL}/api/agents/register
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>  { &quot;agent&quot;: &quot;avery&quot;, &quot;endpoint&quot;: &quot;http://100.92.176.74:8013&quot; }
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>When routing openclaw://avery:
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>When routing agents://avery:
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>  GET {INNIE_FLEET_URL}/api/agents/avery  →  { &quot;endpoint&quot;: &quot;...&quot; }
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>  POST {endpoint}/v1/jobs  { &quot;prompt&quot;: &quot;[from gilfoyle]...&quot; }
 </code></pre></div>
@@ -2383,13 +2383,13 @@ This means the system degrades gracefully and can work without the fleet gateway
 <tbody>
 <tr>
 <td>1</td>
-<td><code>reply_to: openclaw://</code> in <code>notify_reply_to</code></td>
+<td><code>reply_to: agents://</code> in <code>notify_reply_to</code></td>
 <td><strong>Yes</strong></td>
 <td>~20 lines</td>
 </tr>
 <tr>
 <td>2</td>
-<td>SSRF allowlist rejects <code>openclaw://</code> at creation</td>
+<td>SSRF allowlist rejects <code>agents://</code> at creation</td>
 <td><strong>Yes</strong></td>
 <td>1 line</td>
 </tr>
@@ -2525,7 +2525,7 @@ reachable IP (important when the machine has multiple interfaces):</p>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>innie<span class="w"> </span>serve
 </code></pre></div>
 <hr />
-<h3 id="change-3-notify_reply_to-add-openclaw-resolution">Change 3 — <code>notify_reply_to</code>: add <code>openclaw://</code> resolution<a class="headerlink" href="#change-3-notify_reply_to-add-openclaw-resolution" title="Permanent link">&para;</a></h3>
+<h3 id="change-3-notify_reply_to-add-agents-resolution">Change 3 — <code>notify_reply_to</code>: add <code>agents://</code> resolution<a class="headerlink" href="#change-3-notify_reply_to-add-agents-resolution" title="Permanent link">&para;</a></h3>
 <p><strong>File:</strong> <code>src/innie/serve/app.py</code></p>
 <p>Two sub-changes:</p>
 <p><strong>3a — SSRF allowlist</strong> (at job creation):
@@ -2533,15 +2533,15 @@ reachable IP (important when the machine has multiple interfaces):</p>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">if</span> <span class="n">scheme</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;mattermost&quot;</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">}:</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># After</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">if</span> <span class="n">scheme</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;mattermost&quot;</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">,</span> <span class="s2">&quot;openclaw&quot;</span><span class="p">}:</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">if</span> <span class="n">scheme</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;mattermost&quot;</span><span class="p">,</span> <span class="s2">&quot;https&quot;</span><span class="p">,</span> <span class="s2">&quot;agents&quot;</span><span class="p">}:</span>
 </code></pre></div></p>
 <p><strong>3b — <code>notify_reply_to</code> handler:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">elif</span> <span class="n">job</span><span class="o">.</span><span class="n">reply_to</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;openclaw://&quot;</span><span class="p">):</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">target_agent</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">reply_to</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">&quot;openclaw://&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">elif</span> <span class="n">job</span><span class="o">.</span><span class="n">reply_to</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;agents://&quot;</span><span class="p">):</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">target_agent</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">reply_to</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">&quot;agents://&quot;</span><span class="p">)</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">endpoint</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_resolve_agent_endpoint</span><span class="p">(</span><span class="n">target_agent</span><span class="p">)</span>
 <a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">endpoint</span><span class="p">:</span>
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>            <span class="sa">f</span><span class="s2">&quot;Cannot resolve openclaw://</span><span class="si">{</span><span class="n">target_agent</span><span class="si">}</span><span class="s2"> — &quot;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>            <span class="sa">f</span><span class="s2">&quot;Cannot resolve agents://</span><span class="si">{</span><span class="n">target_agent</span><span class="si">}</span><span class="s2"> — &quot;</span>
 <a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>            <span class="sa">f</span><span class="s2">&quot;set INNIE_FLEET_URL or INNIE_AGENT_</span><span class="si">{</span><span class="n">target_agent</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_URL&quot;</span>
 <a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="p">)</span>
 <a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>        <span class="k">return</span>
@@ -2705,7 +2705,7 @@ reachable IP (important when the machine has multiple interfaces):</p>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Test A2A: submit job with openclaw reply_to</span>
 <a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://100.92.176.74:8013/v1/jobs<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;prompt&quot;:&quot;ping&quot;,&quot;reply_to&quot;:&quot;openclaw://gilfoyle&quot;}&#39;</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;prompt&quot;:&quot;ping&quot;,&quot;reply_to&quot;:&quot;agents://gilfoyle&quot;}&#39;</span>
 <a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
 <a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1"># Gilfoyle should receive a new job</span>
 <a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>curl<span class="w"> </span>http://100.80.223.7:8018/v1/jobs
@@ -2726,7 +2726,7 @@ reachable IP (important when the machine has multiple interfaces):</p>
 </tr>
 <tr>
 <td><code>src/innie/serve/app.py</code></td>
-<td><code>openclaw://</code> in <code>notify_reply_to</code>, SSRF allowlist, <code>_resolve_agent_endpoint()</code>, <code>GET /v1/jobs/{id}/events</code></td>
+<td><code>agents://</code> in <code>notify_reply_to</code>, SSRF allowlist, <code>_resolve_agent_endpoint()</code>, <code>GET /v1/jobs/{id}/events</code></td>
 </tr>
 <tr>
 <td><code>src/innie/commands/serve.py</code></td>

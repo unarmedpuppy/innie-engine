@@ -12,13 +12,9 @@
         <meta name="author" content="Joshua Jenquist">
       
       
-        <link rel="canonical" href="https://joshuajenquist.github.io/innie-engine/adrs/0008-fleet-gateway/">
+        <link rel="canonical" href="https://joshuajenquist.github.io/innie-engine/adrs/0031-dynamic-agent-registration-a2a/">
       
       
-        <link rel="prev" href="../0007-git-auto-backup/">
-      
-      
-        <link rel="next" href="../0009-skills-as-slash-commands/">
       
       
         
@@ -29,7 +25,7 @@
     
     
       
-        <title>0008 – Fleet Gateway - innie-engine</title>
+        <title>ADR-0031 — Dynamic Agent Registration and A2A Communication - innie-engine</title>
       
     
     
@@ -80,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-0008-fleet-gateway-for-multi-machine-coordination" class="md-skip">
+        <a href="#adr-0031-dynamic-agent-registration-and-a2a-communication" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              0008 – Fleet Gateway
+              ADR-0031 — Dynamic Agent Registration and A2A Communication
             
           </span>
         </div>
@@ -323,12 +319,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../" class="md-tabs__link">
           
   
@@ -1038,31 +1032,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1080,7 +1071,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1319,37 +1310,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    0008 – Fleet Gateway
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../0008-fleet-gateway/" class="md-nav__link">
         
   
   
@@ -1365,70 +1329,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Context
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rationale" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rationale
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Consequences
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2074,16 +1974,105 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rationale" class="md-nav__link">
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-self-registration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rationale
+        1. Self-registration
       
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-agents-scheme-for-async-a2a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. agents:// scheme for async A2A
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-endpoint-resolution-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Endpoint resolution order
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternatives-considered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternatives Considered
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternatives Considered">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#static-env-vars-per-agent-the-agent-harness-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static env vars per agent (the agent-harness approach)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-fleetyaml-original-innie-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static fleet.yaml (original innie approach)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dedicated-reply-inbox-message-queue-webhook" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dedicated reply inbox (message queue / webhook)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grpcwebsocket-persistent-connections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gRPC/WebSocket persistent connections
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2092,6 +2081,28 @@
     <span class="md-ellipsis">
       
         Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
       
     </span>
   </a>
@@ -2118,59 +2129,148 @@
   
 
 
-<h1 id="adr-0008-fleet-gateway-for-multi-machine-coordination">ADR-0008 — Fleet Gateway for Multi-Machine Coordination<a class="headerlink" href="#adr-0008-fleet-gateway-for-multi-machine-coordination" title="Permanent link">&para;</a></h1>
+<h1 id="adr-0031-dynamic-agent-registration-and-a2a-communication">ADR-0031 — Dynamic Agent Registration and A2A Communication<a class="headerlink" href="#adr-0031-dynamic-agent-registration-and-a2a-communication" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Accepted
-<strong>Date:</strong> 2026-02
-<strong>Context:</strong> Coordinating multiple innie agents across machines</p>
+<strong>Date:</strong> 2026-03
+<strong>Supersedes:</strong> ADR-0008 (fleet gateway static config — the "Future" note is now resolved)</p>
 <hr />
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>The original motivation for innie came from a homelab with multiple machines running AI agents. The need: agents on different machines should be able to discover each other, submit jobs to each other, and report health.</p>
-<p>Prior art: the <code>agent-harness</code> project (which innie merges) had a jobs API (<code>POST /v1/jobs</code>) and a separate <code>fleet-gateway</code> service that aggregated multiple agents.</p>
-<p>Options for multi-machine coordination:</p>
+<p>ADR-0008 established the fleet gateway as a lightweight HTTP registry for multi-machine coordination.
+The original design required manually updating a <code>fleet.yaml</code> file on every machine whenever an agent
+was added, moved, or changed ports. For a fleet of 4+ agents across 3 machines, that's O(agents ×
+machines) manual config.</p>
+<p>There was also no mechanism for agents to communicate <em>asynchronously</em> with each other. If Avery (on
+the Mac Mini) needed Gilfoyle (on the home server) to check disk usage, the only option was a
+synchronous HTTP call that blocked until Gilfoyle responded — or implementing bespoke fire-and-forget
+logic in the caller.</p>
+<p>Two problems to solve:</p>
 <ol>
-<li><strong>No fleet support</strong> — users SSH between machines manually</li>
-<li><strong>Shared database</strong> — all agents read/write a central PostgreSQL</li>
-<li><strong>Message queue</strong> — Redis/RabbitMQ as communication backbone</li>
-<li><strong>HTTP APIs</strong> — each agent exposes HTTP; a gateway aggregates</li>
-<li><strong>gRPC service mesh</strong> — strongly typed but heavy</li>
+<li><strong>Static config</strong>: every fleet topology change requires manual edits on every machine</li>
+<li><strong>No A2A</strong>: agents can't delegate tasks to each other and receive results asynchronously</li>
 </ol>
 <hr />
 <h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>Lightweight HTTP gateway</strong> with YAML-configured agent registry and background health polling.</p>
-<ul>
-<li>Each agent runs <code>innie serve</code> (FastAPI, default port 8013)</li>
-<li>A fleet gateway (<code>innie fleet start</code>) maintains a registry of agents</li>
-<li>Health monitor polls SERVER agents every N seconds (configurable)</li>
-<li>3-strike degradation: 1-2 failures → DEGRADED, 3+ → OFFLINE</li>
-<li>Gateway proxies job creation and memory reads across agents</li>
-<li>CLI agents (local) are registered but not health-polled</li>
-</ul>
+<h3 id="1-self-registration">1. Self-registration<a class="headerlink" href="#1-self-registration" title="Permanent link">&para;</a></h3>
+<p>Each <code>innie serve</code> instance registers itself with the fleet gateway on startup:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>POST {INNIE_FLEET_URL}/api/agents/register
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>{ &quot;agent&quot;: &quot;avery&quot;, &quot;endpoint&quot;: &quot;http://100.92.176.74:8013&quot; }
+</code></pre></div>
+<p>The gateway upserts the agent into its in-memory registry and persists registrations to
+<code>~/.innie/fleet-registry.json</code> so they survive gateway restarts.</p>
+<p>Each machine only needs one env var: <code>INNIE_FLEET_URL</code>. <code>INNIE_SERVE_HOST</code> declares the reachable IP
+(important when a machine has multiple interfaces — LAN vs Tailscale).</p>
+<h3 id="2-agents-scheme-for-async-a2a">2. <code>agents://</code> scheme for async A2A<a class="headerlink" href="#2-agents-scheme-for-async-a2a" title="Permanent link">&para;</a></h3>
+<p>Job results are routed via <code>reply_to</code>, which already supported <code>mattermost://</code> and <code>https://</code>.
+We added <code>agents://&lt;name&gt;</code> as a first-class scheme.</p>
+<p>When a job with <code>reply_to: agents://gilfoyle</code> completes:
+1. The serve app resolves <code>gilfoyle</code> to an endpoint (fleet gateway first, env var fallback)
+2. POSTs the result as a <em>new job prompt</em> to <code>{endpoint}/v1/jobs</code>
+3. Gilfoyle's harness receives it as an inbound job — Claude reads it and routes the response</p>
+<p>There is no dedicated inbound endpoint. Results arrive as job prompts. This is intentional: it means
+every agent already knows how to receive them, and you get the full job lifecycle (queuing, logging,
+reply-to chaining) for free.</p>
+<h3 id="3-endpoint-resolution-order">3. Endpoint resolution order<a class="headerlink" href="#3-endpoint-resolution-order" title="Permanent link">&para;</a></h3>
+<p><code>_resolve_agent_endpoint(name)</code> tries in order:
+1. <code>GET {INNIE_FLEET_URL}/api/agents/{name}</code> — dynamic, always current
+2. <code>INNIE_AGENT_{NAME}_URL</code> env var — static fallback for when fleet is unreachable</p>
+<p>This means the system degrades gracefully. Each machine can also hard-code fallback URLs and work
+without the fleet gateway at all.</p>
 <hr />
-<h2 id="rationale">Rationale<a class="headerlink" href="#rationale" title="Permanent link">&para;</a></h2>
-<p><strong>Against shared database:</strong> Creates a hard dependency on a central server. If the database is down, all agents are down. Doesn't match the "each machine is independent" model.</p>
-<p><strong>Against message queue:</strong> Significant infrastructure overhead. Adds Redis/RabbitMQ as a dependency. Message queues are great for guaranteed delivery at scale, but innie targets personal/homelab use where simplicity matters more than guaranteed delivery.</p>
-<p><strong>Against gRPC:</strong> Heavy. Requires protobuf schema for every message type. HTTP is universal — any language, any tool can speak to it.</p>
-<p><strong>For lightweight HTTP gateway:</strong>
-- Matches the existing agent-harness pattern (migration path is clear)
-- Each agent is independently deployable — the fleet gateway is optional
-- YAML config is human-readable and version-controllable
-- 3-strike degradation avoids flapping — temporary network blips don't immediately mark agents offline
-- The gateway itself is stateless (health state is in-memory) — restarting it is safe</p>
-<p><strong>Why 3-strike threshold?</strong> One failure might be a network blip. Two is suspicious. Three is a real problem. The threshold is configurable but 3 is the right default for a local network.</p>
+<h2 id="alternatives-considered">Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Permanent link">&para;</a></h2>
+<h3 id="static-env-vars-per-agent-the-agent-harness-approach">Static env vars per agent (the agent-harness approach)<a class="headerlink" href="#static-env-vars-per-agent-the-agent-harness-approach" title="Permanent link">&para;</a></h3>
+<p>The prior system used <code>AGENT_REMOTE_{NAME}_URL</code> env vars. Every machine needed a full map of all
+other agents. Worked fine with 2-3 agents; breaks down at 4+ across 3+ machines.</p>
+<p><strong>Rejected</strong>: O(agents × machines) maintenance, no central source of truth.</p>
+<h3 id="static-fleetyaml-original-innie-approach">Static fleet.yaml (original innie approach)<a class="headerlink" href="#static-fleetyaml-original-innie-approach" title="Permanent link">&para;</a></h3>
+<p><code>fleet.yaml</code> on the gateway machine with all agent URLs. An improvement over per-machine env vars but
+still requires manual edit + restart for every topology change.</p>
+<p><strong>Rejected</strong>: still manual. Adding a new agent means editing the YAML and restarting the gateway.</p>
+<h3 id="dedicated-reply-inbox-message-queue-webhook">Dedicated reply inbox (message queue / webhook)<a class="headerlink" href="#dedicated-reply-inbox-message-queue-webhook" title="Permanent link">&para;</a></h3>
+<p>Give each agent a dedicated inbound endpoint that only accepts results, separate from the jobs API.</p>
+<p><strong>Rejected</strong>: more surface area, no benefit. The jobs API already does queuing, authentication,
+logging, and reply-to chaining. Receiving a result as a job prompt gives you all of that for free.</p>
+<h3 id="grpcwebsocket-persistent-connections">gRPC/WebSocket persistent connections<a class="headerlink" href="#grpcwebsocket-persistent-connections" title="Permanent link">&para;</a></h3>
+<p>Strong typing and bidirectional streaming, but significant infrastructure overhead.</p>
+<p><strong>Rejected</strong>: innie targets personal/homelab use. HTTP fire-and-forget is sufficient for the use
+case.</p>
 <hr />
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <p><strong>Positive:</strong>
-- Fleet gateway is completely optional — single-machine users ignore it entirely
-- Each agent is independently functional without the gateway
-- Health status provides real-time visibility into fleet state
-- Proxied job submission means callers don't need to know which machine a job runs on</p>
+- Adding a new agent = set <code>INNIE_FLEET_URL</code> and start <code>innie serve</code>. Nothing else.
+- Agents know about each other without hardcoded config — Claude can route intelligently.
+- <code>reply_to: agents://name</code> chains multi-step workflows across machines with no extra code.
+- Fleet gateway restart doesn't lose registrations (persisted to JSON).
+- Degrades gracefully — env var fallback works without the fleet gateway.</p>
 <p><strong>Negative:</strong>
-- In-memory health state means a gateway restart resets all statuses to UNKNOWN
-- No guaranteed delivery — if a job submission fails, the caller must retry
-- The gateway is a single point of failure for fleet-wide operations</p>
-<p><strong>Neutral:</strong>
-- The fleet config YAML can still be used for agents that don't self-register (static entries)
-- Agent self-registration was implemented in ADR-0031 — dynamic agents no longer require fleet.yaml</p>
+- <code>INNIE_SERVE_HOST</code> must be set correctly on machines with multiple interfaces. If unset, falls back
+  to <code>socket.gethostbyname(hostname)</code> which may return a LAN IP unreachable from other machines.
+- Fire-and-forget delivery — no retry on failure. If the target agent is down when the result
+  arrives, the result is lost.
+- Registration is not authenticated. Any process that can reach the fleet gateway can register an
+  agent. Acceptable for homelab; would need a shared secret for production use.</p>
+<hr />
+<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Set on</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INNIE_FLEET_URL</code></td>
+<td>Every machine</td>
+<td>Fleet gateway URL for registration + resolution</td>
+</tr>
+<tr>
+<td><code>INNIE_SERVE_HOST</code></td>
+<td>Every machine</td>
+<td>This machine's reachable IP (Tailscale IP preferred)</td>
+</tr>
+<tr>
+<td><code>INNIE_API_TOKEN</code></td>
+<td>Every machine</td>
+<td>Bearer token for inbound auth on <code>/v1/jobs</code></td>
+</tr>
+<tr>
+<td><code>INNIE_AGENT_{NAME}_URL</code></td>
+<td>Fallback only</td>
+<td>Direct URL when fleet gateway is unreachable</td>
+</tr>
+<tr>
+<td><code>INNIE_AGENT_{NAME}_TOKEN</code></td>
+<td>Optional</td>
+<td>Bearer token for outbound A2A calls to that agent</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h2>
+<p>Three files, ~120 lines:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/innie/fleet/gateway.py</code></td>
+<td><code>POST /api/agents/register</code>; <code>_load_registry()</code> / <code>_save_registry()</code>; load persisted registry in lifespan</td>
+</tr>
+<tr>
+<td><code>src/innie/serve/app.py</code></td>
+<td><code>_register_with_fleet()</code> in lifespan; <code>_resolve_agent_endpoint()</code>; <code>agents://</code> branch in <code>notify_reply_to()</code>; SSRF allowlist update; <code>GET /v1/jobs/{id}/events</code></td>
+</tr>
+<tr>
+<td><code>src/innie/commands/serve.py</code></td>
+<td>Set <code>INNIE_SERVE_PORT</code> env var before uvicorn so the app can construct its own endpoint URL</td>
+</tr>
+</tbody>
+</table>
 
 
 

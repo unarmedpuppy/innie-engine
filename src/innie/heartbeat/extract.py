@@ -37,6 +37,19 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
     context = collected.get("current_context", "")
     context_text = f"\n--- Current CONTEXT.md ---\n{context}\n" if context else ""
 
+    # Existing knowledge for contradiction detection
+    existing = collected.get("existing_knowledge", [])
+    existing_text = ""
+    if existing:
+        existing_text = "\n--- Existing Knowledge (check for contradictions) ---\n"
+        existing_text += (
+            "If any session above contradicts or supersedes an entry below, "
+            "include it in `superseded_learnings` with the exact file path and a one-sentence reason. "
+            "Do not re-extract learnings already captured here unless they need updating.\n\n"
+        )
+        for entry in existing:
+            existing_text += f"[{entry['file']}]\n{entry['summary']}\n\n"
+
     return f"""{instructions}
 
 ## Raw Data
@@ -44,12 +57,14 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
 {sessions_text}
 {git_text}
 {context_text}
+{existing_text}
 
 ## Task
 
 Extract structured information from the raw data above.
 Output ONLY valid JSON matching the schema in the instructions.
 Do not include any text outside the JSON object.
+The schema includes a `superseded_learnings` field — populate it when sessions show an existing learning is wrong or outdated.
 """
 
 
@@ -89,12 +104,17 @@ def _call_anthropic(prompt: str, model: str) -> str:
     return "".join(b["text"] for b in body.get("content", []) if b.get("type") == "text")
 
 
-def _call_openai_compatible(prompt: str, model: str, url: str) -> str:
+def _call_openai_compatible(prompt: str, model: str, url: str, api_key: str = "") -> str:
     """Call any OpenAI-compatible /chat/completions endpoint. Returns response text."""
     import httpx
 
+    headers = {}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
     resp = httpx.post(
         f"{url.rstrip('/')}/chat/completions",
+        headers=headers,
         json={
             "model": model,
             "max_tokens": 4096,
@@ -104,6 +124,45 @@ def _call_openai_compatible(prompt: str, model: str, url: str) -> str:
     )
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"]
+
+
+def _resolve_openclaw() -> tuple[str, str, str]:
+    """Read LLM provider config from OpenClaw. Returns (url, api_key, model).
+
+    Looks for the primary model in agents.defaults.model.primary (e.g. "homelab/glm-5"),
+    then resolves that provider's baseUrl and apiKey from models.providers.
+    """
+    import json
+    from pathlib import Path
+
+    config_path = Path.home() / ".openclaw" / "openclaw.json"
+    if not config_path.exists():
+        raise RuntimeError(
+            "OpenClaw config not found at ~/.openclaw/openclaw.json.\n"
+            "Install OpenClaw or switch to a different heartbeat provider."
+        )
+
+    cfg = json.loads(config_path.read_text())
+    primary = cfg.get("agents", {}).get("defaults", {}).get("model", {}).get("primary", "")
+    if "/" in primary:
+        provider_name, model_id = primary.split("/", 1)
+    else:
+        provider_name = primary
+        model_id = "auto"
+
+    provider = cfg.get("models", {}).get("providers", {}).get(provider_name, {})
+    if not provider:
+        raise RuntimeError(
+            f"OpenClaw provider '{provider_name}' not found in models.providers.\n"
+            f"Available: {list(cfg.get('models', {}).get('providers', {}).keys())}"
+        )
+
+    url = provider.get("baseUrl", "")
+    api_key = provider.get("apiKey", "")
+    if not url:
+        raise RuntimeError(f"OpenClaw provider '{provider_name}' has no baseUrl configured.")
+
+    return url, api_key, model_id
 
 
 def _extract_json_object(text: str) -> dict | None:
@@ -144,7 +203,8 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
     Provider selection via config:
       heartbeat.provider = "anthropic"  → Anthropic API (requires ANTHROPIC_API_KEY)
       heartbeat.provider = "external"   → OpenAI-compatible endpoint (vLLM, Ollama, etc.)
-      heartbeat.provider = "auto"       → external if external_url is set, else anthropic
+      heartbeat.provider = "openclaw"   → Auto-reads URL/key/model from ~/.openclaw/openclaw.json
+      heartbeat.provider = "auto"       → openclaw if installed, external if url set, else anthropic
 
     Returns validated HeartbeatExtraction.
     """
@@ -155,13 +215,30 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
 
     # Resolve "auto" provider
     if provider == "auto":
-        provider = "external" if external_url else "anthropic"
+        from pathlib import Path
+
+        if (Path.home() / ".openclaw" / "openclaw.json").exists():
+            provider = "openclaw"
+        elif external_url:
+            provider = "external"
+        else:
+            provider = "anthropic"
 
     # Resolve "auto" model
     if model == "auto":
-        model = "claude-haiku-4-5-20251001" if provider == "anthropic" else "default"
+        if provider == "anthropic":
+            model = "claude-haiku-4-5-20251001"
+        elif provider == "openclaw":
+            pass  # model resolved by _resolve_openclaw below
+        else:
+            model = "default"
 
-    if provider == "external":
+    if provider == "openclaw":
+        oc_url, oc_key, oc_model = _resolve_openclaw()
+        if model == "auto":
+            model = oc_model
+        text = _call_openai_compatible(prompt, model, oc_url, api_key=oc_key)
+    elif provider == "external":
         if not external_url:
             raise RuntimeError(
                 "heartbeat.provider = \"external\" requires heartbeat.external_url to be set.\n"

@@ -198,10 +198,17 @@ def _custom_setup() -> tuple[str, bool, bool]:
     # Heartbeat
     console.print("\n  [bold]Heartbeat[/bold] (auto-extracts memories from sessions)")
     console.print("  Runs every 30 min: collects session data, AI extracts learnings,")
-    console.print("  routes to journal/learnings/projects. Requires Anthropic API key.")
-    console.print("  [1] Yes — install cron job")
+    console.print("  routes to journal/learnings/projects.")
+
+    from pathlib import Path as _Path
+
+    has_openclaw = (_Path.home() / ".openclaw" / "openclaw.json").exists()
+    if has_openclaw:
+        console.print("  [1] Yes — install cron job (OpenClaw provider detected)")
+    else:
+        console.print("  [1] Yes — install cron job (requires Anthropic API key or external URL)")
     console.print("  [2] No — I'll run `innie heartbeat run` manually")
-    hb_choice = typer.prompt("  Choice", default="2")
+    hb_choice = typer.prompt("  Choice", default="1" if has_openclaw else "2")
     enable_heartbeat = hb_choice == "1"
 
     # Git

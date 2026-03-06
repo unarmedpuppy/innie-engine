@@ -31,7 +31,7 @@ def _docker_env() -> dict:
     colima_sock = Path.home() / ".colima" / "default" / "docker.sock"
     if colima_sock.exists():
         env["DOCKER_HOST"] = f"unix://{colima_sock}"
-        env.setdefault("DOCKER_API_VERSION", "1.43")
+        env.setdefault("DOCKER_API_VERSION", "1.47")
     return env
 
 

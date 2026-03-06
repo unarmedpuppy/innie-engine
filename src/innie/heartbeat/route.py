@@ -233,6 +233,64 @@ def route_metrics(extraction: HeartbeatExtraction, agent: str | None = None) -> 
         f.write(json.dumps(entry, separators=(",", ":")) + "\n")
 
 
+def route_superseded(extraction: HeartbeatExtraction, agent: str | None = None) -> int:
+    """Mark superseded learnings/decisions with frontmatter flags.
+
+    Writes superseded: true, superseded_on, superseded_reason to the file's
+    frontmatter. Files are kept (not deleted) for audit trail. The search
+    indexer excludes them from results.
+    """
+    if not extraction.superseded_learnings:
+        return 0
+
+    data_dir = paths.data_dir(agent)
+    today = datetime.now().strftime("%Y-%m-%d")
+    count = 0
+
+    for item in extraction.superseded_learnings:
+        # Resolve path — accept relative (to data/) or absolute
+        target = data_dir / item.file_path
+        if not target.exists():
+            # Try stripping leading data/ if LLM included it
+            alt = data_dir / item.file_path.lstrip("data/").lstrip("/")
+            if alt.exists():
+                target = alt
+            else:
+                continue  # File not found — skip silently
+
+        try:
+            text = target.read_text(encoding="utf-8")
+
+            if text.startswith("---"):
+                # Update existing frontmatter
+                end = text.index("---", 3)
+                fm_block = text[3:end]
+                # Remove any existing superseded fields
+                fm_block = re.sub(r"\nsuperseded[^\n]*", "", fm_block)
+                new_fm = (
+                    f"---{fm_block}"
+                    f"\nsuperseded: true"
+                    f"\nsuperseded_on: {today}"
+                    f"\nsuperseded_reason: \"{item.reason.replace(chr(34), chr(39))}\""
+                    f"\n---"
+                )
+                text = new_fm + text[end + 3:]
+            else:
+                # Prepend frontmatter
+                text = (
+                    f"---\nsuperseded: true\nsuperseded_on: {today}"
+                    f"\nsuperseded_reason: \"{item.reason.replace(chr(34), chr(39))}\"\n---\n\n"
+                    + text
+                )
+
+            target.write_text(text, encoding="utf-8")
+            count += 1
+        except Exception:
+            continue
+
+    return count
+
+
 def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict[str, int]:
     """Run all routing for a heartbeat extraction. Returns counts per route."""
     results = {
@@ -241,6 +299,7 @@ def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict
         "projects": route_project_updates(extraction, agent),
         "decisions": route_decisions(extraction, agent),
         "open_items": route_open_items(extraction, agent),
+        "superseded": route_superseded(extraction, agent),
     }
 
     route_metrics(extraction, agent)

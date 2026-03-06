@@ -179,6 +179,21 @@ def _chunk_markdown(text: str, chunk_words: int, overlap: int) -> list[str]:
 # ── Indexing ─────────────────────────────────────────────────────────────────
 
 
+def _is_superseded(file_path: Path) -> bool:
+    """Return True if the file has 'superseded: true' in its YAML frontmatter."""
+    try:
+        text = file_path.read_text(encoding="utf-8", errors="ignore")
+        if not text.startswith("---"):
+            return False
+        end = text.find("---", 3)
+        if end == -1:
+            return False
+        fm = text[3:end]
+        return bool(re.search(r"(?m)^superseded:\s*true\s*$", fm))
+    except OSError:
+        return False
+
+
 def collect_files(agent: str | None = None, scan_secrets: bool = True) -> list[Path]:
     """Collect all indexable .md files from data/ and state/sessions/.
 
@@ -197,6 +212,9 @@ def collect_files(agent: str | None = None, scan_secrets: bool = True) -> list[P
             files.extend(p.rglob("*.md"))
         elif p.is_file() and p.suffix == ".md":
             files.append(p)
+
+    # Exclude superseded files — they're kept for audit trail but shouldn't surface in search
+    files = [f for f in files if not _is_superseded(f)]
 
     if scan_secrets:
         from innie.core.secrets import should_index_file

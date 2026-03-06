@@ -5,6 +5,7 @@ No AI involved — pure data collection.
 """
 
 import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -114,11 +115,95 @@ def collect_current_context(agent: str | None = None) -> str:
     return ""
 
 
+def collect_existing_knowledge(agent: str | None = None, sessions: list[dict] | None = None) -> list[dict]:
+    """Return relevant existing learnings/decisions for contradiction detection.
+
+    Tries hybrid search using session content as the query.
+    Falls back to the 20 most recently modified files if search unavailable.
+    Capped at ~6000 chars total to stay within token budget.
+    """
+    from innie.core import paths as _paths
+
+    data_dir = _paths.data_dir(agent)
+    if not data_dir.exists():
+        return []
+
+    # Build query string from session content
+    query_parts: list[str] = []
+    for s in (sessions or [])[:5]:
+        query_parts.append(s.get("content", "")[:300])
+    query = " ".join(query_parts)[:1500]
+
+    results: list[dict] = []
+
+    # Try semantic/hybrid search first
+    if query:
+        try:
+            from innie.core.search import open_db, search_hybrid
+            db_path = _paths.index_db(agent)
+            if db_path.exists():
+                conn = open_db(db_path)
+                hits = search_hybrid(conn, query, limit=20)
+                conn.close()
+                seen_files: set[str] = set()
+                for hit in hits:
+                    fp = Path(hit["file_path"])
+                    if str(fp) in seen_files:
+                        continue
+                    seen_files.add(str(fp))
+                    try:
+                        rel = str(fp.relative_to(data_dir))
+                    except ValueError:
+                        continue
+                    # Skip non-learnings/decisions
+                    if not (rel.startswith("learnings/") or rel.startswith("decisions/")):
+                        continue
+                    results.append({
+                        "file": rel,
+                        "summary": hit["content"][:300].strip(),
+                    })
+        except Exception:
+            pass
+
+    # Fallback: most recently modified files from learnings/ and decisions/
+    if not results:
+        candidates: list[Path] = []
+        for subdir in ("learnings", "decisions"):
+            d = data_dir / subdir
+            if d.exists():
+                candidates.extend(d.rglob("*.md"))
+        candidates.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        for fp in candidates[:20]:
+            try:
+                rel = str(fp.relative_to(data_dir))
+                text = fp.read_text(encoding="utf-8", errors="ignore")
+                # Skip frontmatter
+                body = re.sub(r"^---\n.*?\n---\n?", "", text, flags=re.DOTALL).strip()
+                results.append({"file": rel, "summary": body[:300]})
+            except Exception:
+                continue
+
+    # Apply total char budget
+    budget = 6000
+    trimmed: list[dict] = []
+    used = 0
+    for r in results:
+        entry_len = len(r["file"]) + len(r["summary"]) + 10
+        if used + entry_len > budget:
+            break
+        trimmed.append(r)
+        used += entry_len
+
+    return trimmed
+
+
 def collect_all(agent: str | None = None, since_override: float | None = None) -> dict:
     """Run full Phase 1 collection."""
+    session_data = collect_session_data(agent, since_override=since_override)
     return {
         "timestamp": time.time(),
-        "sessions": collect_session_data(agent, since_override=since_override),
+        "sessions": session_data,
         "git_activity": collect_git_activity(),
         "current_context": collect_current_context(agent),
+        "existing_knowledge": collect_existing_knowledge(agent, session_data.get("sessions", [])),
     }

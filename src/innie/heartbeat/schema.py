@@ -47,6 +47,11 @@ class ProcessedSessions(BaseModel):
     ids: list[str] = []
 
 
+class SupersededLearning(BaseModel):
+    file_path: str  # relative to data/ e.g. "learnings/infrastructure/2026-02-10-foo.md"
+    reason: str     # one sentence: what changed and why this is now wrong/outdated
+
+
 class HeartbeatExtraction(BaseModel):
     journal_entries: list[JournalEntry]
     learnings: list[Learning] = []
@@ -54,4 +59,5 @@ class HeartbeatExtraction(BaseModel):
     decisions: list[Decision] = []
     open_items: list[OpenItem] = []
     context_updates: ContextUpdate | None = None
+    superseded_learnings: list[SupersededLearning] = []
     processed_sessions: ProcessedSessions

@@ -291,6 +291,44 @@ def route_superseded(extraction: HeartbeatExtraction, agent: str | None = None) 
     return count
 
 
+def route_people(extraction: HeartbeatExtraction, agent: str | None = None) -> int:
+    """Append new context to per-person files in data/people/.
+
+    Creates the file if it doesn't exist. Appends a dated section with the
+    new content so the file builds up a timestamped history.
+    """
+    if not extraction.people_updates:
+        return 0
+
+    people_dir = paths.data_dir(agent) / "people"
+    people_dir.mkdir(parents=True, exist_ok=True)
+    today = datetime.now().strftime("%Y-%m-%d")
+    count = 0
+
+    for update in extraction.people_updates:
+        name = update.name.strip().lower()
+        if not name or not update.content.strip():
+            continue
+
+        person_file = people_dir / f"{name}.md"
+        section = f"\n## Update {today}\n\n{update.content.strip()}\n"
+
+        if person_file.exists():
+            person_file.write_text(
+                person_file.read_text(encoding="utf-8") + section,
+                encoding="utf-8",
+            )
+        else:
+            # Bootstrap minimal file
+            person_file.write_text(
+                f"---\nname: {name.title()}\nupdated: {today}\n---\n\n# {name.title()}\n{section}",
+                encoding="utf-8",
+            )
+        count += 1
+
+    return count
+
+
 def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict[str, int]:
     """Run all routing for a heartbeat extraction. Returns counts per route."""
     results = {
@@ -300,6 +338,7 @@ def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict
         "decisions": route_decisions(extraction, agent),
         "open_items": route_open_items(extraction, agent),
         "superseded": route_superseded(extraction, agent),
+        "people": route_people(extraction, agent),
     }
 
     route_metrics(extraction, agent)

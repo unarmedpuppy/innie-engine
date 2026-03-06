@@ -52,6 +52,11 @@ class SupersededLearning(BaseModel):
     reason: str     # one sentence: what changed and why this is now wrong/outdated
 
 
+class PersonUpdate(BaseModel):
+    name: str    # lowercase: josh | abby | oliver | eloise
+    content: str # markdown to append — new preferences, facts, context, events
+
+
 class HeartbeatExtraction(BaseModel):
     journal_entries: list[JournalEntry]
     learnings: list[Learning] = []
@@ -60,4 +65,5 @@ class HeartbeatExtraction(BaseModel):
     open_items: list[OpenItem] = []
     context_updates: ContextUpdate | None = None
     superseded_learnings: list[SupersededLearning] = []
+    people_updates: list[PersonUpdate] = []
     processed_sessions: ProcessedSessions

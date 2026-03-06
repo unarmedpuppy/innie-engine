@@ -24,6 +24,14 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
     session_data = collected.get("sessions", {})
     for s in session_data.get("sessions", []):
         sessions_text += f"\n--- Session: {s['id']} ---\n{s['content']}\n"
+        todos = s.get("metadata", {}).get("todos")
+        if todos:
+            completed = [t["content"] for t in todos if t["status"] == "completed"]
+            incomplete = [t["content"] for t in todos if t["status"] in ("in_progress", "pending")]
+            if completed:
+                sessions_text += f"[Todos completed: {'; '.join(completed)}]\n"
+            if incomplete:
+                sessions_text += f"[Todos NOT completed (abandoned/pending): {'; '.join(incomplete)}]\n"
 
     # Format git activity
     git_text = ""

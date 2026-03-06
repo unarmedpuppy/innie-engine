@@ -189,6 +189,23 @@ class ClaudeCodeBackend(Backend):
                                 parts.append(f"[result:{t[:200]}]")
         return " ".join(parts)
 
+    def _load_todos(self, session_id: str) -> list[dict] | None:
+        """Load todo state for a session from ~/.claude/todos/{session_id}-agent-{session_id}.json.
+
+        Returns list of {content, status} dicts, or None if no todo file exists / file is empty.
+        Status values: 'completed' | 'in_progress' | 'pending'
+        """
+        todo_path = Path.home() / ".claude" / "todos" / f"{session_id}-agent-{session_id}.json"
+        if not todo_path.exists():
+            return None
+        try:
+            data = json.loads(todo_path.read_text(encoding="utf-8", errors="ignore"))
+            if not isinstance(data, list) or not data:
+                return None
+            return [{"content": t.get("content", ""), "status": t.get("status", "")} for t in data]
+        except Exception:
+            return None
+
     def _session_dirs(self) -> list[tuple[Path, str]]:
         """Return (dir, label) pairs to scan for JSONL session files.
 
@@ -260,17 +277,21 @@ class ClaudeCodeBackend(Backend):
                             continue
 
                     if messages:
+                        metadata: dict = {
+                            "source": label,
+                            "file": str(jsonl_file),
+                            "message_count": len(messages),
+                        }
+                        todos = self._load_todos(jsonl_file.stem)
+                        if todos:
+                            metadata["todos"] = todos
                         sessions.append(
                             SessionData(
                                 session_id=jsonl_file.stem,
                                 started=started,
                                 ended=ended,
                                 content="\n".join(messages),
-                                metadata={
-                                    "source": label,
-                                    "file": str(jsonl_file),
-                                    "message_count": len(messages),
-                                },
+                                metadata=metadata,
                             )
                         )
                 except Exception:

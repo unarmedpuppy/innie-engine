@@ -40,3 +40,7 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0028](0028-heartbeat-provider-abstraction.md) | Heartbeat Provider Abstraction: Remove Anthropic Hard Dependency | Accepted | 2026-03 |
 | [0029](0029-containerized-heartbeat-scheduler.md) | Containerized Heartbeat Scheduler | Accepted | 2026-03 |
 | [0030](0030-textual-tui-framework.md) | Textual TUI Framework + Lumon Design Language | Accepted | 2026-03 |
+| [0031](0031-...) | *(reserved)* | — | — |
+| [0032](0032-agent-harness-migration-strategy.md) | Agent-Harness Migration Strategy | Accepted | 2026-03 |
+| [0033](0033-knowledge-contradiction-detection.md) | Knowledge Contradiction Detection | Accepted | 2026-03-06 |
+| [0034](0034-heartbeat-schema-expansion-and-a2a-inbox.md) | Heartbeat Schema Expansion and Async A2A Inbox | Accepted | 2026-03-06 |

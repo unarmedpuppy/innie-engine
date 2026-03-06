@@ -189,17 +189,42 @@ class ClaudeCodeBackend(Backend):
                                 parts.append(f"[result:{t[:200]}]")
         return " ".join(parts)
 
-    def collect_sessions(self, since: float) -> list[SessionData]:
-        """Parse JSONL session files from ~/.claude/projects/."""
-        sessions: list[SessionData] = []
-        projects_dir = Path.home() / ".claude" / "projects"
-        if not projects_dir.exists():
-            return sessions
+    def _session_dirs(self) -> list[tuple[Path, str]]:
+        """Return (dir, label) pairs to scan for JSONL session files.
 
-        for project_dir in projects_dir.iterdir():
-            if not project_dir.is_dir():
-                continue
-            for jsonl_file in project_dir.glob("*.jsonl"):
+        Always includes ~/.claude/projects/ (one level deep, each subdir is a project).
+        Also includes any flat dirs listed in backends.claude_code.additional_session_dirs
+        config — these are scanned directly for *.jsonl (no subdir level).
+
+        Default additional dir: ~/.openclaw/agents/main/sessions/ if it exists.
+        """
+        from innie.core.config import get
+
+        results: list[tuple[Path, str]] = []
+
+        # Primary: ~/.claude/projects/<project>/*.jsonl
+        projects_dir = Path.home() / ".claude" / "projects"
+        if projects_dir.exists():
+            for d in projects_dir.iterdir():
+                if d.is_dir():
+                    results.append((d, d.name))
+
+        # Additional flat dirs (e.g. openclaw gateway sessions)
+        defaults = ["~/.openclaw/agents/main/sessions"]
+        extra = get("backends.claude_code.additional_session_dirs", defaults)
+        for raw in extra:
+            p = Path(raw).expanduser()
+            if p.is_dir():
+                results.append((p, p.name))
+
+        return results
+
+    def collect_sessions(self, since: float) -> list[SessionData]:
+        """Parse JSONL session files from ~/.claude/projects/ and additional dirs."""
+        sessions: list[SessionData] = []
+
+        for session_dir, label in self._session_dirs():
+            for jsonl_file in session_dir.glob("*.jsonl"):
                 try:
                     mtime = jsonl_file.stat().st_mtime
                     if mtime < since:
@@ -242,7 +267,7 @@ class ClaudeCodeBackend(Backend):
                                 ended=ended,
                                 content="\n".join(messages),
                                 metadata={
-                                    "project": project_dir.name,
+                                    "source": label,
                                     "file": str(jsonl_file),
                                     "message_count": len(messages),
                                 },

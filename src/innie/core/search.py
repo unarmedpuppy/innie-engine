@@ -194,8 +194,28 @@ def _is_superseded(file_path: Path) -> bool:
         return False
 
 
+def _vault_path(agent: str | None = None) -> Path | None:
+    """Return the agent's vault path if configured with index:true in profile.yaml."""
+    try:
+        import yaml  # type: ignore
+
+        profile = paths.profile_file(agent)
+        if not profile.exists():
+            return None
+        data = yaml.safe_load(profile.read_text())
+        vault = data.get("vault", {})
+        if not vault.get("index", False):
+            return None
+        raw = vault.get("path", "")
+        if not raw:
+            return None
+        return Path(raw).expanduser()
+    except Exception:
+        return None
+
+
 def collect_files(agent: str | None = None, scan_secrets: bool = True) -> list[Path]:
-    """Collect all indexable .md files from data/ and state/sessions/.
+    """Collect all indexable .md files from data/, state/sessions/, and optional vault.
 
     When scan_secrets is True, files containing potential secrets are excluded.
     """
@@ -205,6 +225,11 @@ def collect_files(agent: str | None = None, scan_secrets: bool = True) -> list[P
         paths.context_file(agent),
         paths.soul_file(agent),
     ]
+
+    # Include vault if configured with index:true in profile.yaml
+    vault = _vault_path(agent)
+    if vault and vault.is_dir():
+        search_paths.append(vault)
 
     files: list[Path] = []
     for p in search_paths:

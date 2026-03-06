@@ -121,6 +121,24 @@ def _git_autocommit():
     if not git_dir.exists():
         return
 
+    # Pull from remote before committing to stay in sync across machines.
+    # Use rebase so our new entries land on top of any remote changes.
+    # -X ours: when replaying our commits, prefer our version on conflict.
+    pull_result = subprocess.run(
+        ["git", "pull", "--rebase", "-X", "ours"],
+        cwd=innie_home,
+        capture_output=True,
+        text=True,
+    )
+    if pull_result.returncode != 0:
+        # Rebase couldn't auto-resolve — abort and fall back to merge with ours
+        subprocess.run(["git", "rebase", "--abort"], cwd=innie_home, capture_output=True)
+        subprocess.run(
+            ["git", "pull", "-X", "ours"],
+            cwd=innie_home,
+            capture_output=True,
+        )
+
     # Check for changes
     result = subprocess.run(
         ["git", "status", "--porcelain"],
@@ -167,7 +185,12 @@ def enable():
     external_url = get("heartbeat.external_url", "")
 
     # Warn if Anthropic path is selected but key is missing
-    needs_anthropic = provider == "anthropic" or (provider == "auto" and not external_url)
+    from pathlib import Path
+
+    has_openclaw = (Path.home() / ".openclaw" / "openclaw.json").exists()
+    needs_anthropic = provider == "anthropic" or (
+        provider == "auto" and not external_url and not has_openclaw
+    )
     if needs_anthropic and not os.environ.get("ANTHROPIC_API_KEY", ""):
         console.print("[yellow]ANTHROPIC_API_KEY is not set in the current environment.[/yellow]")
         console.print("  The heartbeat cron will fail silently without it.")
@@ -268,9 +291,28 @@ def hb_status():
     provider = cfg_get("heartbeat.provider", "auto")
     external_url = cfg_get("heartbeat.external_url", "")
     model = cfg_get("heartbeat.model", "auto")
-    resolved_provider = provider if provider != "auto" else ("external" if external_url else "anthropic")
+    if provider == "auto":
+        from pathlib import Path
+
+        if (Path.home() / ".openclaw" / "openclaw.json").exists():
+            resolved_provider = "openclaw"
+        elif external_url:
+            resolved_provider = "external"
+        else:
+            resolved_provider = "anthropic"
+    else:
+        resolved_provider = provider
+
     console.print(f"Provider: [bold]{resolved_provider}[/bold]  model={model}")
-    if resolved_provider == "external":
+    if resolved_provider == "openclaw":
+        try:
+            from innie.heartbeat.extract import _resolve_openclaw
+
+            oc_url, _, oc_model = _resolve_openclaw()
+            console.print(f"  URL: {oc_url}  model={oc_model}")
+        except Exception as e:
+            console.print(f"  [red]{e}[/red]")
+    elif resolved_provider == "external":
         console.print(f"  URL: {external_url or '[red]not set[/red]'}")
     else:
         has_key = bool(os.environ.get("ANTHROPIC_API_KEY", ""))

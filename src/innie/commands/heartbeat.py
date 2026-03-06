@@ -37,6 +37,10 @@ def run(
     mode = " [dim](dry run)[/dim]" if dry_run else ""
     console.print(f"Running heartbeat for agent: [bold]{agent}[/bold]{mode}")
 
+    # Sync: pull latest from remote before collecting
+    if not dry_run:
+        _git_pull()
+
     # Phase 1: Collect
     console.print("  Phase 1: Collecting data...")
     from innie.core.collector import collect_all
@@ -107,8 +111,50 @@ def run(
     console.print("  [green]Done.[/green]")
 
 
+def _has_remote():
+    """Check if the .innie git repo has a remote configured."""
+    import subprocess
+
+    innie_home = paths.home()
+    result = subprocess.run(
+        ["git", "remote"],
+        cwd=innie_home,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0 and result.stdout.strip() != ""
+
+
+def _git_pull():
+    """Pull latest from remote before making local changes."""
+    import subprocess
+
+    from innie.core.config import get
+
+    if not get("git.auto_commit", False):
+        return
+
+    innie_home = paths.home()
+    git_dir = innie_home / ".git"
+    if not git_dir.exists() or not _has_remote():
+        return
+
+    pull_result = subprocess.run(
+        ["git", "pull", "--rebase", "--autostash"],
+        cwd=innie_home,
+        capture_output=True,
+        text=True,
+    )
+    if pull_result.returncode == 0:
+        pulled = "up to date" not in pull_result.stdout.lower()
+        if pulled:
+            console.print("  [green]✓[/green] Pulled latest from remote")
+    else:
+        console.print(f"  [yellow]![/yellow] Pull failed: {pull_result.stderr.strip()}")
+
+
 def _git_autocommit():
-    """Auto-commit knowledge base changes to git if repo exists."""
+    """Auto-commit and push knowledge base changes to git."""
     import subprocess
 
     from innie.core.config import get
@@ -162,7 +208,7 @@ def _git_autocommit():
     )
 
     # Push if remote exists
-    if get("git.auto_push", False):
+    if _has_remote():
         push_result = subprocess.run(
             ["git", "push"],
             cwd=innie_home,
@@ -172,7 +218,7 @@ def _git_autocommit():
         if push_result.returncode == 0:
             console.print("  [green]✓[/green] Pushed to remote")
         else:
-            console.print("  [yellow]![/yellow] Push failed (no remote?)")
+            console.print("  [yellow]![/yellow] Push failed: {push_result.stderr.strip()}")
 
 
 def enable():

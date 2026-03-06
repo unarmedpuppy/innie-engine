@@ -114,7 +114,7 @@ def run(
     console.print("  Phase 3: Routing to knowledge base...")
     from innie.heartbeat.route import route_all
 
-    results = route_all(extraction, agent)
+    results = route_all(extraction, agent, collected=collected)
     for target, count in results.items():
         if count > 0:
             console.print(f"    {target}: {count}")

@@ -57,6 +57,12 @@ class PersonUpdate(BaseModel):
     content: str # markdown to append — new preferences, facts, context, events
 
 
+class AgentMessage(BaseModel):
+    to: str      # target agent name: gilfoyle | ralph | colin | jobin | avery
+    subject: str # one-line subject
+    content: str # markdown body — what the other agent needs to know
+
+
 class HeartbeatExtraction(BaseModel):
     journal_entries: list[JournalEntry]
     learnings: list[Learning] = []
@@ -66,4 +72,5 @@ class HeartbeatExtraction(BaseModel):
     context_updates: ContextUpdate | None = None
     superseded_learnings: list[SupersededLearning] = []
     people_updates: list[PersonUpdate] = []
+    agent_messages: list[AgentMessage] = []
     processed_sessions: ProcessedSessions

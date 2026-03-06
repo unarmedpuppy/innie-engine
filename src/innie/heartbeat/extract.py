@@ -45,6 +45,15 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
     context = collected.get("current_context", "")
     context_text = f"\n--- Current CONTEXT.md ---\n{context}\n" if context else ""
 
+    # Inbox messages from other agents
+    inbox_msgs = collected.get("inbox_messages", [])
+    inbox_text = ""
+    if inbox_msgs:
+        inbox_text = "\n--- Inbox (messages from other agents) ---\n"
+        inbox_text += "These were sent to you by other agents. Process them as additional context.\n\n"
+        for msg in inbox_msgs:
+            inbox_text += f"From: {msg['from_agent']} | File: {msg['filename']}\n{msg['content']}\n\n"
+
     # Existing knowledge for contradiction detection
     existing = collected.get("existing_knowledge", [])
     existing_text = ""
@@ -65,6 +74,7 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
 {sessions_text}
 {git_text}
 {context_text}
+{inbox_text}
 {existing_text}
 
 ## Task

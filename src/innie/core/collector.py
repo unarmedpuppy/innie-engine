@@ -197,6 +197,38 @@ def collect_existing_knowledge(agent: str | None = None, sessions: list[dict] | 
     return trimmed
 
 
+def collect_inbox(agent: str | None = None) -> list[dict]:
+    """Read all unprocessed messages from data/inbox/.
+
+    Returns list of {filename, from_agent, content} dicts.
+    Files remain in place — archiving happens in route_inbox_archive() after extraction.
+    """
+    inbox_dir = paths.inbox_dir(agent)
+    if not inbox_dir.exists():
+        return []
+
+    messages = []
+    for f in sorted(inbox_dir.glob("*.md")):
+        try:
+            content = f.read_text(encoding="utf-8", errors="ignore").strip()
+            if not content:
+                continue
+            # Try to extract sender from filename: YYYY-MM-DD-from-{agent}-{slug}.md
+            from_agent = "unknown"
+            parts = f.stem.split("-from-")
+            if len(parts) == 2:
+                from_agent = parts[1].split("-")[0]
+            messages.append({
+                "filename": f.name,
+                "from_agent": from_agent,
+                "content": content,
+            })
+        except Exception:
+            continue
+
+    return messages
+
+
 def collect_all(agent: str | None = None, since_override: float | None = None) -> dict:
     """Run full Phase 1 collection."""
     session_data = collect_session_data(agent, since_override=since_override)
@@ -206,4 +238,5 @@ def collect_all(agent: str | None = None, since_override: float | None = None) -
         "git_activity": collect_git_activity(),
         "current_context": collect_current_context(agent),
         "existing_knowledge": collect_existing_knowledge(agent, session_data.get("sessions", [])),
+        "inbox_messages": collect_inbox(agent),
     }

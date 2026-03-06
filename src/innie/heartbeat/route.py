@@ -329,7 +329,73 @@ def route_people(extraction: HeartbeatExtraction, agent: str | None = None) -> i
     return count
 
 
-def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict[str, int]:
+def route_inbox_out(extraction: HeartbeatExtraction, agent: str | None = None) -> int:
+    """Write outbound agent_messages to target agents' data/inbox/ dirs.
+
+    File naming: YYYY-MM-DD-from-{sender}-{slug}.md
+    The target agent picks these up on their next heartbeat collect phase.
+    """
+    if not extraction.agent_messages:
+        return 0
+
+    sender = agent or paths.active_agent()
+    today = datetime.now().strftime("%Y-%m-%d")
+    count = 0
+
+    for msg in extraction.agent_messages:
+        target = msg.to.strip().lower()
+        if not target or not msg.content.strip():
+            continue
+
+        target_inbox = paths.agents_dir() / target / "data" / "inbox"
+        target_inbox.mkdir(parents=True, exist_ok=True)
+
+        slug = _slugify(msg.subject)[:40] if msg.subject else "note"
+        filename = f"{today}-from-{sender}-{slug}.md"
+        # Avoid collisions
+        dest = target_inbox / filename
+        i = 1
+        while dest.exists():
+            dest = target_inbox / f"{today}-from-{sender}-{slug}-{i}.md"
+            i += 1
+
+        dest.write_text(
+            f"---\nfrom: {sender}\nto: {target}\ndate: {today}\nsubject: {msg.subject}\n---\n\n{msg.content.strip()}\n",
+            encoding="utf-8",
+        )
+        count += 1
+
+    return count
+
+
+def route_inbox_archive(collected: dict, agent: str | None = None) -> int:
+    """Archive processed inbox messages to data/inbox/archive/.
+
+    Called after extraction so inbox is clear for next run.
+    """
+    inbox_msgs = collected.get("inbox_messages", [])
+    if not inbox_msgs:
+        return 0
+
+    inbox_dir = paths.inbox_dir(agent)
+    archive_dir = inbox_dir / "archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    count = 0
+
+    for msg in inbox_msgs:
+        src = inbox_dir / msg["filename"]
+        if src.exists():
+            src.rename(archive_dir / msg["filename"])
+            count += 1
+
+    return count
+
+
+def route_all(
+    extraction: HeartbeatExtraction,
+    agent: str | None = None,
+    collected: dict | None = None,
+) -> dict[str, int]:
     """Run all routing for a heartbeat extraction. Returns counts per route."""
     results = {
         "journal": route_journal(extraction, agent),
@@ -339,6 +405,8 @@ def route_all(extraction: HeartbeatExtraction, agent: str | None = None) -> dict
         "open_items": route_open_items(extraction, agent),
         "superseded": route_superseded(extraction, agent),
         "people": route_people(extraction, agent),
+        "inbox_out": route_inbox_out(extraction, agent),
+        "inbox_archived": route_inbox_archive(collected or {}, agent),
     }
 
     route_metrics(extraction, agent)

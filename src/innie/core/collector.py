@@ -26,10 +26,10 @@ def save_heartbeat_state(state: dict, agent: str | None = None) -> None:
     state_file.write_text(json.dumps(state, indent=2))
 
 
-def collect_session_data(agent: str | None = None) -> dict:
+def collect_session_data(agent: str | None = None, since_override: float | None = None) -> dict:
     """Collect unprocessed session data from the active backend."""
     state = load_heartbeat_state(agent)
-    since = state.get("last_run", 0)
+    since = since_override if since_override is not None else state.get("last_run", 0)
 
     # Discover and use active backends
     from innie.backends.registry import detect_backends
@@ -43,7 +43,15 @@ def collect_session_data(agent: str | None = None) -> dict:
             continue
 
     # Filter out already-processed sessions
-    processed = set(state.get("processed_sessions", []))
+    # State format: {"prefix": {"full_uuid": timestamp, ...}, ...}
+    ps = state.get("processed_sessions", {})
+    if isinstance(ps, dict):
+        processed = set()
+        for prefix_dict in ps.values():
+            if isinstance(prefix_dict, dict):
+                processed.update(prefix_dict.keys())
+    else:
+        processed = set(ps)
     new_sessions = [s for s in all_sessions if s.session_id not in processed]
 
     return {
@@ -106,11 +114,11 @@ def collect_current_context(agent: str | None = None) -> str:
     return ""
 
 
-def collect_all(agent: str | None = None) -> dict:
+def collect_all(agent: str | None = None, since_override: float | None = None) -> dict:
     """Run full Phase 1 collection."""
     return {
         "timestamp": time.time(),
-        "sessions": collect_session_data(agent),
+        "sessions": collect_session_data(agent, since_override=since_override),
         "git_activity": collect_git_activity(),
         "current_context": collect_current_context(agent),
     }

@@ -15,6 +15,8 @@ console = Console()
 
 def run(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview what would be collected and extracted without writing anything"),
+    batch_size: int = typer.Option(0, "--batch-size", "-b", help="Max sessions to process per run (0 = unlimited). Use for retroactive backfill."),
+    retroactive: bool = typer.Option(False, "--retroactive", "-r", help="Process all historical sessions regardless of last_run timestamp. Uses processed_sessions to avoid duplicates."),
 ):
     """Run one heartbeat cycle: collect → extract → route."""
     sys.argv[0] = "innie-heartbeat"
@@ -45,25 +47,51 @@ def run(
     console.print("  Phase 1: Collecting data...")
     from innie.core.collector import collect_all
 
-    collected = collect_all(agent)
-    session_count = len(collected.get("sessions", {}).get("sessions", []))
-    git_count = len(collected.get("git_activity", []))
-    console.print(f"    Sessions: {session_count}, Git commits: {git_count}")
+    collected = collect_all(agent, since_override=0 if retroactive else None)
+    all_sessions = collected.get("sessions", {}).get("sessions", [])
 
-    if session_count == 0 and git_count == 0:
+    # Filter out trivial sessions (fewer than 3 messages or very short content)
+    MIN_MESSAGES = 3
+    MIN_CONTENT_LEN = 200
+    substantive = [
+        s for s in all_sessions
+        if s.get("metadata", {}).get("message_count", 0) >= MIN_MESSAGES
+        and len(s.get("content", "")) >= MIN_CONTENT_LEN
+    ]
+    skipped = len(all_sessions) - len(substantive)
+
+    # Apply batch limit
+    if batch_size > 0:
+        batch = substantive[:batch_size]
+    else:
+        batch = substantive
+
+    git_count = len(collected.get("git_activity", []))
+    console.print(f"    Sessions: {len(batch)} substantive (skipped {skipped} trivial), Git commits: {git_count}")
+
+    if len(batch) == 0 and git_count == 0:
         console.print("  [dim]Nothing new to process.[/dim]")
         return
 
+    # Inject filtered batch back into collected
+    collected["sessions"]["sessions"] = batch
+
     if dry_run:
         console.print("\n  [bold]Sessions that would be processed:[/bold]")
-        for s in collected.get("sessions", {}).get("sessions", []):
-            ts = datetime.fromtimestamp(s.get("started", 0)).strftime("%Y-%m-%d %H:%M") if s.get("started") else "unknown"
+        for s in batch:
+            started = s.get("started", 0)
+            try:
+                ts = datetime.fromtimestamp(float(started)).strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                ts = str(started)[:16]
             preview = s.get("content", "")[:120].replace("\n", " ")
             console.print(f"    [{ts}] {s['id'][:16]}...  {preview}...")
         if git_count:
             console.print(f"\n  [bold]Git activity:[/bold]")
             for g in collected.get("git_activity", []):
                 console.print(f"    [{g['repo']}] {g['commit']}")
+        if batch_size > 0 and len(substantive) > batch_size:
+            console.print(f"\n  [dim]{len(substantive) - batch_size} more sessions remain after this batch.[/dim]")
         console.print("\n  [dim]Dry run — no extraction, routing, or state changes.[/dim]")
         return
 

@@ -147,6 +147,48 @@ class ClaudeCodeBackend(Backend):
         ctx_file = paths.agent_dir(agent) / "launch-context.md"
         ctx_file.write_text(context)
 
+    def _parse_timestamp(self, ts, fallback: float) -> float:
+        """Normalize a JSONL timestamp (ISO string or Unix float) to a Unix float."""
+        if ts is None:
+            return fallback
+        if isinstance(ts, (int, float)):
+            return float(ts)
+        try:
+            from datetime import datetime
+            return datetime.fromisoformat(str(ts).replace("Z", "+00:00")).timestamp()
+        except Exception:
+            return fallback
+
+    def _extract_content_text(self, content) -> str:
+        """Extract readable text from a message content field (str or list of blocks)."""
+        if isinstance(content, str):
+            return content
+        if not isinstance(content, list):
+            return ""
+        parts: list[str] = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type", "")
+            if btype == "text":
+                text = block.get("text", "").strip()
+                # Skip system injections and XML-wrapped blocks
+                if text and not text.startswith("<"):
+                    parts.append(text)
+            elif btype == "tool_use":
+                parts.append(f"[tool:{block.get('name', '')}]")
+            elif btype == "tool_result":
+                rc = block.get("content", "")
+                if isinstance(rc, str) and rc.strip():
+                    parts.append(f"[result:{rc[:200]}]")
+                elif isinstance(rc, list):
+                    for item in rc:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            t = item.get("text", "").strip()
+                            if t:
+                                parts.append(f"[result:{t[:200]}]")
+        return " ".join(parts)
+
     def collect_sessions(self, since: float) -> list[SessionData]:
         """Parse JSONL session files from ~/.claude/projects/."""
         sessions: list[SessionData] = []
@@ -163,29 +205,32 @@ class ClaudeCodeBackend(Backend):
                     if mtime < since:
                         continue
                     content = jsonl_file.read_text(encoding="utf-8", errors="ignore")
-                    # Extract basic metadata from content
-                    lines = content.strip().split("\n")
+                    lines = [ln for ln in content.strip().split("\n") if ln.strip()]
                     if not lines:
                         continue
 
-                    # Parse first and last JSON lines for timestamps
-                    first = json.loads(lines[0]) if lines else {}
-                    last = json.loads(lines[-1]) if lines else {}
+                    first = json.loads(lines[0])
+                    last = json.loads(lines[-1])
 
-                    started = first.get("timestamp", mtime)
-                    ended = last.get("timestamp", mtime)
+                    started = self._parse_timestamp(first.get("timestamp"), mtime)
+                    ended = self._parse_timestamp(last.get("timestamp"), mtime)
 
                     # Build readable transcript from messages
+                    # Claude Code JSONL: top-level "type" is "user"|"assistant",
+                    # with content inside entry["message"]["content"]
                     messages: list[str] = []
                     for line in lines:
                         try:
                             entry = json.loads(line)
-                            role = entry.get("role", "")
+                            role = entry.get("type", "")
+                            if role not in ("user", "assistant"):
+                                continue
                             msg = entry.get("message", {})
-                            if isinstance(msg, dict):
-                                text = msg.get("content", "")
-                                if isinstance(text, str) and text.strip():
-                                    messages.append(f"[{role}] {text[:500]}")
+                            if not isinstance(msg, dict):
+                                continue
+                            text = self._extract_content_text(msg.get("content", ""))
+                            if text.strip():
+                                messages.append(f"[{role}] {text[:500]}")
                         except json.JSONDecodeError:
                             continue
 

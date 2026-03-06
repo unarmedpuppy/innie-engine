@@ -55,6 +55,7 @@ def _register_commands():
         fleet,
         git_cmd,
         heartbeat,
+        inbox,
         init,
         migrate,
         search,
@@ -82,6 +83,14 @@ def _register_commands():
     app.command("migrate")(migrate.migrate)
     app.command("update")(update.update)
     app.command("secrets")(secrets.scan)
+
+    # Inbox subcommands
+    inbox_app = typer.Typer(help="Async A2A inbox — read and send messages between agents.")
+    inbox_app.command("list")(inbox.list_inbox)
+    inbox_app.command("read")(inbox.read_message)
+    inbox_app.command("send")(inbox.send)
+    inbox_app.command("archive")(inbox.archive)
+    app.add_typer(inbox_app, name="inbox")
 
     # Docker subcommands
     docker_app = typer.Typer(help="Manage the full Docker services stack (embeddings, heartbeat, serve).")

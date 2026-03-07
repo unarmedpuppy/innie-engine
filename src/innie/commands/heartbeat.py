@@ -42,6 +42,7 @@ def run(
     # Sync: pull latest from remote before collecting
     if not dry_run:
         _git_pull()
+        _self_update()
 
     # Phase 1: Collect
     console.print("  Phase 1: Collecting data...")
@@ -144,6 +145,63 @@ def run(
     _git_autocommit()
 
     console.print("  [green]Done.[/green]")
+
+
+def _self_update():
+    """Pull and reinstall the latest innie-engine if auto_update is enabled.
+
+    Detects install type from direct_url.json:
+    - Editable/local: reinstall from the local source dir (picks up working-tree changes)
+    - PyPI/remote: uv tool upgrade innie-engine --reinstall
+    """
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from innie.core.config import get
+
+    if not get("heartbeat.auto_update", False):
+        return
+
+    dist_info = next(
+        Path(sys.executable).parent.parent.glob(
+            "lib/python*/site-packages/innie_engine*.dist-info"
+        ),
+        None,
+    )
+    if dist_info is None:
+        return
+
+    direct_url_file = dist_info / "direct_url.json"
+    is_editable = False
+    source_dir: str | None = None
+    if direct_url_file.exists():
+        try:
+            info = json.loads(direct_url_file.read_text())
+            if info.get("dir_info", {}).get("editable"):
+                is_editable = True
+                source_dir = info["url"].removeprefix("file://")
+        except Exception:
+            pass
+
+    if is_editable and source_dir:
+        result = subprocess.run(
+            ["uv", "tool", "install", "-e", source_dir, "--reinstall"],
+            capture_output=True,
+            text=True,
+        )
+    else:
+        result = subprocess.run(
+            ["uv", "tool", "upgrade", "innie-engine", "--reinstall"],
+            capture_output=True,
+            text=True,
+        )
+
+    if result.returncode == 0:
+        console.print("  [green]✓[/green] innie-engine updated")
+    else:
+        console.print(f"  [yellow]![/yellow] innie-engine update failed: {result.stderr.strip()[:120]}")
 
 
 def _has_remote():

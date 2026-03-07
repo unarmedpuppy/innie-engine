@@ -42,6 +42,7 @@ model = "auto"              # LLM model name, or "auto" to pick default per prov
 external_url = ""           # OpenAI-compatible endpoint (required when provider = "external")
 collect_git = true          # Include git log/diff in collection
 collect_sessions = true     # Include session logs in collection
+auto_update = false         # Reinstall innie-engine at start of each heartbeat
 
 # ── Index ─────────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ auto_push = false           # Auto git push after commit (requires remote)
 | `external_url` | string | `""` | OpenAI-compatible endpoint (required when `provider = "external"`) |
 | `collect_git` | bool | `true` | Include git log/diff in Phase 1 |
 | `collect_sessions` | bool | `true` | Include session logs in Phase 1 |
+| `auto_update` | bool | `false` | Reinstall `innie-engine` from PyPI (or local source if editable) at the start of each heartbeat |
 
 **provider = "auto"** — uses `external` if `external_url` is set, otherwise falls back to
 `anthropic`. Existing installs with `ANTHROPIC_API_KEY` continue to work unchanged.

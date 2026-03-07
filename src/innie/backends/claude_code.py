@@ -257,18 +257,25 @@ class ClaudeCodeBackend(Backend):
                     started = self._parse_timestamp(first.get("timestamp"), mtime)
                     ended = self._parse_timestamp(last.get("timestamp"), mtime)
 
-                    # Build readable transcript from messages
-                    # Claude Code JSONL: top-level "type" is "user"|"assistant",
-                    # with content inside entry["message"]["content"]
+                    # Build readable transcript from messages.
+                    # Two JSONL formats:
+                    # - Claude Code: top-level "type" is "user"|"assistant", content in entry["message"]["content"]
+                    # - OpenClaw gateway: top-level "type" is "message", role in entry["message"]["role"], content in entry["message"]["content"]
                     messages: list[str] = []
                     for line in lines:
                         try:
                             entry = json.loads(line)
-                            role = entry.get("type", "")
-                            if role not in ("user", "assistant"):
-                                continue
+                            entry_type = entry.get("type", "")
                             msg = entry.get("message", {})
                             if not isinstance(msg, dict):
+                                continue
+                            if entry_type in ("user", "assistant"):
+                                role = entry_type
+                            elif entry_type == "message":
+                                role = msg.get("role", "")
+                            else:
+                                continue
+                            if role not in ("user", "assistant"):
                                 continue
                             text = self._extract_content_text(msg.get("content", ""))
                             if text.strip():

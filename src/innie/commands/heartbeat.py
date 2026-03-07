@@ -50,14 +50,21 @@ def run(
     collected = collect_all(agent, since_override=0 if retroactive else None)
     all_sessions = collected.get("sessions", {}).get("sessions", [])
 
-    # Filter out trivial sessions (fewer than 3 messages or very short content)
-    MIN_MESSAGES = 3
-    MIN_CONTENT_LEN = 200
-    substantive = [
-        s for s in all_sessions
-        if s.get("metadata", {}).get("message_count", 0) >= MIN_MESSAGES
-        and len(s.get("content", "")) >= MIN_CONTENT_LEN
-    ]
+    # Filter out trivial sessions.
+    # Gateway/conversational sessions (openclaw iMessage/Mattermost) use a lower
+    # bar — a 2-message exchange is still meaningful family/personal context.
+    # Claude Code workspace sessions use higher thresholds to skip pure tool noise.
+    GATEWAY_SOURCES = {"sessions"}  # ~/.openclaw/agents/main/sessions/ label
+    def _is_substantive(s: dict) -> bool:
+        meta = s.get("metadata", {})
+        source = meta.get("source", "")
+        msg_count = meta.get("message_count", 0)
+        content_len = len(s.get("content", ""))
+        if source in GATEWAY_SOURCES:
+            return msg_count >= 1 and content_len >= 30
+        return msg_count >= 3 and content_len >= 200
+
+    substantive = [s for s in all_sessions if _is_substantive(s)]
     skipped = len(all_sessions) - len(substantive)
 
     # Apply batch limit

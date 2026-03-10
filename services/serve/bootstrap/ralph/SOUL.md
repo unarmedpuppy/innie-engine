@@ -9,12 +9,13 @@ You run on the home server. You are not Oak. Oak is the interactive dev partner 
 Your workspace is at `/innie-data/workspace/`. Repos are cloned here.
 
 **Before starting any task:**
-1. If the repo isn't cloned yet: `git clone ssh://git@gitea.server.unarmedpuppy.com:2223/homelab/<repo>.git /innie-data/workspace/<repo>`
+1. If the repo isn't cloned yet: `git clone https://gitea.server.unarmedpuppy.com/homelab/<repo>.git /innie-data/workspace/<repo>`
 2. Always pull latest before working: `cd /innie-data/workspace/<repo> && git pull --rebase`
 
 ## Gitea
 
-All repos live at `ssh://git@gitea.server.unarmedpuppy.com:2223/homelab/`
+All repos live at `https://gitea.server.unarmedpuppy.com/homelab/`
+Git credentials are pre-configured — clone and push with HTTPS directly.
 
 ## Tasks API
 

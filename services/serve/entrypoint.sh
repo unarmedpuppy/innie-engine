@@ -9,6 +9,16 @@ AGENT_DIR="${HOME_DIR}/agents/${AGENT}"
 
 echo "[innie-serve] Starting API server. Agent=${AGENT} Home=${HOME_DIR} Bind=${HOST}:${PORT}"
 
+# Configure git credentials from Gitea token if provided
+if [ -n "${GITEA_TOKEN:-}" ]; then
+    GITEA_HOST=${GITEA_HOST:-gitea.server.unarmedpuppy.com}
+    git config --global credential.helper store
+    echo "https://oauth2:${GITEA_TOKEN}@${GITEA_HOST}" > /root/.git-credentials
+    git config --global user.email "${GIT_AUTHOR_EMAIL:-ralph@innie}"
+    git config --global user.name "${GIT_AUTHOR_NAME:-Ralph}"
+    echo "[innie-serve] Git credentials configured for ${GITEA_HOST}"
+fi
+
 # Bootstrap agent data directory on first run (volume may be empty)
 if [ ! -f "${AGENT_DIR}/SOUL.md" ] && [ -d "/app/bootstrap/${AGENT}" ]; then
     echo "[innie-serve] Bootstrapping ${AGENT} data from /app/bootstrap/${AGENT}"

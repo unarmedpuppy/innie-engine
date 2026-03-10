@@ -122,3 +122,7 @@ def heartbeat_state(agent: str | None = None) -> Path:
 
 def skills_dir(agent: str | None = None) -> Path:
     return agent_dir(agent) / "skills"
+
+
+def env_file(agent: str | None = None) -> Path:
+    return agent_dir(agent) / ".env"

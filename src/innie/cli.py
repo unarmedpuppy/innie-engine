@@ -52,6 +52,7 @@ def _register_commands():
         docker_services,
         doctor,
         edit,
+        env,
         fleet,
         git_cmd,
         heartbeat,
@@ -138,6 +139,14 @@ def _register_commands():
     git_app.command("auto-commit")(git_cmd.auto_commit)
     git_app.command("status")(git_cmd.status)
     app.add_typer(git_app, name="git")
+
+    # Env subcommands
+    env_app = typer.Typer(help="Manage per-agent secrets in a gitignored .env file.")
+    env_app.command("set")(env.env_set)
+    env_app.command("get")(env.env_get)
+    env_app.command("list")(env.env_list)
+    env_app.command("unset")(env.env_unset)
+    app.add_typer(env_app, name="env")
 
     # Edit subcommands
     edit_app = typer.Typer(help="Edit agent identity files (SOUL.md, CONTEXT.md, user.md).")

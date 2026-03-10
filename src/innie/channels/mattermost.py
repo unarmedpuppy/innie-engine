@@ -69,16 +69,20 @@ class MattermostAdapter:
         })
 
         try:
-            await self._driver.init_driver()
+            self._driver.login()
             self._bot_user_id = self._driver.client.userid
             logger.info(f"[mattermost] connected as bot user {self._bot_user_id}")
         except Exception as e:
             logger.error(f"[mattermost] init failed: {e}")
             return
 
+        url = self._config.base_url.rstrip("/")
+        ws_url = url.replace("https://", "wss://").replace("http://", "ws://")
+        ws_url += "/api/v4/websocket"
+
         while True:
             try:
-                await self._driver.websocket.connect(self._handle_event)
+                await self._ws_connect(ws_url)
             except asyncio.CancelledError:
                 logger.info("[mattermost] adapter cancelled")
                 return
@@ -86,19 +90,37 @@ class MattermostAdapter:
                 logger.warning(f"[mattermost] WebSocket disconnected: {e} — reconnecting in 5s")
                 await asyncio.sleep(5)
 
-    async def _handle_event(self, raw: dict) -> None:
-        if raw.get("event") != "posted":
+    async def _ws_connect(self, ws_url: str) -> None:
+        import websockets
+
+        async with websockets.connect(ws_url) as ws:
+            # Authenticate
+            await ws.send(json.dumps({
+                "seq": 1,
+                "action": "authentication_challenge",
+                "data": {"token": self._config.bot_token},
+            }))
+            async for raw in ws:
+                await self._handle_event(raw)
+
+    async def _handle_event(self, raw: str) -> None:
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return
+
+        if data.get("event") != "posted":
             return
 
         try:
-            post = json.loads(raw["data"]["post"])
+            post = json.loads(data["data"]["post"])
         except (KeyError, json.JSONDecodeError):
             return
 
         if post.get("user_id") == self._bot_user_id:
             return  # ignore own messages
 
-        channel_type = raw["data"].get("channel_type", "D")
+        channel_type = data["data"].get("channel_type", "D")
         is_group = channel_type != "D"
         user_id = post["user_id"]
         text = post.get("message", "")
@@ -130,8 +152,11 @@ class MattermostAdapter:
             )
 
     async def _post_message(self, channel_id: str, message: str, root_id: str) -> None:
-        self._driver.posts.create_post(options={
-            "channel_id": channel_id,
-            "message": message,
-            "root_id": root_id,
-        })
+        await asyncio.to_thread(
+            self._driver.posts.create_post,
+            options={
+                "channel_id": channel_id,
+                "message": message,
+                "root_id": root_id,
+            },
+        )

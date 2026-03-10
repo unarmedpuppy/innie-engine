@@ -144,11 +144,13 @@ class MattermostAdapter:
 
         reply = filter_for_channel(result.text)
         if reply:
+            # Only thread replies in channels; DMs have no threading
+            root_id = post["id"] if is_group else ""
             await deliver(
                 self._post_message,
                 post["channel_id"],
                 reply,
-                post["id"],
+                root_id,
             )
 
     async def _post_message(self, channel_id: str, message: str, root_id: str) -> None:

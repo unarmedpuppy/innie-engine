@@ -19,11 +19,12 @@ if [ -n "${GITEA_TOKEN:-}" ]; then
     echo "[innie-serve] Git credentials configured for ${GITEA_HOST}"
 fi
 
-# Bootstrap agent data directory on first run (volume may be empty)
-if [ ! -f "${AGENT_DIR}/SOUL.md" ] && [ -d "/app/bootstrap/${AGENT}" ]; then
-    echo "[innie-serve] Bootstrapping ${AGENT} data from /app/bootstrap/${AGENT}"
+# Bootstrap agent data directory — copy any missing files from image bootstrap
+if [ -d "/app/bootstrap/${AGENT}" ]; then
     mkdir -p "${AGENT_DIR}"
+    # cp -rn skips existing files, so this is safe to run on every start
     cp -rn "/app/bootstrap/${AGENT}/." "${AGENT_DIR}/"
+    echo "[innie-serve] Bootstrap sync complete for ${AGENT}"
 fi
 
 exec innie serve --host "$HOST" --port "$PORT"

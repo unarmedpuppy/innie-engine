@@ -64,6 +64,8 @@ async def stream_claude_events(
     anthropic_base = os.environ.get("ANTHROPIC_BASE_URL")
     if anthropic_base:
         env["ANTHROPIC_BASE_URL"] = anthropic_base
+    # Remove nested-session guard so Claude Code can run as a subprocess
+    env.pop("CLAUDECODE", None)
 
     process = await asyncio.create_subprocess_exec(
         *cmd,
@@ -94,6 +96,13 @@ async def stream_claude_events(
                 await asyncio.wait_for(process.wait(), timeout=5.0)
             except (asyncio.TimeoutError, ProcessLookupError):
                 process.kill()
+        # Log stderr so startup/auth errors are visible
+        try:
+            stderr_bytes = await asyncio.wait_for(process.stderr.read(), timeout=2.0)
+            if stderr_bytes:
+                logger.warning("[claude stderr] %s", stderr_bytes.decode("utf-8", errors="replace").strip())
+        except (asyncio.TimeoutError, Exception):
+            pass
 
 
 async def _read_lines(stream: asyncio.StreamReader, timeout: float) -> AsyncGenerator[str, None]:

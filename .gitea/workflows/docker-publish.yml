@@ -1,0 +1,31 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: harbor.server.unarmedpuppy.com
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: services/serve/Dockerfile
+          push: true
+          tags: |
+            harbor.server.unarmedpuppy.com/library/innie-engine:latest
+            harbor.server.unarmedpuppy.com/library/innie-engine:${{ github.ref_name }}

@@ -31,5 +31,6 @@ fi
 
 # Fix ownership before dropping privileges
 chown -R appuser:appuser "${HOME_DIR}" 2>/dev/null || true
+chown -R appuser:appuser /home/appuser 2>/dev/null || true
 
 exec gosu appuser innie serve --host "$HOST" --port "$PORT"

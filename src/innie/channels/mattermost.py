@@ -6,6 +6,8 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
+
 from innie.channels.delivery import deliver
 from innie.channels.filter import filter_for_channel
 from innie.channels.policy import is_allowed
@@ -130,7 +132,10 @@ class MattermostAdapter:
 
         session_id = self._sessions.get_session("mattermost", user_id)
 
-        result = await collect_stream(
+        await self._send_typing(post["channel_id"])
+        typing_task = asyncio.create_task(self._pulse_typing(post["channel_id"]))
+        try:
+            result = await collect_stream(
             prompt=text,
             model="claude-sonnet-4-6",
             system_prompt=build_session_context(agent_name=self._agent_name),
@@ -138,6 +143,8 @@ class MattermostAdapter:
             session_id=session_id,
             working_directory=str(Path.home()),
         )
+        finally:
+            typing_task.cancel()
 
         if result.session_id:
             self._sessions.update_session("mattermost", user_id, result.session_id)
@@ -152,6 +159,24 @@ class MattermostAdapter:
                 reply,
                 root_id,
             )
+
+    async def _send_typing(self, channel_id: str) -> None:
+        url = f"{self._config.base_url.rstrip('/')}/api/v4/users/me/typing"
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {self._config.bot_token}"},
+                    json={"channel_id": channel_id},
+                    timeout=5.0,
+                )
+        except Exception:
+            pass
+
+    async def _pulse_typing(self, channel_id: str) -> None:
+        while True:
+            await asyncio.sleep(5)
+            await self._send_typing(channel_id)
 
     async def _post_message(self, channel_id: str, message: str, root_id: str) -> None:
         await asyncio.to_thread(

@@ -23,7 +23,7 @@ def load_channels_config(agent: str | None = None) -> dict | None:
         agent = paths.active_agent()
     if not agent:
         return None
-    cfg_path = Path.home() / ".innie" / "agents" / agent / "channels.yaml"
+    cfg_path = paths.agent_dir(agent) / "channels.yaml"
     if not cfg_path.exists():
         return None
     try:

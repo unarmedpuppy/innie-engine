@@ -11,7 +11,8 @@ import os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
@@ -22,6 +23,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from innie.core import paths
 from innie.core.context import build_session_context
 from innie.serve.claude import collect_stream, graceful_kill, stream_claude_events
+from innie.serve.job_store import JobStore
 from innie.serve.models import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -106,8 +108,18 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global jobs
+    jobs = _init_job_store()
     await _register_with_fleet()
+    from innie.channels.loader import start_channels, stop_channels
+    from innie.serve.scheduler import setup_scheduler, teardown_scheduler
+    await start_channels(app)
+    agent = paths.active_agent()
+    if agent:
+        setup_scheduler(agent)
     yield
+    await stop_channels()
+    teardown_scheduler()
 
 
 app = FastAPI(
@@ -126,9 +138,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory job store
-jobs: dict[str, Job] = {}
+# Persistent job store — initialised in lifespan so agent name is resolved
+jobs: JobStore | None = None
 active_pids: dict[str, int] = {}
+_serve_start_time: float = time.time()
+
+
+def _init_job_store() -> JobStore:
+    agent = paths.active_agent()
+    db_path = paths.state_dir(agent) / "jobs.db"
+    return JobStore(db_path)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -245,10 +264,11 @@ async def execute_job(job_id: str) -> None:
 
     job.status = JobStatus.RUNNING
     job.started_at = datetime.utcnow().isoformat()
+    jobs.update(job)
 
     working_dir = _resolve_working_dir(job.working_directory)
     context = _resolve_context(job.agent, job.include_memory)
-    perm = job.permission_mode or "default"
+    perm = job.permission_mode or "yolo"
 
     # Inject semantic search if available
     try:
@@ -280,6 +300,7 @@ async def execute_job(job_id: str) -> None:
         job.num_turns = result.num_turns
         job.events = result.events[:500]
         job.completed_at = datetime.utcnow().isoformat()
+        jobs.update(job)
 
         logger.info(
             f"Job {job_id} completed: cost=${result.cost_usd:.4f}, turns={result.num_turns}"
@@ -289,11 +310,13 @@ async def execute_job(job_id: str) -> None:
         job.status = JobStatus.TIMEOUT
         job.error = f"Timed out after {ASYNC_TIMEOUT}s"
         job.completed_at = datetime.utcnow().isoformat()
+        jobs.update(job)
 
     except Exception as e:
         job.status = JobStatus.FAILED
         job.error = str(e)
         job.completed_at = datetime.utcnow().isoformat()
+        jobs.update(job)
         logger.error(f"Job {job_id} failed: {e}")
 
     finally:
@@ -319,6 +342,123 @@ async def health():
     }
 
 
+# ── Agent audit ─────────────────────────────────────────────────────────────
+
+
+@app.get("/v1/agent/info")
+async def agent_info():
+    agent = paths.active_agent()
+    profile_path = Path.home() / ".innie" / "agents" / (agent or "") / "profile.yaml"
+    role = ""
+    if profile_path.exists():
+        import yaml
+        try:
+            data = yaml.safe_load(profile_path.read_text()) or {}
+            role = data.get("role", "")
+        except Exception:
+            pass
+    uptime_s = int(time.time() - _serve_start_time)
+    return {
+        "agent": agent,
+        "role": role,
+        "version": "0.2.0",
+        "uptime_seconds": uptime_s,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/v1/agent/skills")
+async def agent_skills():
+    from innie.skills.registry import discover_skills
+    agent = paths.active_agent()
+    skills = discover_skills(agent)
+    return {
+        "agent": agent,
+        "skills": [
+            {"name": s.name, "description": s.description}
+            for s in sorted(skills.values(), key=lambda x: x.name)
+        ],
+        "count": len(skills),
+    }
+
+
+@app.get("/v1/agent/schedule")
+async def agent_schedule():
+    from innie.serve.scheduler import _load_schedule, _scheduler
+    agent = paths.active_agent()
+    sched_jobs = _load_schedule(agent or "")
+    result = []
+    for j in sched_jobs:
+        next_run = None
+        if _scheduler:
+            try:
+                job = _scheduler.get_job(j.name)
+                if job and job.next_run_time:
+                    next_run = job.next_run_time.isoformat()
+            except Exception:
+                pass
+        result.append({
+            "name": j.name,
+            "enabled": j.enabled,
+            "cron": j.cron,
+            "interval_hours": j.interval_hours,
+            "action": j.action,
+            "prompt_preview": (j.prompt or "")[:120].strip() if j.prompt else None,
+            "deliver_to": {"channel": j.deliver_to.channel, "contact": j.deliver_to.contact} if j.deliver_to else None,
+            "reply_to": j.reply_to,
+            "next_run": next_run,
+        })
+    return {"agent": agent, "jobs": result, "count": len(result)}
+
+
+@app.get("/v1/agent/identity")
+async def agent_identity():
+    agent = paths.active_agent() or ""
+    base = Path.home() / ".innie" / "agents" / agent
+
+    def _read(path: Path) -> str | None:
+        try:
+            return path.read_text() if path.exists() else None
+        except Exception:
+            return None
+
+    return {
+        "agent": agent,
+        "soul": _read(base / "SOUL.md"),
+        "context": _read(base / "CONTEXT.md"),
+        "profile": _read(base / "profile.yaml"),
+    }
+
+
+@app.get("/v1/agent/audit")
+async def agent_audit():
+    """Combined audit endpoint — returns info + skills + schedule + identity in one call."""
+    info = await agent_info()
+    skills = await agent_skills()
+    schedule = await agent_schedule()
+    identity = await agent_identity()
+    return {
+        "info": info,
+        "skills": skills["skills"],
+        "schedule": schedule["jobs"],
+        "identity": {
+            "soul": identity["soul"],
+            "context": identity["context"],
+        },
+    }
+
+
+@app.post("/v1/schedule/{job_name}/trigger")
+async def trigger_schedule_job(job_name: str, background_tasks: BackgroundTasks):
+    """Manually fire a scheduled job by name."""
+    from innie.serve.scheduler import trigger_job
+    agent = paths.active_agent()
+    ok = await trigger_job(job_name, agent or "")
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"Scheduled job '{job_name}' not found or disabled")
+    return {"status": "triggered", "job": job_name}
+
+
 # ── Chat completions ────────────────────────────────────────────────────────
 
 
@@ -328,7 +468,7 @@ async def chat_completions(request: ChatCompletionRequest):
     prompt = _format_messages(request.messages)
     working_dir = _resolve_working_dir(request.working_directory)
     context = _resolve_context(None, True)
-    perm = request.permission_mode or "default"
+    perm = request.permission_mode or "yolo"
 
     if request.stream:
 
@@ -450,7 +590,7 @@ async def create_job(
         agent=request.agent,
         reply_to=request.reply_to,
     )
-    jobs[job_id] = job
+    jobs.add(job)
 
     background_tasks.add_task(execute_job, job_id)
 
@@ -551,6 +691,7 @@ async def cancel_job(job_id: str):
     job.status = JobStatus.CANCELLED
     job.error = "Cancelled by user"
     job.completed_at = datetime.utcnow().isoformat()
+    jobs.update(job)
 
     return {"message": f"Job {job_id} cancelled"}
 
@@ -562,7 +703,7 @@ async def delete_job(job_id: str):
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     if job.status == JobStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Cancel the job first")
-    del jobs[job_id]
+    jobs.delete(job_id)
     return {"message": f"Job {job_id} deleted"}
 
 

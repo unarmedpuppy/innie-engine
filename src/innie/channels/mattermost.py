@@ -1,0 +1,137 @@
+"""Mattermost channel adapter — WebSocket bot with reconnect loop."""
+
+import asyncio
+import json
+import logging
+from dataclasses import dataclass
+from pathlib import Path
+
+from innie.channels.delivery import deliver
+from innie.channels.filter import filter_for_channel
+from innie.channels.policy import is_allowed
+from innie.channels.sessions import ContactSessions
+from innie.core.context import build_session_context
+from innie.serve.claude import collect_stream
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MattermostConfig:
+    base_url: str
+    bot_token: str
+    dm_policy: str = "open"
+    allow_from: list = None  # type: ignore[assignment]
+    group_policy: str = "open"
+    group_allow_from: list = None  # type: ignore[assignment]
+    require_mention: bool = False
+
+    def __post_init__(self):
+        if self.allow_from is None:
+            self.allow_from = ["*"]
+        if self.group_allow_from is None:
+            self.group_allow_from = []
+
+    def as_policy_dict(self) -> dict:
+        return {
+            "dm_policy": self.dm_policy,
+            "allow_from": self.allow_from,
+            "group_policy": self.group_policy,
+            "group_allow_from": self.group_allow_from,
+            "require_mention": self.require_mention,
+        }
+
+
+class MattermostAdapter:
+    def __init__(self, config: MattermostConfig, sessions: ContactSessions, agent_name: str):
+        self._config = config
+        self._sessions = sessions
+        self._agent_name = agent_name
+        self._driver = None
+        self._bot_user_id: str | None = None
+
+    async def run(self) -> None:
+        """Start the WebSocket listener with a reconnect loop. Runs forever as a background task."""
+        try:
+            from mattermostdriver import Driver
+        except ImportError:
+            logger.error("[mattermost] mattermostdriver not installed — channel disabled")
+            return
+
+        url = self._config.base_url.replace("https://", "").replace("http://", "")
+        scheme = "https" if self._config.base_url.startswith("https") else "http"
+
+        self._driver = Driver({
+            "url": url,
+            "token": self._config.bot_token,
+            "scheme": scheme,
+            "port": 443 if scheme == "https" else 80,
+        })
+
+        try:
+            await self._driver.init_driver()
+            self._bot_user_id = self._driver.client.userid
+            logger.info(f"[mattermost] connected as bot user {self._bot_user_id}")
+        except Exception as e:
+            logger.error(f"[mattermost] init failed: {e}")
+            return
+
+        while True:
+            try:
+                await self._driver.websocket.connect(self._handle_event)
+            except asyncio.CancelledError:
+                logger.info("[mattermost] adapter cancelled")
+                return
+            except Exception as e:
+                logger.warning(f"[mattermost] WebSocket disconnected: {e} — reconnecting in 5s")
+                await asyncio.sleep(5)
+
+    async def _handle_event(self, raw: dict) -> None:
+        if raw.get("event") != "posted":
+            return
+
+        try:
+            post = json.loads(raw["data"]["post"])
+        except (KeyError, json.JSONDecodeError):
+            return
+
+        if post.get("user_id") == self._bot_user_id:
+            return  # ignore own messages
+
+        channel_type = raw["data"].get("channel_type", "D")
+        is_group = channel_type != "D"
+        user_id = post["user_id"]
+        text = post.get("message", "")
+
+        if not is_allowed(self._config.as_policy_dict(), user_id, is_group, text, self._agent_name):
+            return
+
+        session_id = self._sessions.get_session("mattermost", user_id)
+
+        result = await collect_stream(
+            prompt=text,
+            model="claude-sonnet-4-6",
+            system_prompt=build_session_context(agent_name=self._agent_name),
+            permission_mode="yolo",
+            session_id=session_id,
+            working_directory=str(Path.home()),
+        )
+
+        if result.session_id:
+            self._sessions.update_session("mattermost", user_id, result.session_id)
+
+        reply = filter_for_channel(result.text)
+        if reply:
+            await deliver(
+                self._post_message,
+                post["channel_id"],
+                reply,
+                post["id"],
+            )
+
+    async def _post_message(self, channel_id: str, message: str, root_id: str) -> None:
+        self._driver.posts.create_post(options={
+            "channel_id": channel_id,
+            "message": message,
+            "root_id": root_id,
+        })

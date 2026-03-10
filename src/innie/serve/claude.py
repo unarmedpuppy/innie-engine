@@ -6,6 +6,7 @@ import logging
 import os
 import signal
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import AsyncGenerator
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,19 @@ class StreamResult:
     cost_usd: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
+    duration_ms: int = 0
     num_turns: int = 0
     is_error: bool = False
     errors: list[str] = field(default_factory=list)
     events: list[dict] = field(default_factory=list)
+
+
+def _claude_binary() -> str:
+    """Return path to Claude CLI — ClaudeCode.app wrapper on macOS for FDA permissions."""
+    app_bin = Path.home() / "Applications" / "ClaudeCode.app" / "Contents" / "MacOS" / "claude-wrapper"
+    if app_bin.exists():
+        return str(app_bin)
+    return "claude"
 
 
 async def stream_claude_events(
@@ -34,22 +44,34 @@ async def stream_claude_events(
     timeout: float = 1800,
 ) -> AsyncGenerator[dict, None]:
     """Stream JSONL events from Claude Code CLI."""
-    cmd = ["claude", "--output-format", "stream-json", "--verbose"]
+    cmd = [_claude_binary(), "--print", "--output-format", "stream-json", "--verbose"]
     cmd.extend(["--model", model])
-    cmd.extend(["--permission-mode", permission_mode])
+
+    if permission_mode == "yolo":
+        cmd.append("--dangerously-skip-permissions")
+    elif permission_mode == "plan":
+        cmd.extend(["--permission-mode", "plan"])
 
     if system_prompt:
         cmd.extend(["--system-prompt", system_prompt])
     if session_id:
         cmd.extend(["--resume", session_id])
 
-    cmd.extend(["--prompt", prompt])
+    cmd.append("--")
+    cmd.append(prompt)
+
+    env = os.environ.copy()
+    anthropic_base = os.environ.get("ANTHROPIC_BASE_URL")
+    if anthropic_base:
+        env["ANTHROPIC_BASE_URL"] = anthropic_base
 
     process = await asyncio.create_subprocess_exec(
         *cmd,
         cwd=working_directory,
+        stdin=asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        env=env,
     )
 
     try:
@@ -126,10 +148,13 @@ async def collect_stream(
 
         elif event_type == "result":
             result.session_id = data.get("session_id", result.session_id)
-            result.cost_usd = data.get("cost_usd", 0.0)
-            result.input_tokens = data.get("input_tokens", 0)
-            result.output_tokens = data.get("output_tokens", 0)
+            result.cost_usd = data.get("total_cost_usd", data.get("cost_usd", 0.0))
+            result.duration_ms = data.get("duration_ms", 0)
             result.num_turns = data.get("num_turns", 0)
+            result.is_error = data.get("is_error", False)
+            usage = data.get("usage", {})
+            result.input_tokens = usage.get("input_tokens", data.get("input_tokens", 0))
+            result.output_tokens = usage.get("output_tokens", data.get("output_tokens", 0))
 
         elif event_type == "error":
             result.is_error = True

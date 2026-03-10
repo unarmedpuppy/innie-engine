@@ -16,6 +16,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -483,6 +484,194 @@ async def get_trace(session_id: str, agent_id: str | None = None):
                 continue
 
     raise HTTPException(404, f"Trace '{session_id}' not found")
+
+
+# ── Agent audit proxy ───────────────────────────────────────────────────────
+
+
+@app.get("/api/agents/{agent_id}/audit")
+async def get_agent_audit(agent_id: str):
+    """Proxy /v1/agent/audit from the agent's serve instance."""
+    agent = agents.get(agent_id)
+    if not agent:
+        raise HTTPException(404, f"Agent '{agent_id}' not found")
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{agent.endpoint}/v1/agent/audit",
+                timeout=PROXY_TIMEOUT,
+            )
+            data = resp.json()
+            data["_agent_id"] = agent_id
+            data["_status"] = agent.health.status
+            return data
+        except Exception as e:
+            # Return partial data so dashboard still renders
+            return {
+                "_agent_id": agent_id,
+                "_status": "offline",
+                "_error": str(e),
+                "info": {"agent": agent_id, "role": agent.description, "uptime_seconds": None},
+                "skills": [],
+                "schedule": [],
+                "identity": {"soul": None, "context": None},
+            }
+
+
+@app.post("/api/agents/{agent_id}/schedule/{job_name}/trigger")
+async def trigger_agent_schedule_job(agent_id: str, job_name: str):
+    """Proxy schedule job trigger to the agent's serve instance."""
+    agent = _get_online_agent(agent_id)
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                f"{agent.endpoint}/v1/schedule/{job_name}/trigger",
+                timeout=PROXY_TIMEOUT,
+            )
+            return resp.json()
+        except Exception as e:
+            raise HTTPException(502, f"Failed to trigger job: {e}")
+
+
+# ── Dashboard ────────────────────────────────────────────────────────────────
+
+
+_DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>innie fleet</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f0f12;color:#e2e2e7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;padding:24px}
+h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
+.subtitle{color:#6b7280;font-size:13px;margin-bottom:28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+.card{background:#17171c;border:1px solid #2a2a35;border-radius:10px;overflow:hidden}
+.card-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #2a2a35}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.online{background:#22c55e}.dot.offline{background:#ef4444}.dot.degraded{background:#f59e0b}.dot.unknown{background:#6b7280}
+.agent-name{font-weight:600;font-size:15px;color:#fff}
+.agent-role{font-size:12px;color:#6b7280;margin-top:1px}
+.uptime{margin-left:auto;font-size:12px;color:#6b7280}
+.card-body{padding:14px 16px}
+.section{margin-bottom:14px}
+.section:last-child{margin-bottom:0}
+.section-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#4b5563;margin-bottom:6px;font-weight:600}
+.skill-list{display:flex;flex-direction:column;gap:3px}
+.skill{font-size:12px;color:#9ca3af}
+.skill strong{color:#d1d5db;margin-right:4px}
+.sched-list{display:flex;flex-direction:column;gap:4px}
+.sched-item{font-size:12px;padding:4px 8px;background:#1e1e26;border-radius:5px;color:#9ca3af}
+.sched-item.enabled{border-left:2px solid #22c55e}.sched-item.disabled{border-left:2px solid #374151;opacity:.5}
+.sched-name{font-weight:600;color:#d1d5db;margin-right:6px}
+.sched-trigger-btn{float:right;font-size:11px;padding:1px 7px;background:#1d4ed8;color:#bfdbfe;border:none;border-radius:3px;cursor:pointer}
+.sched-trigger-btn:hover{background:#2563eb}
+.context-preview{font-size:12px;color:#6b7280;white-space:pre-wrap;max-height:90px;overflow:hidden;line-height:1.5}
+.error{color:#f87171;font-size:12px;padding:8px;background:#1c1111;border-radius:5px}
+.loading{color:#4b5563;font-size:13px;padding:8px}
+.tag-count{display:inline-block;font-size:11px;background:#1e2030;color:#818cf8;padding:1px 6px;border-radius:3px;margin-left:4px}
+</style>
+</head>
+<body>
+<h1>innie fleet</h1>
+<p class="subtitle" id="subtitle">Loading agents…</p>
+<div class="grid" id="grid"></div>
+<script>
+const BASE = '';
+async function load() {
+  const r = await fetch(BASE + '/api/agents');
+  const {agents} = await r.json();
+  document.getElementById('subtitle').textContent =
+    agents.length + ' agent' + (agents.length !== 1 ? 's' : '') + ' registered';
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (const a of agents) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = '<div class="card-body loading">Loading ' + a.id + '…</div>';
+    grid.appendChild(card);
+    fetchAudit(a, card);
+  }
+}
+async function fetchAudit(a, card) {
+  try {
+    const r = await fetch(BASE + '/api/agents/' + a.id + '/audit');
+    const d = await r.json();
+    renderCard(a, d, card);
+  } catch(e) {
+    card.innerHTML = '<div class="card-body error">Failed to load ' + a.id + ': ' + e + '</div>';
+  }
+}
+function fmtUptime(s) {
+  if (!s) return '';
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm';
+  return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+}
+function fmtCron(j) {
+  if (j.cron) return j.cron;
+  if (j.interval_hours) return 'every ' + j.interval_hours + 'h';
+  if (j.action) return j.action;
+  return '?';
+}
+function renderCard(a, d, card) {
+  const info = d.info || {};
+  const status = d._status || a.health?.status || 'unknown';
+  const skills = d.skills || [];
+  const sched = d.schedule || [];
+  const ctx = (d.identity && d.identity.context) || '';
+  const ctxPreview = ctx.split('\\n').filter(l => l.trim() && !l.startsWith('#')).slice(0,6).join('\\n');
+  const skillsHtml = skills.length === 0 ? '<span style="color:#4b5563">none</span>' :
+    '<div class="skill-list">' + skills.slice(0,8).map(s =>
+      '<div class="skill"><strong>' + s.name + '</strong>' + (s.description ? s.description.substring(0,60) : '') + '</div>'
+    ).join('') + (skills.length > 8 ? '<div class="skill" style="color:#4b5563">+' + (skills.length-8) + ' more</div>' : '') + '</div>';
+  const schedHtml = sched.length === 0 ? '<span style="color:#4b5563">none</span>' :
+    '<div class="sched-list">' + sched.map(j =>
+      '<div class="sched-item ' + (j.enabled ? 'enabled' : 'disabled') + '">' +
+      '<button class="sched-trigger-btn" onclick="trigger(\\'' + a.id + '\\',\\'' + j.name + '\\',this)" ' + (j.enabled ? '' : 'disabled') + '>run</button>' +
+      '<span class="sched-name">' + j.name + '</span>' +
+      '<span style="color:#4b5563">' + fmtCron(j) + '</span>' +
+      (j.next_run ? '<br><span style="font-size:11px;color:#374151">next: ' + j.next_run.substring(0,16).replace('T',' ') + '</span>' : '') +
+      '</div>'
+    ).join('') + '</div>';
+  card.innerHTML =
+    '<div class="card-header">' +
+    '<div class="dot ' + status + '"></div>' +
+    '<div><div class="agent-name">' + (info.agent || a.id) +
+      '<span class="tag-count">' + skills.length + ' skills</span></div>' +
+    '<div class="agent-role">' + (info.role || a.description || '') + '</div></div>' +
+    '<div class="uptime">' + (status === 'online' ? fmtUptime(info.uptime_seconds) : status) + '</div>' +
+    '</div>' +
+    '<div class="card-body">' +
+    (d._error ? '<div class="error">' + d._error + '</div>' : '') +
+    '<div class="section"><div class="section-label">Schedule</div>' + schedHtml + '</div>' +
+    '<div class="section"><div class="section-label">Skills</div>' + skillsHtml + '</div>' +
+    (ctxPreview ? '<div class="section"><div class="section-label">Open items</div><div class="context-preview">' + ctxPreview + '</div></div>' : '') +
+    '</div>';
+}
+async function trigger(agentId, jobName, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const r = await fetch(BASE + '/api/agents/' + agentId + '/schedule/' + jobName + '/trigger', {method:'POST'});
+    const d = await r.json();
+    btn.textContent = d.status === 'triggered' ? '✓' : 'err';
+  } catch(e) {
+    btn.textContent = 'err';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = 'run'; }, 3000);
+}
+load();
+</script>
+</body>
+</html>"""
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def dashboard():
+    return HTMLResponse(_DASHBOARD_HTML)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────

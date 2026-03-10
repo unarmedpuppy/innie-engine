@@ -150,6 +150,9 @@ def _register_commands():
     skill_app = typer.Typer(help="Knowledge base skills (slash commands).")
     skill_app.command("list")(skills.list_skills)
     skill_app.command("run")(skills.run_skill)
+    skill_app.command("install")(skills.install_skill)
+    skill_app.command("show")(skills.show_skill)
+    skill_app.command("remove")(skills.remove_skill)
     app.add_typer(skill_app, name="skill")
 
     # Trace subcommands

@@ -38,6 +38,8 @@ serve = [
     "fastapi>=0.115",
     "uvicorn>=0.32",
     "aiosqlite>=0.21",
+    "mattermostdriver>=7.3",
+    "apscheduler>=3.10",
 ]
 dev = [
     "pytest>=8.0",

@@ -68,6 +68,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
             password=bb_cfg.get("password", ""),
             send_read_receipts=bb_cfg.get("send_read_receipts", False),
             idle_session_hours=bb_cfg.get("idle_session_hours", 2.0),
+            channel_hint=bb_cfg.get("channel_hint", ""),
             policy=policy,
             groups=bb_cfg.get("groups", {}),
         )

@@ -33,6 +33,7 @@ class BlueBubblesConfig:
     password: str
     send_read_receipts: bool = False
     idle_session_hours: float = 2.0
+    channel_hint: str = ""
     # policy fields forwarded as a dict to is_allowed
     policy: dict = field(default_factory=dict)
     # per-chat overrides: chat_guid → {require_mention: bool}
@@ -145,13 +146,17 @@ async def _handle_message(payload: dict) -> None:
     if _sessions.get_chat_guid("bluebubbles", contact_id) is None:
         _sessions.update_session("bluebubbles", contact_id, session_id or "", chat_guid)
 
+    system_prompt = build_session_context(agent_name=_agent_name)
+    if _config.channel_hint:
+        system_prompt += f"\n\n{_config.channel_hint.strip()}"
+
     await _send_typing(chat_guid, _config)
     typing_task = asyncio.create_task(_pulse_typing(chat_guid, _config))
     try:
         result = await collect_stream(
             prompt=prompt,
             model="claude-sonnet-4-6",
-            system_prompt=build_session_context(agent_name=_agent_name),
+            system_prompt=system_prompt,
             permission_mode="yolo",
             session_id=session_id,
             working_directory=str(Path.home()),

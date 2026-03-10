@@ -71,7 +71,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
             policy=policy,
             groups=bb_cfg.get("groups", {}),
         )
-        innie_url = os.environ.get("INNIE_PUBLIC_URL", "http://localhost:8013")
+        innie_url = os.environ.get("INNIE_PUBLIC_URL", "http://127.0.0.1:8013")
         await bluebubbles.start(bb, _sessions, agent or "avery", innie_url)
         app.include_router(bluebubbles.router)
         logger.info("[channels] BlueBubbles adapter started")

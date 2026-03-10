@@ -69,7 +69,7 @@ async def _register_webhook(config: BlueBubblesConfig, innie_url: str) -> None:
             await client.post(
                 f"{config.server_url}/api/v1/webhook",
                 params={"password": config.password},
-                json={"url": webhook_url, "events": ["new-message"]},
+                json={"url": webhook_url, "events": ["*"]},
                 timeout=10.0,
             )
             logger.info(f"[bluebubbles] webhook registered → {webhook_url}")
@@ -85,6 +85,24 @@ async def webhook(request: Request):
     payload = await request.json()
     asyncio.create_task(_handle_message(payload))
     return {"status": "ok"}
+
+
+async def _send_typing(chat_guid: str, config: BlueBubblesConfig) -> None:
+    """Fire a single typing indicator POST."""
+    encoded = chat_guid.replace(";", "%3B").replace("+", "%2B")
+    url = f"{config.server_url}/api/v1/chat/{encoded}/typing"
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(url, params={"password": config.password}, timeout=5.0)
+    except Exception:
+        pass
+
+
+async def _pulse_typing(chat_guid: str, config: BlueBubblesConfig) -> None:
+    """Keep typing indicator alive every 5s until cancelled."""
+    while True:
+        await asyncio.sleep(5)
+        await _send_typing(chat_guid, config)
 
 
 async def _handle_message(payload: dict) -> None:
@@ -127,14 +145,19 @@ async def _handle_message(payload: dict) -> None:
     if _sessions.get_chat_guid("bluebubbles", contact_id) is None:
         _sessions.update_session("bluebubbles", contact_id, session_id or "", chat_guid)
 
-    result = await collect_stream(
-        prompt=prompt,
-        model="claude-sonnet-4-6",
-        system_prompt=build_session_context(agent_name=_agent_name),
-        permission_mode="yolo",
-        session_id=session_id,
-        working_directory=str(Path.home()),
-    )
+    await _send_typing(chat_guid, _config)
+    typing_task = asyncio.create_task(_pulse_typing(chat_guid, _config))
+    try:
+        result = await collect_stream(
+            prompt=prompt,
+            model="claude-sonnet-4-6",
+            system_prompt=build_session_context(agent_name=_agent_name),
+            permission_mode="yolo",
+            session_id=session_id,
+            working_directory=str(Path.home()),
+        )
+    finally:
+        typing_task.cancel()
 
     if result.session_id:
         _sessions.update_session("bluebubbles", contact_id, result.session_id, chat_guid)

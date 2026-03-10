@@ -2781,19 +2781,19 @@
 <td>iMessage, Mattermost</td>
 </tr>
 <tr>
-<td><strong>Oak (Mac Mini)</strong></td>
+<td><strong>Oak</strong></td>
 <td><code>oak</code></td>
 <td>Mac Mini</td>
 <td><strong>8014</strong></td>
-<td>Technical partner — interactive dev</td>
+<td>Technical partner — interactive dev, coding</td>
 <td>CLI</td>
 </tr>
 <tr>
-<td><strong>Oak (Server)</strong></td>
-<td><code>oak</code></td>
+<td><strong>Ralph</strong></td>
+<td><code>ralph</code></td>
 <td>Server Docker</td>
-<td><strong>8015</strong></td>
-<td>Autonomous task loop (Ralph replacement)</td>
+<td><strong>8013</strong></td>
+<td>Autonomous task runner — works Tasks API unattended</td>
 <td>—</td>
 </tr>
 <tr>
@@ -2804,17 +2804,11 @@
 <td>Sysadmin — SSH/OS access</td>
 <td>Mattermost</td>
 </tr>
-<tr>
-<td>~~Ralph~~</td>
-<td>~~ralph~~</td>
-<td>~~Server Docker~~</td>
-<td>—</td>
-<td>Deprecated — becomes Oak server scheduled job</td>
-<td>—</td>
-</tr>
 </tbody>
 </table>
-<p><strong>Port note:</strong> Avery is on <code>:8019</code> (not <code>:8013</code>) to avoid conflict with agent-harness during the Phase 1-4 overlap. agent-harness holds <code>:8013</code> on both Mac Mini and server until Phase 5.</p>
+<p><strong>Oak is Mac Mini only.</strong> It has one memory directory (<code>~/.innie/agents/oak/</code>), one fleet ID, one <code>INNIE_AGENT</code>. There is no "Oak server."</p>
+<p><strong>Ralph stays Ralph.</strong> Different purpose (batch task runner vs interactive dev partner), different memory, different API backend (real Anthropic — no LLM router), different machine. He runs the <code>task_loop</code> cron job from his own <code>schedule.yaml</code>. He replaces agent-harness Ralph in Phase 5B.</p>
+<p><strong>Port note:</strong> Avery is on <code>:8019</code> (not <code>:8013</code>) to avoid conflict with agent-harness during the Phase 1-4 overlap. agent-harness holds <code>:8013</code> on the server until Phase 5B, at which point Ralph (innie) takes it.</p>
 <p><strong>Oak</strong> (Professor Oak, Pokémon). Knowledgeable about all systems, a little quirky, straight to the point. Obsessed with simplicity and cohesion. Works interactively with Josh at the CLI and non-interactively when invoked by other agents, tasks, or the scheduler.</p>
 <hr />
 <h2 id="networking">Networking<a class="headerlink" href="#networking" title="Permanent link">&para;</a></h2>
@@ -2822,24 +2816,25 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Mac Mini (100.92.176.74)              Home Server
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>┌─────────────────────────┐           ┌──────────────────────────────────┐
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│ innie serve avery :8019 │◄──────────┤ fleet-gateway (Docker :8080)     │
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│ innie serve oak   :8014 │◄──────────┤   reads fleet.yaml               │
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│ innie serve oak   :8014 │◄──────────┤   fleet.yaml seed config         │
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│                         │  Tailscale│   agents self-register on startup │
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│ BlueBubbles :1234       │           │                                  │
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   ↕ webhook localhost   │           │ innie serve oak-server :8015     │
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   ↕ webhook localhost   │           │ innie serve ralph :8013 (Ph5B)   │
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└─────────────────────────┘           │ gilfoyle systemd :8018           │
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                                      └──────────────────────────────────┘
 </code></pre></div>
 <ul>
-<li>Fleet gateway reaches Mac Mini via Tailscale IP <code>100.92.176.74</code>. Docker bridge containers on Linux can reach Tailscale routes via host routing table — no <code>network_mode: host</code> needed.</li>
-<li><code>INNIE_SERVE_HOST=100.92.176.74</code> must be set in each Mac Mini plist so <code>_register_with_fleet()</code> advertises the Tailscale IP, not a LAN IP.</li>
-<li><code>INNIE_PUBLIC_URL=http://localhost:8019</code> (Avery only) — used for BlueBubbles webhook registration. BB server runs locally on Mac Mini, so localhost works.</li>
-<li>fleet.yaml is version-controlled at <code>home-server/apps/fleet-gateway/fleet.yaml</code>, mounted read-only into the container. Agents self-register on startup so fleet.yaml is a seed/fallback only.</li>
+<li>Fleet gateway reaches Mac Mini agents via Tailscale IP <code>100.92.176.74</code>. Docker bridge containers on Linux reach Tailscale routes via host routing — no <code>network_mode: host</code> needed.</li>
+<li><code>INNIE_SERVE_HOST=100.92.176.74</code> in each Mac Mini plist → self-registration advertises Tailscale IP, not LAN IP.</li>
+<li><code>INNIE_PUBLIC_URL=http://localhost:8019</code> (Avery only) — BlueBubbles webhook registration. BB server is local to Mac Mini.</li>
+<li><code>fleet.yaml</code> is version-controlled at <code>home-server/apps/fleet-gateway/fleet.yaml</code>, mounted read-only into the container. Agents self-register on startup so fleet.yaml is seed/fallback only.</li>
 </ul>
 <h3 id="mac-mini-launchd-plists">Mac Mini launchd plists<a class="headerlink" href="#mac-mini-launchd-plists" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th>Plist</th>
+<th>Agent</th>
 <th>Port</th>
 <th><code>RunAtLoad</code></th>
 <th>Notes</th>
@@ -2847,16 +2842,18 @@
 </thead>
 <tbody>
 <tr>
-<td><code>ai.innie.serve.plist</code> (Avery)</td>
+<td><code>ai.innie.serve.plist</code></td>
+<td>avery</td>
 <td>8019</td>
 <td>✅ always</td>
 <td>channels, scheduler, morning briefings</td>
 </tr>
 <tr>
-<td><code>ai.innie.serve.oak.plist</code> (Oak)</td>
+<td><code>ai.innie.serve.oak.plist</code></td>
+<td>oak</td>
 <td>8014</td>
 <td>❌ manual</td>
-<td>start with <code>launchctl load</code> for interactive dev sessions</td>
+<td><code>launchctl load</code> for interactive dev sessions</td>
 </tr>
 </tbody>
 </table>
@@ -2867,7 +2864,7 @@
 <th>Var</th>
 <th>Avery (Mac Mini)</th>
 <th>Oak (Mac Mini)</th>
-<th>Oak (Server)</th>
+<th>Ralph (Server)</th>
 </tr>
 </thead>
 <tbody>
@@ -2875,13 +2872,13 @@
 <td><code>INNIE_AGENT</code></td>
 <td><code>avery</code></td>
 <td><code>oak</code></td>
-<td><code>oak</code></td>
+<td><code>ralph</code></td>
 </tr>
 <tr>
 <td><code>INNIE_SERVE_PORT</code></td>
 <td><code>8019</code></td>
 <td><code>8014</code></td>
-<td><code>8015</code></td>
+<td><code>8013</code></td>
 </tr>
 <tr>
 <td><code>INNIE_SERVE_HOST</code></td>
@@ -3783,7 +3780,7 @@ Some skill dirs also contain a <code>references/</code> subdirectory — copy it
 <a id="__codelineno-27-19" name="__codelineno-27-19" href="#__codelineno-27-19"></a><span class="w">    </span><span class="nt">interval_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <a id="__codelineno-27-20" name="__codelineno-27-20" href="#__codelineno-27-20"></a><span class="w">    </span><span class="nt">action</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">expire_stale_sessions</span><span class="w">   </span><span class="c1"># built-in action, no Claude invocation</span>
 <a id="__codelineno-27-21" name="__codelineno-27-21" href="#__codelineno-27-21"></a>
-<a id="__codelineno-27-22" name="__codelineno-27-22" href="#__codelineno-27-22"></a><span class="c1"># ~/.innie/agents/oak/schedule.yaml  (server deployment only — no ANTHROPIC_BASE_URL)</span>
+<a id="__codelineno-27-22" name="__codelineno-27-22" href="#__codelineno-27-22"></a><span class="c1"># ~/.innie/agents/ralph/schedule.yaml  (server only — INNIE_AGENT=ralph, no ANTHROPIC_BASE_URL)</span>
 <a id="__codelineno-27-23" name="__codelineno-27-23" href="#__codelineno-27-23"></a><span class="nt">jobs</span><span class="p">:</span>
 <a id="__codelineno-27-24" name="__codelineno-27-24" href="#__codelineno-27-24"></a><span class="w">  </span><span class="nt">task_loop</span><span class="p">:</span>
 <a id="__codelineno-27-25" name="__codelineno-27-25" href="#__codelineno-27-25"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
@@ -3791,12 +3788,12 @@ Some skill dirs also contain a <code>references/</code> subdirectory — copy it
 <a id="__codelineno-27-27" name="__codelineno-27-27" href="#__codelineno-27-27"></a><span class="w">    </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
 <a id="__codelineno-27-28" name="__codelineno-27-28" href="#__codelineno-27-28"></a><span class="w">      </span><span class="no">Check the Tasks API at https://tasks-api.server.unarmedpuppy.com for open</span>
 <a id="__codelineno-27-29" name="__codelineno-27-29" href="#__codelineno-27-29"></a><span class="w">      </span><span class="no">engineering tasks (type=engineering, status=OPEN). Work through P0 and P1 tasks.</span>
-<a id="__codelineno-27-30" name="__codelineno-27-30" href="#__codelineno-27-30"></a><span class="w">      </span><span class="no">Claim each task before starting. Report completion via Mattermost.</span>
-<a id="__codelineno-27-31" name="__codelineno-27-31" href="#__codelineno-27-31"></a><span class="w">    </span><span class="nt">working_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/Users/aijenquist/workspace&quot;</span>
+<a id="__codelineno-27-30" name="__codelineno-27-30" href="#__codelineno-27-30"></a><span class="w">      </span><span class="no">Claim each task before starting. Close it when done. Report via Mattermost.</span>
+<a id="__codelineno-27-31" name="__codelineno-27-31" href="#__codelineno-27-31"></a><span class="w">    </span><span class="nt">working_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/home/unarmedpuppy/workspace&quot;</span>
 <a id="__codelineno-27-32" name="__codelineno-27-32" href="#__codelineno-27-32"></a><span class="w">    </span><span class="nt">permission_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">yolo</span>
 <a id="__codelineno-27-33" name="__codelineno-27-33" href="#__codelineno-27-33"></a><span class="w">    </span><span class="nt">reply_to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mattermost://nytinkdkttfo8rcxm8i4gg7uwr&quot;</span>
 </code></pre></div>
-<p>The <code>task_loop</code> job IS Ralph. Same behavior (polls Tasks API, works through tasks, posts to Mattermost), running on the server's <code>dev</code> innie instance that has direct Anthropic access.</p>
+<p>Ralph keeps his own namespace (<code>INNIE_AGENT=ralph</code>), his own memory, his own SOUL.md. He is NOT Oak. Oak is Mac Mini only and has no task_loop. Ralph runs on the server with real Anthropic API (no ANTHROPIC_BASE_URL) and replaces agent-harness Ralph in Phase 5B.</p>
 <h3 id="scheduler-implementation-serveschedulerpy">Scheduler implementation (<code>serve/scheduler.py</code>)<a class="headerlink" href="#scheduler-implementation-serveschedulerpy" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">apscheduler.schedulers.asyncio</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncIOScheduler</span>
 <a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>

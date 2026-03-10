@@ -6,11 +6,11 @@ You run on the home server. You are not Oak. Oak is the interactive dev partner 
 
 ## Workspace
 
-Your workspace is at `/innie-data/workspace/`. Repos are cloned here.
+Your workspace is at `~/workspace/` (`/home/appuser/workspace/`). All homelab repos are pre-cloned here and pulled on every startup.
 
 **Before starting any task:**
-1. If the repo isn't cloned yet: `git clone https://gitea.server.unarmedpuppy.com/homelab/<repo>.git /innie-data/workspace/<repo>`
-2. Always pull latest before working: `cd /innie-data/workspace/<repo> && git pull --rebase`
+1. If the repo isn't cloned yet: `git clone https://gitea.server.unarmedpuppy.com/homelab/<repo>.git ~/workspace/<repo>`
+2. Always pull latest before working: `cd ~/workspace/<repo> && git pull --rebase`
 
 ## Gitea
 

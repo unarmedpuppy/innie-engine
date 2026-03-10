@@ -55,18 +55,21 @@ EOF
 
 setup_memory_remote() {
     local remote_url="ssh://git@gitea.server.unarmedpuppy.com:2223/homelab/agent-memory.git"
+    local data_dir="${AGENT_DIR}/data"
 
-    if [ ! -d "${HOME_DIR}/.git" ]; then
-        echo "[innie-serve] Initializing ${HOME_DIR} as git repo..."
-        gosu appuser git -C "${HOME_DIR}" init
-        gosu appuser git -C "${HOME_DIR}" remote add origin "$remote_url"
+    gosu appuser mkdir -p "$data_dir"
+
+    if [ ! -d "${data_dir}/.git" ]; then
+        echo "[innie-serve] Initializing ${data_dir} as git repo..."
+        gosu appuser git -C "$data_dir" init
+        gosu appuser git -C "$data_dir" remote add origin "$remote_url"
         echo "[innie-serve] Memory remote added: $remote_url"
     else
         local current
-        current=$(gosu appuser git -C "${HOME_DIR}" remote get-url origin 2>/dev/null || echo "")
+        current=$(gosu appuser git -C "$data_dir" remote get-url origin 2>/dev/null || echo "")
         if [ "$current" != "$remote_url" ]; then
-            gosu appuser git -C "${HOME_DIR}" remote set-url origin "$remote_url" 2>/dev/null || \
-                gosu appuser git -C "${HOME_DIR}" remote add origin "$remote_url"
+            gosu appuser git -C "$data_dir" remote set-url origin "$remote_url" 2>/dev/null || \
+                gosu appuser git -C "$data_dir" remote add origin "$remote_url"
             echo "[innie-serve] Memory remote updated: $remote_url"
         else
             echo "[innie-serve] Memory remote already set"
@@ -75,7 +78,7 @@ setup_memory_remote() {
 }
 
 setup_workspace() {
-    local workspace="${HOME_DIR}/workspace"
+    local workspace="/home/appuser/workspace"
     local gitea_host="${GITEA_HOST:-gitea.server.unarmedpuppy.com}"
 
     if [ -z "${GITEA_TOKEN:-}" ]; then

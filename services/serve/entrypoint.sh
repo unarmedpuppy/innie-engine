@@ -12,10 +12,12 @@ echo "[innie-serve] Starting API server. Agent=${AGENT} Home=${HOME_DIR} Bind=${
 # Configure git credentials from Gitea token if provided
 if [ -n "${GITEA_TOKEN:-}" ]; then
     GITEA_HOST=${GITEA_HOST:-gitea.server.unarmedpuppy.com}
-    git config --global credential.helper store
-    echo "https://oauth2:${GITEA_TOKEN}@${GITEA_HOST}" > /root/.git-credentials
-    git config --global user.email "${GIT_AUTHOR_EMAIL:-ralph@innie}"
-    git config --global user.name "${GIT_AUTHOR_NAME:-Ralph}"
+    gosu appuser git config --global credential.helper store
+    echo "https://oauth2:${GITEA_TOKEN}@${GITEA_HOST}" > /home/appuser/.git-credentials
+    chown appuser:appuser /home/appuser/.git-credentials
+    chmod 600 /home/appuser/.git-credentials
+    gosu appuser git config --global user.email "${GIT_AUTHOR_EMAIL:-ralph@innie}"
+    gosu appuser git config --global user.name "${GIT_AUTHOR_NAME:-Ralph}"
     echo "[innie-serve] Git credentials configured for ${GITEA_HOST}"
 fi
 
@@ -27,4 +29,7 @@ if [ -d "/app/bootstrap/${AGENT}" ]; then
     echo "[innie-serve] Bootstrap sync complete for ${AGENT}"
 fi
 
-exec innie serve --host "$HOST" --port "$PORT"
+# Fix ownership before dropping privileges
+chown -R appuser:appuser "${HOME_DIR}" 2>/dev/null || true
+
+exec gosu appuser innie serve --host "$HOST" --port "$PORT"

@@ -12,14 +12,59 @@
 
 ## Agent Roster — Final State
 
-| Agent | Namespace | Runs on | Purpose | Channels |
-|-------|-----------|---------|---------|----------|
-| **Avery** | `avery` | Mac Mini (innie serve :8013) | Family coordinator | iMessage, Mattermost |
-| **Oak** | `oak` | Mac Mini + Server Docker | Technical partner — coding, deployments, debugging, autonomous tasks | CLI + jobs API |
-| **Gilfoyle** | `gilfoyle` | Server (systemd, port 8018) | Sysadmin — SSH/OS access | Mattermost |
-| ~~Ralph~~ | ~~ralph~~ | ~~Server Docker~~ | Deprecated — becomes scheduled job in `oak` | — |
+| Agent | Namespace | Host | Port | Purpose | Channels |
+|-------|-----------|------|------|---------|----------|
+| **Avery** | `avery` | Mac Mini | **8019** | Family coordinator | iMessage, Mattermost |
+| **Oak (Mac Mini)** | `oak` | Mac Mini | **8014** | Technical partner — interactive dev | CLI |
+| **Oak (Server)** | `oak` | Server Docker | **8015** | Autonomous task loop (Ralph replacement) | — |
+| **Gilfoyle** | `gilfoyle` | Server systemd | **8018** | Sysadmin — SSH/OS access | Mattermost |
+| ~~Ralph~~ | ~~ralph~~ | ~~Server Docker~~ | — | Deprecated — becomes Oak server scheduled job | — |
+
+**Port note:** Avery is on `:8019` (not `:8013`) to avoid conflict with agent-harness during the Phase 1-4 overlap. agent-harness holds `:8013` on both Mac Mini and server until Phase 5.
 
 **Oak** (Professor Oak, Pokémon). Knowledgeable about all systems, a little quirky, straight to the point. Obsessed with simplicity and cohesion. Works interactively with Josh at the CLI and non-interactively when invoked by other agents, tasks, or the scheduler.
+
+---
+
+## Networking
+
+### Tailscale + fleet gateway connectivity
+
+```
+Mac Mini (100.92.176.74)              Home Server
+┌─────────────────────────┐           ┌──────────────────────────────────┐
+│ innie serve avery :8019 │◄──────────┤ fleet-gateway (Docker :8080)     │
+│ innie serve oak   :8014 │◄──────────┤   reads fleet.yaml               │
+│                         │  Tailscale│   agents self-register on startup │
+│ BlueBubbles :1234       │           │                                  │
+│   ↕ webhook localhost   │           │ innie serve oak-server :8015     │
+└─────────────────────────┘           │ gilfoyle systemd :8018           │
+                                      └──────────────────────────────────┘
+```
+
+- Fleet gateway reaches Mac Mini via Tailscale IP `100.92.176.74`. Docker bridge containers on Linux can reach Tailscale routes via host routing table — no `network_mode: host` needed.
+- `INNIE_SERVE_HOST=100.92.176.74` must be set in each Mac Mini plist so `_register_with_fleet()` advertises the Tailscale IP, not a LAN IP.
+- `INNIE_PUBLIC_URL=http://localhost:8019` (Avery only) — used for BlueBubbles webhook registration. BB server runs locally on Mac Mini, so localhost works.
+- fleet.yaml is version-controlled at `home-server/apps/fleet-gateway/fleet.yaml`, mounted read-only into the container. Agents self-register on startup so fleet.yaml is a seed/fallback only.
+
+### Mac Mini launchd plists
+
+| Plist | Port | `RunAtLoad` | Notes |
+|-------|------|-------------|-------|
+| `ai.innie.serve.plist` (Avery) | 8019 | ✅ always | channels, scheduler, morning briefings |
+| `ai.innie.serve.oak.plist` (Oak) | 8014 | ❌ manual | start with `launchctl load` for interactive dev sessions |
+
+### Key env vars per instance
+
+| Var | Avery (Mac Mini) | Oak (Mac Mini) | Oak (Server) |
+|-----|-----------------|----------------|--------------|
+| `INNIE_AGENT` | `avery` | `oak` | `oak` |
+| `INNIE_SERVE_PORT` | `8019` | `8014` | `8015` |
+| `INNIE_SERVE_HOST` | `100.92.176.74` | `100.92.176.74` | `<server Tailscale IP>` |
+| `INNIE_PUBLIC_URL` | `http://localhost:8019` | — | — |
+| `INNIE_FLEET_URL` | `https://fleet-gateway.server.unarmedpuppy.com` | same | `http://fleet-gateway:8080` |
+| `ANTHROPIC_BASE_URL` | `https://homelab-ai.server.unarmedpuppy.com` | same | **unset** (real Anthropic) |
+| `ANTHROPIC_API_KEY` | `lai_85590afb609bba2842111176332c4e94` | same | `<Claude Max key>` |
 
 ---
 

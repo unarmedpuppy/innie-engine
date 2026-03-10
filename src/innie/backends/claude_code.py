@@ -94,6 +94,12 @@ class ClaudeCodeBackend(Backend):
 
         config["hooks"] = hooks
 
+        # Disable attribution header — it invalidates the KV cache and causes
+        # ~90% slower inference with local models. Must be set in settings.json;
+        # shell exports do not work. https://unsloth.ai/docs/basics/claude-code
+        env = config.setdefault("env", {})
+        env.setdefault("CLAUDE_CODE_ATTRIBUTION_HEADER", "0")
+
         with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
             f.write("\n")

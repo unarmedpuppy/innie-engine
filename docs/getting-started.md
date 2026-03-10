@@ -83,6 +83,8 @@ This detects which AI coding assistant you have installed and wires four hooks:
 
 Hooks are installed as **bash shims** in `~/.innie/hooks/`. The shims call `innie` subcommands. They are installed into the backend's config via a namespace-safe merge (existing hooks are never overwritten).
 
+For the **Claude Code** backend, `innie backend install` also sets `CLAUDE_CODE_ATTRIBUTION_HEADER=0` in `~/.claude/settings.json`. This disables a header that Claude Code prepends to every request which invalidates the KV cache on local models, causing ~90% slower inference with vLLM and similar backends.
+
 ---
 
 ## Create Additional Agents

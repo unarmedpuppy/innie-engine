@@ -84,7 +84,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
 
         mm = MattermostConfig(
             base_url=mm_cfg.get("base_url", ""),
-            bot_token=mm_cfg.get("bot_token", ""),
+            bot_token=mm_cfg.get("bot_token") or os.environ.get("MATTERMOST_BOT_TOKEN", ""),
             dm_policy=mm_cfg.get("dm_policy", "open"),
             allow_from=mm_cfg.get("allow_from", ["*"]),
             group_policy=mm_cfg.get("group_policy", "open"),

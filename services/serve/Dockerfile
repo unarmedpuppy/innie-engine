@@ -16,6 +16,7 @@ COPY src/ ./src/
 RUN pip install --no-cache-dir ".[serve]"
 
 COPY services/serve/entrypoint.sh /entrypoint.sh
+COPY services/serve/bootstrap/ /app/bootstrap/
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 8013

@@ -13,7 +13,9 @@ echo "[innie-serve] Starting API server. Agent=${AGENT} Home=${HOME_DIR} Bind=${
 if [ -n "${GITEA_TOKEN:-}" ]; then
     GITEA_HOST=${GITEA_HOST:-gitea.server.unarmedpuppy.com}
     gosu appuser git config --global credential.helper store
-    echo "https://oauth2:${GITEA_TOKEN}@${GITEA_HOST}" > /home/appuser/.git-credentials
+    # Both external and internal Gitea hostnames for credential matching
+    printf "https://oauth2:%s@%s\nhttp://oauth2:%s@gitea:3000\n" \
+        "${GITEA_TOKEN}" "${GITEA_HOST}" "${GITEA_TOKEN}" > /home/appuser/.git-credentials
     chown appuser:appuser /home/appuser/.git-credentials
     chmod 600 /home/appuser/.git-credentials
     gosu appuser git config --global user.email "${GIT_AUTHOR_EMAIL:-ralph@innie}"
@@ -90,7 +92,7 @@ setup_workspace() {
     echo "[innie-serve] Bootstrapping homelab workspace..."
 
     local repos
-    repos=$(curl -sf "https://${gitea_host}/api/v1/orgs/homelab/repos?limit=50" \
+    repos=$(curl -sf "http://gitea:3000/api/v1/orgs/homelab/repos?limit=50" \
         -H "Authorization: token ${GITEA_TOKEN}" \
         | python3 -c "import sys,json; [print(r['name']) for r in json.load(sys.stdin)]" 2>/dev/null) || {
         echo "[innie-serve] Warning: failed to fetch homelab repos, skipping"
@@ -101,7 +103,7 @@ setup_workspace() {
     while IFS= read -r repo; do
         [ -z "$repo" ] && continue
         local repo_dir="$workspace/$repo"
-        local clone_url="https://${gitea_host}/homelab/${repo}.git"
+        local clone_url="http://gitea:3000/homelab/${repo}.git"
 
         if [ ! -d "$repo_dir/.git" ]; then
             gosu appuser git clone --quiet "$clone_url" "$repo_dir" 2>/dev/null \

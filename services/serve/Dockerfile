@@ -11,9 +11,9 @@ RUN npm install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
-COPY pyproject.toml .
+COPY pyproject.toml README.md ./
 COPY src/ ./src/
-RUN pip install --no-cache-dir -e ".[serve]"
+RUN pip install --no-cache-dir ".[serve]"
 
 COPY services/serve/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

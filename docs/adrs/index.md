@@ -40,7 +40,13 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0028](0028-heartbeat-provider-abstraction.md) | Heartbeat Provider Abstraction: Remove Anthropic Hard Dependency | Accepted | 2026-03 |
 | [0029](0029-containerized-heartbeat-scheduler.md) | Containerized Heartbeat Scheduler | Accepted | 2026-03 |
 | [0030](0030-textual-tui-framework.md) | Textual TUI Framework + Lumon Design Language | Accepted | 2026-03 |
-| [0031](0031-...) | *(reserved)* | — | — |
+| [0031](0031-dynamic-agent-registration-a2a.md) | Dynamic Agent Registration and A2A Communication | Accepted | 2026-03 |
 | [0032](0032-agent-harness-migration-strategy.md) | Agent-Harness Migration Strategy | Accepted | 2026-03 |
 | [0033](0033-knowledge-contradiction-detection.md) | Knowledge Contradiction Detection | Accepted | 2026-03-06 |
 | [0034](0034-heartbeat-schema-expansion-and-a2a-inbox.md) | Heartbeat Schema Expansion and Async A2A Inbox | Accepted | 2026-03-06 |
+| [0035](0035-non-root-container-execution.md) | Non-Root Container Execution via gosu | Accepted | 2026-03 |
+| [0036](0036-claude-subscription-inference.md) | Claude Personal Subscription as Inference Provider | Accepted | 2026-03 |
+| [0037](0037-workspace-volume-separation.md) | Workspace Volume Separation from INNIE_HOME | Accepted | 2026-03 |
+| [0038](0038-agent-memory-git-boundary.md) | Agent Memory Git Repo Rooted at `$AGENT_DIR/data/` | Accepted | 2026-03 |
+| [0039](0039-internal-docker-network-gitea.md) | Internal Docker Network Hostnames for Gitea Communication | Accepted | 2026-03 |
+| [0040](0040-innie-home-channel-config-and-auth-fallback.md) | INNIE_HOME-Aware Channel Config and Auth Token Env Fallback | Accepted | 2026-03 |

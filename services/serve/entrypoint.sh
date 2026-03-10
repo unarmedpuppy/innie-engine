@@ -120,10 +120,30 @@ setup_workspace() {
     echo "[innie-serve] Workspace ready: ${cloned} cloned, ${pulled} updated"
 }
 
+setup_claude_symlink() {
+    local cfg="/home/appuser/.claude.json"
+    local cfg_in_volume="/home/appuser/.claude/.claude.json"
+
+    # If config exists as a real file (not symlink), move it into the volume
+    if [ -f "$cfg" ] && [ ! -L "$cfg" ]; then
+        cp "$cfg" "$cfg_in_volume"
+        chown appuser:appuser "$cfg_in_volume"
+        rm -f "$cfg"
+        echo "[innie-serve] Moved .claude.json into volume"
+    fi
+
+    # Symlink from expected location into volume so it survives recreates
+    if [ -f "$cfg_in_volume" ] && [ ! -L "$cfg" ]; then
+        ln -sf "$cfg_in_volume" "$cfg"
+        echo "[innie-serve] Symlinked .claude.json -> volume"
+    fi
+}
+
 # Fix ownership before dropping privileges
 chown -R appuser:appuser "${HOME_DIR}" 2>/dev/null || true
 chown -R appuser:appuser /home/appuser 2>/dev/null || true
 
+setup_claude_symlink
 setup_ssh_keys
 setup_memory_remote
 setup_workspace

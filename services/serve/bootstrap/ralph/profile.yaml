@@ -1,0 +1,6 @@
+name: ralph
+role: Autonomous Task Runner
+permissions: yolo
+memory:
+  injection: minimal
+  max_context_lines: 100

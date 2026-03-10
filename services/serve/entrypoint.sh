@@ -42,10 +42,10 @@ setup_ssh_keys() {
     fi
 
     cat > "$ssh_dir/config" << 'EOF'
-Host gitea.server.unarmedpuppy.com
-    HostName gitea.server.unarmedpuppy.com
+Host gitea
+    HostName gitea
     User git
-    Port 2223
+    Port 2222
     IdentityFile ~/.ssh/id_ed25519
     StrictHostKeyChecking no
 EOF
@@ -54,7 +54,7 @@ EOF
 }
 
 setup_memory_remote() {
-    local remote_url="ssh://git@gitea.server.unarmedpuppy.com:2223/homelab/agent-memory.git"
+    local remote_url="ssh://git@gitea:2222/homelab/agent-memory.git"
     local data_dir="${AGENT_DIR}/data"
 
     gosu appuser mkdir -p "$data_dir"

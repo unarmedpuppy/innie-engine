@@ -2902,16 +2902,23 @@
 <td><code>ANTHROPIC_BASE_URL</code></td>
 <td><code>https://homelab-ai.server.unarmedpuppy.com</code></td>
 <td>same</td>
-<td><strong>unset</strong> (real Anthropic)</td>
+<td><strong>unset</strong></td>
 </tr>
 <tr>
 <td><code>ANTHROPIC_API_KEY</code></td>
 <td><code>lai_85590afb609bba2842111176332c4e94</code></td>
 <td>same</td>
-<td><code>&lt;Claude Max key&gt;</code></td>
+<td><strong>unset</strong></td>
+</tr>
+<tr>
+<td><code>~/.claude/</code> mount</td>
+<td>—</td>
+<td>—</td>
+<td><strong>required</strong> — OAuth credentials from Claude Max subscription login</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Ralph uses Claude Code OAuth auth, not an API key.</strong> Claude Code authenticates via the stored OAuth credentials in <code>~/.claude/</code> (written by <code>claude login</code> on the server). No <code>ANTHROPIC_API_KEY</code> is set. The Docker container must mount the server host's <code>~/.claude/</code> so the subprocess can find the credentials.</p>
 <hr />
 <h2 id="current-state-assessment">Current State Assessment<a class="headerlink" href="#current-state-assessment" title="Permanent link">&para;</a></h2>
 <h3 id="what-innie-engine-already-has-do-not-re-implement">What innie-engine already has (do not re-implement)<a class="headerlink" href="#what-innie-engine-already-has-do-not-re-implement" title="Permanent link">&para;</a></h3>
@@ -3910,16 +3917,36 @@ Wait 48 hours. Verify innie Avery handles all iMessage messages correctly.</p>
 <p><strong>Step 4 — Remove from system startup.</strong></p>
 <p><strong>Step 5 — Document in dev CONTEXT.md:</strong> "OpenClaw deprecated [date]"</p>
 <h3 id="5b-deprecate-agent-harness-server-mac-mini">5B: Deprecate agent-harness (server + Mac Mini)<a class="headerlink" href="#5b-deprecate-agent-harness-server-mac-mini" title="Permanent link">&para;</a></h3>
-<p><strong>Prerequisite:</strong> server innie serve (Ralph replacement) running and validated for ≥1 week.</p>
-<p><strong>Step 1 — Update docker-compose in home-server:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># home-server/apps/agent-harness/docker-compose.yml</span>
-<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="c1"># Change image from agent-harness to innie-engine</span>
-<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="c1"># Add INNIE_AGENT=oak, remove ANTHROPIC_BASE_URL (server uses direct Anthropic)</span>
+<p><strong>Prerequisite:</strong> server innie serve Ralph running and validated for ≥1 week.</p>
+<p><strong>Step 1 — Add innie serve Ralph to home-server docker-compose:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># home-server/apps/ralph/docker-compose.yml</span>
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="nt">services</span><span class="p">:</span>
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="w">  </span><span class="nt">ralph</span><span class="p">:</span>
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">harbor.server.unarmedpuppy.com/library/innie-engine:latest</span>
+<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a><span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ralph</span>
+<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;innie&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;serve&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;--host&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;0.0.0.0&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;--port&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;8013&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a><span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INNIE_AGENT=ralph</span>
+<a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INNIE_HOME=/innie-data</span>
+<a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INNIE_SERVE_PORT=8013</span>
+<a id="__codelineno-34-12" name="__codelineno-34-12" href="#__codelineno-34-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INNIE_SERVE_HOST=&lt;server Tailscale IP&gt;</span>
+<a id="__codelineno-34-13" name="__codelineno-34-13" href="#__codelineno-34-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">INNIE_FLEET_URL=http://fleet-gateway:8080</span>
+<a id="__codelineno-34-14" name="__codelineno-34-14" href="#__codelineno-34-14"></a><span class="w">      </span><span class="c1"># NO ANTHROPIC_BASE_URL — uses real Anthropic via OAuth</span>
+<a id="__codelineno-34-15" name="__codelineno-34-15" href="#__codelineno-34-15"></a><span class="w">      </span><span class="c1"># NO ANTHROPIC_API_KEY — Claude Code uses OAuth credentials from ~/.claude/</span>
+<a id="__codelineno-34-16" name="__codelineno-34-16" href="#__codelineno-34-16"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-34-17" name="__codelineno-34-17" href="#__codelineno-34-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/home/unarmedpuppy/.innie:/innie-data</span>
+<a id="__codelineno-34-18" name="__codelineno-34-18" href="#__codelineno-34-18"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/home/unarmedpuppy/.claude:/root/.claude:ro</span><span class="w">   </span><span class="c1"># OAuth credentials from `claude login`</span>
+<a id="__codelineno-34-19" name="__codelineno-34-19" href="#__codelineno-34-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/home/unarmedpuppy/workspace:/home/unarmedpuppy/workspace</span>
+<a id="__codelineno-34-20" name="__codelineno-34-20" href="#__codelineno-34-20"></a><span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<a id="__codelineno-34-21" name="__codelineno-34-21" href="#__codelineno-34-21"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-network</span>
 </code></pre></div></p>
-<p><strong>Step 2 — Stop Mac Mini agent-harness.</strong> innie serve at :8013 is already running — just stop the agent-harness process.</p>
-<p><strong>Step 3 — Update all A2A callers.</strong> Check system instructions + Gilfoyle config for anything calling agent-harness endpoints. Port stays 8013, endpoint paths stay the same (innie serve is API-compatible).</p>
-<p><strong>Step 4 — Tag <code>v-final</code> on agent-harness repo.</strong> Archive, do not delete.</p>
-<p><strong>Step 5 — Update home-server/agents/reference/ docs</strong> that reference agent-harness.</p>
+<p><strong>Ralph auth note:</strong> Ralph uses Claude Code's OAuth login (Claude Max subscription), not an API key. The <code>~/.claude/</code> directory on the server host contains the OAuth credentials written by <code>claude login</code>. Mount it read-only into the container. No <code>ANTHROPIC_API_KEY</code> or <code>ANTHROPIC_BASE_URL</code> should be set.</p>
+<p><strong>Step 2 — Stop agent-harness on server.</strong> Once Ralph (innie) is validated, stop agent-harness Docker container. Port :8013 is taken by Ralph.</p>
+<p><strong>Step 3 — Stop Mac Mini agent-harness.</strong> innie serve Avery at :8019 is already running. Avery doesn't need :8013. Stop agent-harness process on Mac Mini.</p>
+<p><strong>Step 4 — Update all A2A callers.</strong> Check system instructions + Gilfoyle config for anything calling agent-harness endpoints. innie serve jobs API is compatible (<code>POST /v1/jobs</code>, <code>GET /v1/jobs/{id}</code>).</p>
+<p><strong>Step 5 — Tag <code>v-final</code> on agent-harness repo.</strong> Archive, do not delete.</p>
+<p><strong>Step 6 — Update home-server/agents/reference/ docs</strong> that reference agent-harness.</p>
 <hr />
 <h2 id="phase-6-innie-engine-roadmap-agentic-memory-roadmapmd">Phase 6+: innie-engine Roadmap (agentic-memory-roadmap.md)<a class="headerlink" href="#phase-6-innie-engine-roadmap-agentic-memory-roadmapmd" title="Permanent link">&para;</a></h2>
 <p>These phases are from the existing roadmap document. They do NOT block the consolidation — do them after Phase 5. Ordering within Phase 6+ follows the roadmap's own dependency graph.</p>

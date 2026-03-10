@@ -15,12 +15,15 @@
 | Agent | Namespace | Host | Port | Purpose | Channels |
 |-------|-----------|------|------|---------|----------|
 | **Avery** | `avery` | Mac Mini | **8019** | Family coordinator | iMessage, Mattermost |
-| **Oak (Mac Mini)** | `oak` | Mac Mini | **8014** | Technical partner — interactive dev | CLI |
-| **Oak (Server)** | `oak` | Server Docker | **8015** | Autonomous task loop (Ralph replacement) | — |
+| **Oak** | `oak` | Mac Mini | **8014** | Technical partner — interactive dev, coding | CLI |
+| **Ralph** | `ralph` | Server Docker | **8013** | Autonomous task runner — works Tasks API unattended | — |
 | **Gilfoyle** | `gilfoyle` | Server systemd | **8018** | Sysadmin — SSH/OS access | Mattermost |
-| ~~Ralph~~ | ~~ralph~~ | ~~Server Docker~~ | — | Deprecated — becomes Oak server scheduled job | — |
 
-**Port note:** Avery is on `:8019` (not `:8013`) to avoid conflict with agent-harness during the Phase 1-4 overlap. agent-harness holds `:8013` on both Mac Mini and server until Phase 5.
+**Oak is Mac Mini only.** It has one memory directory (`~/.innie/agents/oak/`), one fleet ID, one `INNIE_AGENT`. There is no "Oak server."
+
+**Ralph stays Ralph.** Different purpose (batch task runner vs interactive dev partner), different memory, different API backend (real Anthropic — no LLM router), different machine. He runs the `task_loop` cron job from his own `schedule.yaml`. He replaces agent-harness Ralph in Phase 5B.
+
+**Port note:** Avery is on `:8019` (not `:8013`) to avoid conflict with agent-harness during the Phase 1-4 overlap. agent-harness holds `:8013` on the server until Phase 5B, at which point Ralph (innie) takes it.
 
 **Oak** (Professor Oak, Pokémon). Knowledgeable about all systems, a little quirky, straight to the point. Obsessed with simplicity and cohesion. Works interactively with Josh at the CLI and non-interactively when invoked by other agents, tasks, or the scheduler.
 
@@ -34,32 +37,32 @@
 Mac Mini (100.92.176.74)              Home Server
 ┌─────────────────────────┐           ┌──────────────────────────────────┐
 │ innie serve avery :8019 │◄──────────┤ fleet-gateway (Docker :8080)     │
-│ innie serve oak   :8014 │◄──────────┤   reads fleet.yaml               │
+│ innie serve oak   :8014 │◄──────────┤   fleet.yaml seed config         │
 │                         │  Tailscale│   agents self-register on startup │
 │ BlueBubbles :1234       │           │                                  │
-│   ↕ webhook localhost   │           │ innie serve oak-server :8015     │
+│   ↕ webhook localhost   │           │ innie serve ralph :8013 (Ph5B)   │
 └─────────────────────────┘           │ gilfoyle systemd :8018           │
                                       └──────────────────────────────────┘
 ```
 
-- Fleet gateway reaches Mac Mini via Tailscale IP `100.92.176.74`. Docker bridge containers on Linux can reach Tailscale routes via host routing table — no `network_mode: host` needed.
-- `INNIE_SERVE_HOST=100.92.176.74` must be set in each Mac Mini plist so `_register_with_fleet()` advertises the Tailscale IP, not a LAN IP.
-- `INNIE_PUBLIC_URL=http://localhost:8019` (Avery only) — used for BlueBubbles webhook registration. BB server runs locally on Mac Mini, so localhost works.
-- fleet.yaml is version-controlled at `home-server/apps/fleet-gateway/fleet.yaml`, mounted read-only into the container. Agents self-register on startup so fleet.yaml is a seed/fallback only.
+- Fleet gateway reaches Mac Mini agents via Tailscale IP `100.92.176.74`. Docker bridge containers on Linux reach Tailscale routes via host routing — no `network_mode: host` needed.
+- `INNIE_SERVE_HOST=100.92.176.74` in each Mac Mini plist → self-registration advertises Tailscale IP, not LAN IP.
+- `INNIE_PUBLIC_URL=http://localhost:8019` (Avery only) — BlueBubbles webhook registration. BB server is local to Mac Mini.
+- `fleet.yaml` is version-controlled at `home-server/apps/fleet-gateway/fleet.yaml`, mounted read-only into the container. Agents self-register on startup so fleet.yaml is seed/fallback only.
 
 ### Mac Mini launchd plists
 
-| Plist | Port | `RunAtLoad` | Notes |
-|-------|------|-------------|-------|
-| `ai.innie.serve.plist` (Avery) | 8019 | ✅ always | channels, scheduler, morning briefings |
-| `ai.innie.serve.oak.plist` (Oak) | 8014 | ❌ manual | start with `launchctl load` for interactive dev sessions |
+| Plist | Agent | Port | `RunAtLoad` | Notes |
+|-------|-------|------|-------------|-------|
+| `ai.innie.serve.plist` | avery | 8019 | ✅ always | channels, scheduler, morning briefings |
+| `ai.innie.serve.oak.plist` | oak | 8014 | ❌ manual | `launchctl load` for interactive dev sessions |
 
 ### Key env vars per instance
 
-| Var | Avery (Mac Mini) | Oak (Mac Mini) | Oak (Server) |
-|-----|-----------------|----------------|--------------|
-| `INNIE_AGENT` | `avery` | `oak` | `oak` |
-| `INNIE_SERVE_PORT` | `8019` | `8014` | `8015` |
+| Var | Avery (Mac Mini) | Oak (Mac Mini) | Ralph (Server) |
+|-----|-----------------|----------------|----------------|
+| `INNIE_AGENT` | `avery` | `oak` | `ralph` |
+| `INNIE_SERVE_PORT` | `8019` | `8014` | `8013` |
 | `INNIE_SERVE_HOST` | `100.92.176.74` | `100.92.176.74` | `<server Tailscale IP>` |
 | `INNIE_PUBLIC_URL` | `http://localhost:8019` | — | — |
 | `INNIE_FLEET_URL` | `https://fleet-gateway.server.unarmedpuppy.com` | same | `http://fleet-gateway:8080` |
@@ -786,7 +789,7 @@ jobs:
     interval_hours: 1
     action: expire_stale_sessions   # built-in action, no Claude invocation
 
-# ~/.innie/agents/oak/schedule.yaml  (server deployment only — no ANTHROPIC_BASE_URL)
+# ~/.innie/agents/ralph/schedule.yaml  (server only — INNIE_AGENT=ralph, no ANTHROPIC_BASE_URL)
 jobs:
   task_loop:
     enabled: true
@@ -794,13 +797,13 @@ jobs:
     prompt: |
       Check the Tasks API at https://tasks-api.server.unarmedpuppy.com for open
       engineering tasks (type=engineering, status=OPEN). Work through P0 and P1 tasks.
-      Claim each task before starting. Report completion via Mattermost.
-    working_directory: "/Users/aijenquist/workspace"
+      Claim each task before starting. Close it when done. Report via Mattermost.
+    working_directory: "/home/unarmedpuppy/workspace"
     permission_mode: yolo
     reply_to: "mattermost://nytinkdkttfo8rcxm8i4gg7uwr"
 ```
 
-The `task_loop` job IS Ralph. Same behavior (polls Tasks API, works through tasks, posts to Mattermost), running on the server's `dev` innie instance that has direct Anthropic access.
+Ralph keeps his own namespace (`INNIE_AGENT=ralph`), his own memory, his own SOUL.md. He is NOT Oak. Oak is Mac Mini only and has no task_loop. Ralph runs on the server with real Anthropic API (no ANTHROPIC_BASE_URL) and replaces agent-harness Ralph in Phase 5B.
 
 ### Scheduler implementation (`serve/scheduler.py`)
 

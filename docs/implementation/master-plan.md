@@ -66,8 +66,11 @@ Mac Mini (100.92.176.74)              Home Server
 | `INNIE_SERVE_HOST` | `100.92.176.74` | `100.92.176.74` | `<server Tailscale IP>` |
 | `INNIE_PUBLIC_URL` | `http://localhost:8019` | — | — |
 | `INNIE_FLEET_URL` | `https://fleet-gateway.server.unarmedpuppy.com` | same | `http://fleet-gateway:8080` |
-| `ANTHROPIC_BASE_URL` | `https://homelab-ai.server.unarmedpuppy.com` | same | **unset** (real Anthropic) |
-| `ANTHROPIC_API_KEY` | `lai_85590afb609bba2842111176332c4e94` | same | `<Claude Max key>` |
+| `ANTHROPIC_BASE_URL` | `https://homelab-ai.server.unarmedpuppy.com` | same | **unset** |
+| `ANTHROPIC_API_KEY` | `lai_85590afb609bba2842111176332c4e94` | same | **unset** |
+| `~/.claude/` mount | — | — | **required** — OAuth credentials from Claude Max subscription login |
+
+**Ralph uses Claude Code OAuth auth, not an API key.** Claude Code authenticates via the stored OAuth credentials in `~/.claude/` (written by `claude login` on the server). No `ANTHROPIC_API_KEY` is set. The Docker container must mount the server host's `~/.claude/` so the subprocess can find the credentials.
 
 ---
 
@@ -953,22 +956,44 @@ launchctl unload ~/Library/LaunchAgents/openclaw.plist  # or equivalent
 
 ### 5B: Deprecate agent-harness (server + Mac Mini)
 
-**Prerequisite:** server innie serve (Ralph replacement) running and validated for ≥1 week.
+**Prerequisite:** server innie serve Ralph running and validated for ≥1 week.
 
-**Step 1 — Update docker-compose in home-server:**
+**Step 1 — Add innie serve Ralph to home-server docker-compose:**
 ```yaml
-# home-server/apps/agent-harness/docker-compose.yml
-# Change image from agent-harness to innie-engine
-# Add INNIE_AGENT=oak, remove ANTHROPIC_BASE_URL (server uses direct Anthropic)
+# home-server/apps/ralph/docker-compose.yml
+services:
+  ralph:
+    image: harbor.server.unarmedpuppy.com/library/innie-engine:latest
+    container_name: ralph
+    restart: unless-stopped
+    command: ["innie", "serve", "--host", "0.0.0.0", "--port", "8013"]
+    environment:
+      - INNIE_AGENT=ralph
+      - INNIE_HOME=/innie-data
+      - INNIE_SERVE_PORT=8013
+      - INNIE_SERVE_HOST=<server Tailscale IP>
+      - INNIE_FLEET_URL=http://fleet-gateway:8080
+      # NO ANTHROPIC_BASE_URL — uses real Anthropic via OAuth
+      # NO ANTHROPIC_API_KEY — Claude Code uses OAuth credentials from ~/.claude/
+    volumes:
+      - /home/unarmedpuppy/.innie:/innie-data
+      - /home/unarmedpuppy/.claude:/root/.claude:ro   # OAuth credentials from `claude login`
+      - /home/unarmedpuppy/workspace:/home/unarmedpuppy/workspace
+    networks:
+      - my-network
 ```
 
-**Step 2 — Stop Mac Mini agent-harness.** innie serve at :8013 is already running — just stop the agent-harness process.
+**Ralph auth note:** Ralph uses Claude Code's OAuth login (Claude Max subscription), not an API key. The `~/.claude/` directory on the server host contains the OAuth credentials written by `claude login`. Mount it read-only into the container. No `ANTHROPIC_API_KEY` or `ANTHROPIC_BASE_URL` should be set.
 
-**Step 3 — Update all A2A callers.** Check system instructions + Gilfoyle config for anything calling agent-harness endpoints. Port stays 8013, endpoint paths stay the same (innie serve is API-compatible).
+**Step 2 — Stop agent-harness on server.** Once Ralph (innie) is validated, stop agent-harness Docker container. Port :8013 is taken by Ralph.
 
-**Step 4 — Tag `v-final` on agent-harness repo.** Archive, do not delete.
+**Step 3 — Stop Mac Mini agent-harness.** innie serve Avery at :8019 is already running. Avery doesn't need :8013. Stop agent-harness process on Mac Mini.
 
-**Step 5 — Update home-server/agents/reference/ docs** that reference agent-harness.
+**Step 4 — Update all A2A callers.** Check system instructions + Gilfoyle config for anything calling agent-harness endpoints. innie serve jobs API is compatible (`POST /v1/jobs`, `GET /v1/jobs/{id}`).
+
+**Step 5 — Tag `v-final` on agent-harness repo.** Archive, do not delete.
+
+**Step 6 — Update home-server/agents/reference/ docs** that reference agent-harness.
 
 ---
 

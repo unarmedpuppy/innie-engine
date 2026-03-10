@@ -69,3 +69,17 @@ Files that return `False` are never read by the embedding service and never stor
 **Neutral:**
 - Scanning runs on every call to `collect_files()` — once per indexing run. Cost is proportional to file count and content size, but is cheap relative to embedding generation.
 - The skip list covers the most common accidentally-included files (`.env`). This is not a complete solution — users should not store secrets in markdown files at all.
+
+---
+
+## Amendment — 2026-03-09: Per-Agent `.env` for Runtime Secrets
+
+**Pattern established:** Agent runtime secrets (bot tokens, API keys used by channel adapters and scheduled jobs) are stored in `~/.innie/agents/{agent}/.env`, one `KEY=VALUE` per line.
+
+**CLI:** `innie env set/get/list/unset` manages these files. Source: `core/agent_env.py`, `commands/env.py`.
+
+**Git protection:** `~/.innie/.gitignore` explicitly excludes `agents/*/.env`. These files never enter the git backup.
+
+**Index protection:** `.env` files are already in the skip list from this ADR's original decision — they are never indexed regardless of location. This applies to per-agent `.env` files as well.
+
+**Channels integration:** `channels/loader.py` reads `MATTERMOST_BOT_TOKEN` (and other tokens) from the agent `.env` first, falling back to inline values in `channels.yaml`. Inline tokens in YAML are deprecated — migrate to `.env`.

@@ -570,6 +570,12 @@ h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
 .sched-trigger-btn{float:right;font-size:11px;padding:1px 7px;background:#1d4ed8;color:#bfdbfe;border:none;border-radius:3px;cursor:pointer}
 .sched-trigger-btn:hover{background:#2563eb}
 .context-preview{font-size:12px;color:#6b7280;white-space:pre-wrap;max-height:90px;overflow:hidden;line-height:1.5}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.collapsible-header:hover .section-label{color:#9ca3af}
+.collapse-toggle{font-size:11px;color:#374151;transition:transform .15s}
+.collapse-toggle.open{transform:rotate(90deg)}
+.collapsible-body{overflow:hidden;transition:max-height .2s ease}
+.collapsible-body.closed{max-height:0}
 .error{color:#f87171;font-size:12px;padding:8px;background:#1c1111;border-radius:5px}
 .loading{color:#4b5563;font-size:13px;padding:8px}
 .meta-pill{display:inline-block;font-size:11px;background:#1e2030;color:#818cf8;padding:1px 6px;border-radius:3px;margin-left:4px}
@@ -634,7 +640,11 @@ function renderCard(a, d, card) {
     (model ? '<span class="meta-item"><strong>' + (provider || 'model') + '</strong>' + model + '</span>' : '') +
     (dns ? '<a class="dns-link" href="http://' + dns + '" target="_blank">' + dns + '</a>' : '') +
     '</div></div>' : '';
-  const schedHtml = sched.length === 0 ? '<span style="color:#4b5563">none</span>' :
+  const schedId = 'sched-' + a.id;
+  const schedCount = sched.filter(j => j.enabled).length;
+  const schedLabel = sched.length === 0 ? 'Schedule' :
+    'Schedule <span style="color:#374151;font-weight:400">(' + schedCount + '/' + sched.length + ' active)</span>';
+  const schedInner = sched.length === 0 ? '<span style="color:#4b5563">none</span>' :
     '<div class="sched-list">' + sched.map(j =>
       '<div class="sched-item ' + (j.enabled ? 'enabled' : 'disabled') + '">' +
       '<button class="sched-trigger-btn" onclick="trigger(\\'' + a.id + '\\',\\'' + j.name + '\\',this)" ' + (j.enabled ? '' : 'disabled') + '>run</button>' +
@@ -643,6 +653,12 @@ function renderCard(a, d, card) {
       (j.next_run ? '<br><span style="font-size:11px;color:#374151">next: ' + j.next_run.substring(0,16).replace('T',' ') + '</span>' : '') +
       '</div>'
     ).join('') + '</div>';
+  const schedHtml =
+    '<div class="collapsible-header" onclick="toggleSched(\\'' + schedId + '\\')">' +
+    '<div class="section-label">' + schedLabel + '</div>' +
+    (sched.length > 0 ? '<span class="collapse-toggle" id="tog-' + schedId + '">▶</span>' : '') +
+    '</div>' +
+    '<div class="collapsible-body closed" id="' + schedId + '">' + schedInner + '</div>';
   card.innerHTML =
     '<div class="card-header">' +
     '<div class="dot ' + status + '"></div>' +
@@ -653,9 +669,25 @@ function renderCard(a, d, card) {
     '<div class="card-body">' +
     (d._error ? '<div class="error">' + d._error + '</div>' : '') +
     metaHtml +
-    '<div class="section"><div class="section-label">Schedule</div>' + schedHtml + '</div>' +
+    '<div class="section">' + schedHtml + '</div>' +
     (ctxPreview ? '<div class="section"><div class="section-label">Open items</div><div class="context-preview">' + ctxPreview + '</div></div>' : '') +
     '</div>';
+}
+function toggleSched(id) {
+  const body = document.getElementById(id);
+  const tog = document.getElementById('tog-' + id);
+  if (!body) return;
+  const isOpen = !body.classList.contains('closed');
+  if (isOpen) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    requestAnimationFrame(() => { body.style.maxHeight = '0'; body.classList.add('closed'); });
+    if (tog) tog.classList.remove('open');
+  } else {
+    body.classList.remove('closed');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    setTimeout(() => { body.style.maxHeight = 'none'; }, 200);
+    if (tog) tog.classList.add('open');
+  }
 }
 async function trigger(agentId, jobName, btn) {
   btn.disabled = true;

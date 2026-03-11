@@ -16,13 +16,14 @@ src/innie/
   commands/               # CLI command modules (env, memory, search, etc.)
 
 ~/.innie/                 # Runtime data — NOT in this repo
+  .env                    # Shared secrets — all agents (GH_TOKEN, GOG_KEYRING_PASSWORD, etc.)
   agents/<name>/          # Per-agent data directory
+    .env                  # Agent-specific secrets — (MATTERMOST_BOT_TOKEN, etc.) gitignored
     profile.yaml          # Identity, role, display name
     channels.yaml         # Channel adapter config (no secrets)
     schedule.yaml         # APScheduler job definitions
     SOUL.md               # Agent personality prompt
     CONTEXT.md            # Working memory / open items
-    .env                  # Secrets (gitignored — see below)
     data/                 # Knowledge base files
   skills/                 # Shared skills directory (all agents)
                           # ~/.claude/skills symlinks here — maintained by self_update cron
@@ -35,23 +36,28 @@ src/innie/
 
 **Never put secrets in YAML config files or launchd plists.**
 
-Every agent has a gitignored `.env` file at `~/.innie/agents/<name>/.env`. All secrets live there.
+Secrets use a two-tier system:
+
+- **`~/.innie/.env`** — shared across all agents. Use for credentials that any agent or skill might need: `GH_TOKEN`, `GOG_KEYRING_PASSWORD`, `ANTHROPIC_API_KEY`, service passwords, etc.
+- **`~/.innie/agents/<name>/.env`** — agent-specific. Use for per-agent secrets: `MATTERMOST_BOT_TOKEN` (each agent has its own bot).
+
+At serve startup, `inject_into_os_env()` loads both — shared first, then agent-specific. Agent-specific values win on collision. Neither launchd-set vars nor already-set env vars are overwritten.
 
 ### What belongs where
 
 | Item | Location |
 |------|----------|
 | Mattermost bot token | `~/.innie/agents/<name>/.env` as `MATTERMOST_BOT_TOKEN` |
-| API keys, passwords, service credentials | `~/.innie/agents/<name>/.env` |
+| GitHub token, API keys, shared passwords | `~/.innie/.env` |
 | Agent identity, role, display name | `~/.innie/agents/<name>/profile.yaml` |
 | Channel adapter config (URLs, policies) | `~/.innie/agents/<name>/channels.yaml` |
 | Process routing (port, host, fleet URL) | launchd plist `EnvironmentVariables` |
 
 ### How secrets get into the process
 
-`inject_into_os_env(agent)` runs at the top of `innie serve`'s lifespan startup (in `serve/app.py`). It loads `~/.innie/agents/<name>/.env` into `os.environ` before channels, scheduler, or job store initialize. All subprocesses inherit the environment.
+`inject_into_os_env(agent)` runs at the top of `innie serve`'s lifespan startup (in `serve/app.py`). It loads both `.env` files into `os.environ` before channels, scheduler, or job store initialize. All subprocesses inherit the environment.
 
-`inject_into_os_env` uses `os.environ.setdefault` — it does NOT overwrite vars already set (e.g. from launchd).
+Priority (highest first): **launchd env > agent-specific .env > shared .env**
 
 ### CLI
 
@@ -64,7 +70,7 @@ innie env unset KEY [--agent name]
 
 ### gitignore
 
-`~/.innie/.gitignore` must contain `agents/*/.env`. Do not remove this entry.
+`~/.innie/.gitignore` must contain both `.env` (shared) and `agents/*/.env` (per-agent). Do not remove these entries.
 
 See ADR-0035 for full details.
 
@@ -96,6 +102,36 @@ git:
 
 ---
 
+## Versioning
+
+innie-engine uses semver. **Bump the version before every commit that changes behavior, adds features, or fixes bugs.**
+
+```bash
+scripts/bump.sh patch   # 0.3.0 → 0.3.1  (bug fix, small tweak)
+scripts/bump.sh minor   # 0.3.1 → 0.4.0  (new feature)
+scripts/bump.sh major   # 0.4.0 → 1.0.0  (breaking change)
+```
+
+The script updates `pyproject.toml` and stages it. Write the commit message yourself. The version travels with the install and surfaces in `/health` — the fleet uses it to detect version drift across agents.
+
+**Do not hardcode version strings.** All code reads version via:
+```python
+from innie import __version__
+```
+
+Which in turn reads from `importlib.metadata.version("innie-engine")`. The canonical source is `pyproject.toml`.
+
+After bumping and committing, reinstall on each agent machine:
+```bash
+uv tool install --editable ~/workspace/innie-engine[serve]
+```
+
+Then restart the agent to pick up the new version (see Deployment below).
+
+See ADR-0041 for full details.
+
+---
+
 ## Deployment
 
 - **Never push to main to deploy.** This repo is installed as a tool via `uv`.
@@ -110,6 +146,11 @@ launchctl unload ~/Library/LaunchAgents/ai.innie.serve.<agent>.plist
 launchctl load ~/Library/LaunchAgents/ai.innie.serve.<agent>.plist
 ```
 
+Or use the fleet gateway remote restart (launchd agents only):
+```bash
+curl -X POST https://fleet-gateway.server.unarmedpuppy.com/api/agents/<agent_id>/restart
+```
+
 ---
 
 ## Channel Adapters
@@ -118,7 +159,7 @@ Adapters live in `src/innie/channels/`. The loader (`channels/loader.py`) reads 
 
 **Token resolution order for Mattermost:**
 1. Inline `bot_token` in `channels.yaml` (deprecated — migrate to `.env`)
-2. `MATTERMOST_BOT_TOKEN` from agent `.env`
+2. `MATTERMOST_BOT_TOKEN` from `~/.innie/.env`
 3. Empty string → adapter fails to connect (intentional, not silent)
 
 ---

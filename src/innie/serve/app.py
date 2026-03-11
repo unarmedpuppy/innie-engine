@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from innie import __version__
 from innie.core import paths
 from innie.core.context import build_session_context
 from innie.serve.claude import collect_stream, graceful_kill, stream_claude_events
@@ -183,7 +184,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="innie-engine",
     description="Persistent memory and identity for AI coding assistants",
-    version="0.2.0",
+    version=__version__,
     lifespan=lifespan,
     dependencies=[Depends(_require_auth)],
 )
@@ -385,17 +386,77 @@ async def execute_job(job_id: str) -> None:
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 
+async def _probe_model_provider() -> dict:
+    """Check reachability of the configured model provider."""
+    import socket
+    profile_path = paths.profile_file()
+    provider = "anthropic"
+    probe_url = "https://api.anthropic.com"
+    try:
+        import yaml
+        if profile_path.exists():
+            data = yaml.safe_load(profile_path.read_text()) or {}
+            model = (data.get("claude-code", {}) or {}).get("model", "")
+            if model and not model.startswith("claude"):
+                provider = "local"
+                probe_url = os.environ.get("ANTHROPIC_BASE_URL", "http://localhost:8080")
+    except Exception:
+        pass
+
+    try:
+        start = time.monotonic()
+        async with httpx.AsyncClient() as client:
+            await client.head(probe_url, timeout=3.0)
+        latency_ms = (time.monotonic() - start) * 1000
+        return {"provider": provider, "reachable": True, "latency_ms": round(latency_ms, 1)}
+    except Exception as e:
+        return {"provider": provider, "reachable": False, "error": str(e)}
+
+
+def _read_heartbeat_state(agent: str) -> dict:
+    """Read last heartbeat run info from state file."""
+    try:
+        state_file = paths.heartbeat_state(agent)
+        if not state_file.exists():
+            return {"last_run": None, "status": "never"}
+        data = json.loads(state_file.read_text())
+        return {
+            "last_run": data.get("last_run") or data.get("last_processed_at"),
+            "status": data.get("status", "unknown"),
+        }
+    except Exception:
+        return {"last_run": None, "status": "unknown"}
+
+
 @app.get("/health")
 async def health():
+    import socket
     agent = paths.active_agent()
     job_counts: dict[str, int] = {}
     for job in jobs.values():
         job_counts[job.status] = job_counts.get(job.status, 0) + 1
 
+    from innie.channels.loader import get_channel_health
+    channels = get_channel_health()
+    heartbeat = _read_heartbeat_state(agent)
+    provider = await _probe_model_provider()
+    uptime_s = int(time.time() - _serve_start_time)
+
+    try:
+        host = socket.gethostname()
+    except Exception:
+        host = None
+
     return {
         "status": "healthy",
         "agent": agent,
+        "version": __version__,
+        "uptime_seconds": uptime_s,
+        "host": host,
         "jobs": job_counts,
+        "channels": channels,
+        "heartbeat": heartbeat,
+        "model_provider": provider,
         "timestamp": datetime.utcnow().isoformat(),
     }
 
@@ -430,10 +491,34 @@ async def agent_info():
         "role": role,
         "model": model,
         "provider": provider,
-        "version": "0.2.0",
+        "version": __version__,
         "uptime_seconds": uptime_s,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.post("/v1/agent/restart")
+async def restart_agent(background_tasks: BackgroundTasks):
+    """Trigger a graceful self-restart via launchctl kickstart.
+
+    Returns immediately. The process will die and launchd will restart it.
+    Only works on macOS with a launchd plist named ai.innie.serve.<agent>.
+    """
+    agent = paths.active_agent()
+    background_tasks.add_task(_trigger_launchd_restart, agent)
+    return {"status": "restarting", "agent": agent, "timestamp": datetime.utcnow().isoformat()}
+
+
+async def _trigger_launchd_restart(agent: str) -> None:
+    import subprocess
+    uid = os.getuid()
+    plist_label = f"ai.innie.serve.{agent}"
+    await asyncio.sleep(0.3)  # allow response to flush
+    subprocess.Popen(
+        ["launchctl", "kickstart", "-k", f"gui/{uid}/{plist_label}"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 @app.get("/v1/agent/skills")

@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+from innie import __version__
 from innie.fleet.config import load_fleet_config
 from innie.fleet.health import HealthMonitor
 from innie.fleet.models import (
@@ -124,7 +125,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="innie-fleet",
     description="Fleet gateway for multi-machine agent coordination",
-    version="0.2.0",
+    version=__version__,
     lifespan=lifespan,
     dependencies=[Depends(_require_fleet_auth)],
 )
@@ -219,6 +220,24 @@ async def force_check(agent_id: str):
         await health_monitor.check_now(agent_id)
     agent = agents[agent_id]
     return {"agent_id": agent_id, "health": agent.health.model_dump()}
+
+
+@app.post("/api/agents/{agent_id}/restart")
+async def restart_agent(agent_id: str):
+    """Trigger a graceful restart of an agent via its /v1/agent/restart endpoint."""
+    agent = _get_online_agent(agent_id)
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(
+                f"{agent.endpoint}/v1/agent/restart",
+                timeout=5.0,
+            )
+            return resp.json()
+        except httpx.TimeoutException:
+            # Expected — agent may restart before responding
+            return {"status": "restarting", "agent": agent_id}
+        except Exception as e:
+            raise HTTPException(502, f"Failed to reach agent: {e}")
 
 
 # ── Agent context (memory) ──────────────────────────────────────────────────

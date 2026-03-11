@@ -1,3 +1,8 @@
 """innie-engine — persistent memory and identity for AI coding assistants."""
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("innie-engine")
+except PackageNotFoundError:
+    __version__ = "dev"

@@ -72,14 +72,18 @@ Files that return `False` are never read by the embedding service and never stor
 
 ---
 
-## Amendment — 2026-03-09: Per-Agent `.env` for Runtime Secrets
+## Amendment — 2026-03-09: Two-Tier `.env` for Runtime Secrets
 
-**Pattern established:** Agent runtime secrets (bot tokens, API keys used by channel adapters and scheduled jobs) are stored in `~/.innie/agents/{agent}/.env`, one `KEY=VALUE` per line.
+**Pattern established:** Secrets use two gitignored `.env` files:
+- `~/.innie/.env` — shared across all agents (GH_TOKEN, GOG_KEYRING_PASSWORD, etc.)
+- `~/.innie/agents/{agent}/.env` — agent-specific (MATTERMOST_BOT_TOKEN, etc.)
 
-**CLI:** `innie env set/get/list/unset` manages these files. Source: `core/agent_env.py`, `commands/env.py`.
+**Amendment (2026-03-11):** Originally per-agent only. Added shared tier after discovering shared skills couldn't reference per-agent paths reliably. See ADR-0035 for full details.
 
-**Git protection:** `~/.innie/.gitignore` explicitly excludes `agents/*/.env`. These files never enter the git backup.
+**CLI:** `innie env set/get/list/unset [--shared]` manages both files. Source: `core/agent_env.py`, `commands/env.py`.
 
-**Index protection:** `.env` files are already in the skip list from this ADR's original decision — they are never indexed regardless of location. This applies to per-agent `.env` files as well.
+**Git protection:** `~/.innie/.gitignore` explicitly excludes both `.env` (shared) and `agents/*/.env` (per-agent). Neither file ever enters the git backup.
 
-**Channels integration:** `channels/loader.py` reads `MATTERMOST_BOT_TOKEN` (and other tokens) from the agent `.env` first, falling back to inline values in `channels.yaml`. Inline tokens in YAML are deprecated — migrate to `.env`.
+**Index protection:** `.env` files are in the skip list from this ADR's original decision — never indexed regardless of location.
+
+**Channels integration:** `channels/loader.py` reads `MATTERMOST_BOT_TOKEN` from the agent-specific `.env` (injected into `os.environ` at serve startup), falling back to inline values in `channels.yaml`. Inline tokens in YAML are deprecated — migrate to `.env`.

@@ -7,13 +7,21 @@ from datetime import datetime
 
 import httpx
 
-from innie.fleet.models import Agent, AgentStatus, AgentType, FleetStats
+from innie.fleet.models import (
+    Agent,
+    AgentStatus,
+    AgentType,
+    ChannelHealth,
+    FleetStats,
+    HeartbeatHealth,
+    ProviderHealth,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class HealthMonitor:
-    """Periodically checks /health on all SERVER agents."""
+    """Periodically checks /health on all SERVER agents and stores rich health data."""
 
     def __init__(
         self,
@@ -40,17 +48,17 @@ class HealthMonitor:
                 pass
 
     async def _loop(self):
-        # Run initial check immediately
         await self._check_all()
         while True:
             await asyncio.sleep(self.interval)
             await self._check_all()
 
     async def _check_all(self):
-        tasks = []
-        for agent_id, agent in self.agents.items():
-            if agent.agent_type == AgentType.SERVER:
-                tasks.append(self._check_agent(agent_id))
+        tasks = [
+            self._check_agent(agent_id)
+            for agent_id, agent in self.agents.items()
+            if agent.agent_type == AgentType.SERVER
+        ]
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -77,11 +85,7 @@ class HealthMonitor:
                 health.last_success = health.last_check
                 health.response_time_ms = elapsed_ms
                 health.error = None
-                try:
-                    data = resp.json()
-                    health.version = data.get("version")
-                except Exception:
-                    pass
+                self._parse_health_data(health, resp.json())
             else:
                 self._record_failure(health, f"HTTP {resp.status_code}")
 
@@ -91,6 +95,41 @@ class HealthMonitor:
             self._record_failure(health, "Connection failed")
         except Exception as e:
             self._record_failure(health, str(e))
+
+    def _parse_health_data(self, health, data: dict) -> None:
+        """Extract rich fields from the agent's /health response."""
+        health.version = data.get("version")
+        health.host = data.get("host")
+        health.uptime_seconds = data.get("uptime_seconds")
+
+        # Channels
+        raw_channels = data.get("channels", [])
+        health.channels = [
+            ChannelHealth(
+                name=ch.get("name", "unknown"),
+                enabled=ch.get("enabled", False),
+                connected=ch.get("connected", False),
+                base_url=ch.get("base_url"),
+                error=ch.get("error"),
+            )
+            for ch in raw_channels
+        ]
+
+        # Heartbeat
+        hb = data.get("heartbeat", {})
+        health.heartbeat = HeartbeatHealth(
+            last_run=hb.get("last_run"),
+            status=hb.get("status"),
+        )
+
+        # Model provider
+        mp = data.get("model_provider", {})
+        health.model_provider = ProviderHealth(
+            provider=mp.get("provider"),
+            reachable=mp.get("reachable", False),
+            latency_ms=mp.get("latency_ms"),
+            error=mp.get("error"),
+        )
 
     def _record_failure(self, health, error: str):
         health.consecutive_failures += 1
@@ -113,22 +152,22 @@ class HealthMonitor:
                 continue
 
             stats.total_agents += 1
-            status = agent.health.status
+            s = agent.health.status
 
-            if status == AgentStatus.ONLINE:
+            if s == AgentStatus.ONLINE:
                 stats.online_count += 1
                 if agent.health.response_time_ms is not None:
                     response_times.append(agent.health.response_time_ms)
-            elif status == AgentStatus.OFFLINE:
+            elif s == AgentStatus.OFFLINE:
                 stats.offline_count += 1
-            elif status == AgentStatus.DEGRADED:
+            elif s == AgentStatus.DEGRADED:
                 stats.degraded_count += 1
             else:
                 stats.unknown_count += 1
 
             if agent.expected_online:
                 stats.expected_online_count += 1
-                if status in (AgentStatus.OFFLINE, AgentStatus.UNKNOWN):
+                if s in (AgentStatus.OFFLINE, AgentStatus.UNKNOWN):
                     stats.unexpected_offline_count += 1
 
         if response_times:

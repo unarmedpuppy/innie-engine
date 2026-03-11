@@ -105,6 +105,7 @@ def run(
 
     # Phase 2: Extract
     console.print("  Phase 2: AI extraction...")
+    extraction = None
     try:
         from innie.heartbeat.extract import extract
 
@@ -115,17 +116,17 @@ def run(
             f"{len(extraction.decisions)} decisions"
         )
     except Exception as e:
-        console.print(f"  [red]Extraction failed: {e}[/red]")
-        raise typer.Exit(1)
+        console.print(f"  [yellow]Extraction failed (skipping): {e}[/yellow]")
 
     # Phase 3: Route
-    console.print("  Phase 3: Routing to knowledge base...")
-    from innie.heartbeat.route import route_all
+    if extraction is not None:
+        console.print("  Phase 3: Routing to knowledge base...")
+        from innie.heartbeat.route import route_all
 
-    results = route_all(extraction, agent, collected=collected)
-    for target, count in results.items():
-        if count > 0:
-            console.print(f"    {target}: {count}")
+        results = route_all(extraction, agent, collected=collected)
+        for target, count in results.items():
+            if count > 0:
+                console.print(f"    {target}: {count}")
 
     # Re-index changed files
     console.print("  Re-indexing...")

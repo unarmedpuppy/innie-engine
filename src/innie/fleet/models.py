@@ -26,6 +26,26 @@ class JobStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class ChannelHealth(BaseModel):
+    name: str
+    enabled: bool = False
+    connected: bool = False
+    base_url: str | None = None
+    error: str | None = None
+
+
+class HeartbeatHealth(BaseModel):
+    last_run: str | None = None
+    status: str | None = None  # "ok", "failed", "never", "unknown"
+
+
+class ProviderHealth(BaseModel):
+    provider: str | None = None
+    reachable: bool = False
+    latency_ms: float | None = None
+    error: str | None = None
+
+
 class AgentHealth(BaseModel):
     status: AgentStatus = AgentStatus.UNKNOWN
     last_check: str | None = None
@@ -33,7 +53,13 @@ class AgentHealth(BaseModel):
     response_time_ms: float | None = None
     consecutive_failures: int = 0
     error: str | None = None
+    # Rich fields populated from /health response
     version: str | None = None
+    host: str | None = None
+    uptime_seconds: int | None = None
+    channels: list[ChannelHealth] = Field(default_factory=list)
+    heartbeat: HeartbeatHealth = Field(default_factory=HeartbeatHealth)
+    model_provider: ProviderHealth = Field(default_factory=ProviderHealth)
 
 
 class AgentConfig(BaseModel):

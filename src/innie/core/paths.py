@@ -130,4 +130,10 @@ def shared_skills_dir() -> Path:
 
 
 def env_file(agent: str | None = None) -> Path:
+    """Agent-specific secrets. ~/.innie/agents/<name>/.env"""
     return agent_dir(agent) / ".env"
+
+
+def shared_env_file() -> Path:
+    """Shared secrets for all agents. ~/.innie/.env"""
+    return home() / ".env"

@@ -106,10 +106,29 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
     return os.environ.get(env_key, "").rstrip("/")
 
 
+def _ensure_skills_symlink() -> None:
+    """Ensure ~/.claude/skills symlinks to the shared innie skills directory."""
+    shared = paths.shared_skills_dir()
+    claude_skills = Path.home() / ".claude" / "skills"
+    if not shared.exists():
+        return
+    if claude_skills.is_symlink() and claude_skills.resolve() == shared.resolve():
+        return
+    try:
+        claude_skills.parent.mkdir(parents=True, exist_ok=True)
+        if claude_skills.exists() or claude_skills.is_symlink():
+            claude_skills.unlink()
+        claude_skills.symlink_to(shared)
+        logger.info(f"Linked ~/.claude/skills -> {shared}")
+    except Exception as e:
+        logger.warning(f"Could not link ~/.claude/skills: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global jobs
     jobs = _init_job_store()
+    _ensure_skills_symlink()
     await _register_with_fleet()
     from innie.channels.loader import start_channels, stop_channels
     from innie.serve.scheduler import setup_scheduler, teardown_scheduler

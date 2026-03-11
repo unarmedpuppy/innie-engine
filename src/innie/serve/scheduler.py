@@ -94,11 +94,6 @@ def setup_scheduler(agent: str) -> None:
     """Load schedule.yaml and register all enabled jobs. Starts the scheduler."""
     global _scheduler
 
-    jobs = _load_schedule(agent)
-    if not jobs:
-        logger.debug(f"[scheduler] no schedule.yaml for {agent} — scheduler not started")
-        return
-
     try:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
     except ImportError:
@@ -107,13 +102,21 @@ def setup_scheduler(agent: str) -> None:
 
     _scheduler = AsyncIOScheduler()
 
-    for job in jobs:
+    # Built-in: session cleanup always runs, regardless of schedule.yaml
+    _register_expire_stale(ScheduledJob(name="session_cleanup", interval_hours=1.0))
+    registered = 1
+
+    agent_jobs = _load_schedule(agent)
+    for job in agent_jobs:
         if not job.enabled:
             continue
+        if job.action == "expire_stale_sessions":
+            continue  # already registered as built-in
         _register_job(job)
+        registered += 1
 
     _scheduler.start()
-    logger.info(f"[scheduler] started with {len([j for j in jobs if j.enabled])} job(s) for {agent}")
+    logger.info(f"[scheduler] started with {registered} job(s) for {agent}")
 
 
 def _register_job(job: ScheduledJob) -> None:

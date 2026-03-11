@@ -106,12 +106,25 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
     return os.environ.get(env_key, "").rstrip("/")
 
 
+def _ensure_dirs() -> None:
+    """Ensure standard innie directory structure exists."""
+    agent = paths.active_agent()
+    for d in [
+        paths.shared_skills_dir(),
+        paths.data_dir(agent),
+        paths.state_dir(agent),
+        paths.sessions_dir(agent),
+    ]:
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+
+
 def _ensure_skills_symlink() -> None:
     """Ensure ~/.claude/skills symlinks to the shared innie skills directory."""
     shared = paths.shared_skills_dir()
     claude_skills = Path.home() / ".claude" / "skills"
-    if not shared.exists():
-        return
     if claude_skills.is_symlink() and claude_skills.resolve() == shared.resolve():
         return
     try:
@@ -124,11 +137,37 @@ def _ensure_skills_symlink() -> None:
         logger.warning(f"Could not link ~/.claude/skills: {e}")
 
 
+def _ensure_git_identity() -> None:
+    """Apply git identity from profile.yaml if configured."""
+    import subprocess
+    import yaml
+
+    profile_path = paths.profile_file()
+    if not profile_path.exists():
+        return
+    try:
+        with profile_path.open() as f:
+            profile = yaml.safe_load(f) or {}
+        git = profile.get("git", {})
+        name = git.get("name")
+        email = git.get("email")
+        if name:
+            subprocess.run(["git", "config", "--global", "user.name", name], check=True, capture_output=True)
+        if email:
+            subprocess.run(["git", "config", "--global", "user.email", email], check=True, capture_output=True)
+        if name or email:
+            logger.info(f"Git identity set: {name} <{email}>")
+    except Exception as e:
+        logger.warning(f"Could not set git identity: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global jobs
     jobs = _init_job_store()
+    _ensure_dirs()
     _ensure_skills_symlink()
+    _ensure_git_identity()
     await _register_with_fleet()
     from innie.channels.loader import start_channels, stop_channels
     from innie.serve.scheduler import setup_scheduler, teardown_scheduler

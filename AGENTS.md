@@ -24,6 +24,9 @@ src/innie/
     CONTEXT.md            # Working memory / open items
     .env                  # Secrets (gitignored — see below)
     data/                 # Knowledge base files
+  skills/                 # Shared skills directory (all agents)
+                          # ~/.claude/skills symlinks here — maintained by self_update cron
+                          # New skills always go in ~/.innie/skills/, never in ~/.claude/skills/
 ```
 
 ---

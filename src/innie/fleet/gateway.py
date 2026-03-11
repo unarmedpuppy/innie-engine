@@ -519,6 +519,23 @@ async def get_agent_audit(agent_id: str):
             }
 
 
+@app.get("/api/agents/{agent_id}/avatar")
+async def get_agent_avatar(agent_id: str):
+    """Proxy agent avatar image from the agent's serve instance."""
+    from fastapi.responses import Response
+    agent = agents.get(agent_id)
+    if not agent:
+        raise HTTPException(404, f"Agent '{agent_id}' not found")
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(f"{agent.endpoint}/v1/agent/avatar", timeout=5.0)
+            if resp.status_code == 200:
+                return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/png"))
+        except Exception:
+            pass
+    raise HTTPException(404, "No avatar")
+
+
 @app.post("/api/agents/{agent_id}/schedule/{job_name}/trigger")
 async def trigger_agent_schedule_job(agent_id: str, job_name: str):
     """Proxy schedule job trigger to the agent's serve instance."""
@@ -556,6 +573,8 @@ h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
 .agent-name{font-weight:600;font-size:15px;color:#fff}
 .agent-role{font-size:12px;color:#6b7280;margin-top:1px}
 .uptime{margin-left:auto;font-size:12px;color:#6b7280}
+.avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#2a2a35}
+.avatar-placeholder{width:36px;height:36px;border-radius:50%;background:#2a2a35;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#6b7280}
 .card-body{padding:14px 16px}
 .section{margin-bottom:14px}
 .section:last-child{margin-bottom:0}
@@ -659,12 +678,17 @@ function renderCard(a, d, card) {
     (sched.length > 0 ? '<span class="collapse-toggle" id="tog-' + schedId + '">▶</span>' : '') +
     '</div>' +
     '<div class="collapsible-body closed" id="' + schedId + '">' + schedInner + '</div>';
+  const avatarHtml = '<img class="avatar" src="' + BASE + '/api/agents/' + a.id + '/avatar" ' +
+    'onerror="this.outerHTML=\'<div class=\\"avatar-placeholder\\">' + (info.agent || a.id).charAt(0).toUpperCase() + '</div>\'">';
   card.innerHTML =
     '<div class="card-header">' +
-    '<div class="dot ' + status + '"></div>' +
-    '<div><div class="agent-name">' + (info.agent || a.id) + '</div>' +
+    avatarHtml +
+    '<div style="flex:1;min-width:0"><div class="agent-name">' + (info.agent || a.id) + '</div>' +
     '<div class="agent-role">' + (info.role || a.description || '') + '</div></div>' +
+    '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
     '<div class="uptime">' + (status === 'online' ? fmtUptime(info.uptime_seconds) : status) + '</div>' +
+    '<div class="dot ' + status + '"></div>' +
+    '</div>' +
     '</div>' +
     '<div class="card-body">' +
     (d._error ? '<div class="error">' + d._error + '</div>' : '') +

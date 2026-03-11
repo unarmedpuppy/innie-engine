@@ -17,7 +17,7 @@ from pathlib import Path
 import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from innie.core import paths
@@ -497,6 +497,17 @@ async def agent_identity():
         "context": _read(base / "CONTEXT.md"),
         "profile": _read(base / "profile.yaml"),
     }
+
+
+@app.get("/v1/agent/avatar")
+async def agent_avatar():
+    agent = paths.active_agent() or ""
+    base = Path.home() / ".innie" / "agents" / agent
+    for ext, mime in [("png", "image/png"), ("jpg", "image/jpeg"), ("jpeg", "image/jpeg"), ("webp", "image/webp"), ("gif", "image/gif")]:
+        path = base / f"avatar.{ext}"
+        if path.exists():
+            return FileResponse(path, media_type=mime)
+    raise HTTPException(status_code=404, detail="No avatar found")
 
 
 @app.get("/v1/agent/audit")

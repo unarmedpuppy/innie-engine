@@ -678,8 +678,8 @@ function renderCard(a, d, card) {
     (sched.length > 0 ? '<span class="collapse-toggle" id="tog-' + schedId + '">▶</span>' : '') +
     '</div>' +
     '<div class="collapsible-body closed" id="' + schedId + '">' + schedInner + '</div>';
-  const avatarHtml = '<img class="avatar" src="' + BASE + '/api/agents/' + a.id + '/avatar" ' +
-    'onerror="this.outerHTML=\'<div class=\\"avatar-placeholder\\">' + (info.agent || a.id).charAt(0).toUpperCase() + '</div>\'">';
+  const initial = (info.agent || a.id).charAt(0).toUpperCase();
+  const avatarHtml = '<img class="avatar" src="' + BASE + '/api/agents/' + a.id + '/avatar" onerror="avatarErr(this,\\'' + initial + '\\')">';
   card.innerHTML =
     '<div class="card-header">' +
     avatarHtml +
@@ -696,6 +696,12 @@ function renderCard(a, d, card) {
     '<div class="section">' + schedHtml + '</div>' +
     (ctxPreview ? '<div class="section"><div class="section-label">Open items</div><div class="context-preview">' + ctxPreview + '</div></div>' : '') +
     '</div>';
+}
+function avatarErr(img, initial) {
+  const el = document.createElement('div');
+  el.className = 'avatar-placeholder';
+  el.textContent = initial;
+  img.replaceWith(el);
 }
 function toggleSched(id) {
   const body = document.getElementById(id);

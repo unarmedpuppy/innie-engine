@@ -1,10 +1,15 @@
 """Request/response models for the serve API."""
 
+import os
 import time
 import uuid
 from enum import Enum
 
 from pydantic import BaseModel, Field
+
+
+def _default_model() -> str:
+    return os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
 
 
 class JobStatus(str, Enum):
@@ -22,7 +27,7 @@ class Message(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    model: str = "claude-sonnet-4-20250514"
+    model: str = Field(default_factory=_default_model)
     messages: list[Message]
     stream: bool = False
     temperature: float | None = None
@@ -56,7 +61,7 @@ class ChatCompletionResponse(BaseModel):
 
 class JobCreateRequest(BaseModel):
     prompt: str = Field(..., description="Task prompt for Claude")
-    model: str = "claude-sonnet-4-20250514"
+    model: str = Field(default_factory=_default_model)
     working_directory: str | None = Field(default=None, description="Working directory for Claude")
     system_prompt: str | None = None
     include_memory: bool = Field(

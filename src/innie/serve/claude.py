@@ -34,9 +34,13 @@ def _claude_binary() -> str:
     return "claude"
 
 
+def _default_model() -> str:
+    return os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
+
+
 async def stream_claude_events(
     prompt: str,
-    model: str = "claude-sonnet-4-20250514",
+    model: str | None = None,
     system_prompt: str | None = None,
     permission_mode: str = "yolo",
     session_id: str | None = None,
@@ -44,6 +48,8 @@ async def stream_claude_events(
     timeout: float = 1800,
 ) -> AsyncGenerator[dict, None]:
     """Stream JSONL events from Claude Code CLI."""
+    if model is None:
+        model = _default_model()
     cmd = [_claude_binary(), "--print", "--output-format", "stream-json", "--verbose"]
     cmd.extend(["--model", model])
 
@@ -123,7 +129,7 @@ async def _read_lines(stream: asyncio.StreamReader, timeout: float) -> AsyncGene
 
 async def collect_stream(
     prompt: str,
-    model: str = "claude-sonnet-4-20250514",
+    model: str | None = None,
     system_prompt: str | None = None,
     permission_mode: str = "yolo",
     session_id: str | None = None,

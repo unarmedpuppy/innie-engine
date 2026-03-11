@@ -1,6 +1,7 @@
 """APScheduler — morning briefing, session cleanup, Ralph loop replacement."""
 
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,10 @@ from typing import Any
 import yaml
 
 from innie.core import paths
+
+
+def _default_model() -> str:
+    return os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +33,7 @@ class ScheduledJob:
     interval_hours: float | None = None
     action: str | None = None  # built-in: 'expire_stale_sessions'
     prompt: str | None = None
-    model: str = "claude-sonnet-4-6"
+    model: str = field(default_factory=_default_model)
     permission_mode: str = "yolo"
     working_directory: str | None = None
     deliver_to: DeliverTo | None = None
@@ -61,7 +66,7 @@ def _load_schedule(agent: str) -> list[ScheduledJob]:
             interval_hours=raw.get("interval_hours"),
             action=raw.get("action"),
             prompt=raw.get("prompt"),
-            model=raw.get("model", "claude-sonnet-4-6"),
+            model=raw.get("model", _default_model()),
             permission_mode=raw.get("permission_mode", "yolo"),
             working_directory=raw.get("working_directory"),
             deliver_to=deliver_to,

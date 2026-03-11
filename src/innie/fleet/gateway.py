@@ -90,6 +90,7 @@ async def lifespan(app: FastAPI):
             agent_type=agent_cfg.agent_type,
             expected_online=agent_cfg.expected_online,
             tags=agent_cfg.tags,
+            tailscale_dns=agent_cfg.tailscale_dns,
         )
 
     # Load dynamically registered agents (persisted across gateway restarts)
@@ -571,7 +572,10 @@ h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
 .context-preview{font-size:12px;color:#6b7280;white-space:pre-wrap;max-height:90px;overflow:hidden;line-height:1.5}
 .error{color:#f87171;font-size:12px;padding:8px;background:#1c1111;border-radius:5px}
 .loading{color:#4b5563;font-size:13px;padding:8px}
-.tag-count{display:inline-block;font-size:11px;background:#1e2030;color:#818cf8;padding:1px 6px;border-radius:3px;margin-left:4px}
+.meta-pill{display:inline-block;font-size:11px;background:#1e2030;color:#818cf8;padding:1px 6px;border-radius:3px;margin-left:4px}
+.meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.meta-item{font-size:12px;color:#9ca3af}.meta-item strong{color:#d1d5db;margin-right:4px}
+.dns-link{font-size:12px;color:#60a5fa;text-decoration:none;font-family:monospace}.dns-link:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -619,14 +623,17 @@ function fmtCron(j) {
 function renderCard(a, d, card) {
   const info = d.info || {};
   const status = d._status || a.health?.status || 'unknown';
-  const skills = d.skills || [];
   const sched = d.schedule || [];
   const ctx = (d.identity && d.identity.context) || '';
   const ctxPreview = ctx.split('\\n').filter(l => l.trim() && !l.startsWith('#')).slice(0,6).join('\\n');
-  const skillsHtml = skills.length === 0 ? '<span style="color:#4b5563">none</span>' :
-    '<div class="skill-list">' + skills.slice(0,8).map(s =>
-      '<div class="skill"><strong>' + s.name + '</strong>' + (s.description ? s.description.substring(0,60) : '') + '</div>'
-    ).join('') + (skills.length > 8 ? '<div class="skill" style="color:#4b5563">+' + (skills.length-8) + ' more</div>' : '') + '</div>';
+  const model = info.model || null;
+  const provider = info.provider || null;
+  const dns = a.tailscale_dns || null;
+  const metaHtml = (model || dns) ?
+    '<div class="section"><div class="meta-row">' +
+    (model ? '<span class="meta-item"><strong>' + (provider || 'model') + '</strong>' + model + '</span>' : '') +
+    (dns ? '<a class="dns-link" href="http://' + dns + '" target="_blank">' + dns + '</a>' : '') +
+    '</div></div>' : '';
   const schedHtml = sched.length === 0 ? '<span style="color:#4b5563">none</span>' :
     '<div class="sched-list">' + sched.map(j =>
       '<div class="sched-item ' + (j.enabled ? 'enabled' : 'disabled') + '">' +
@@ -639,15 +646,14 @@ function renderCard(a, d, card) {
   card.innerHTML =
     '<div class="card-header">' +
     '<div class="dot ' + status + '"></div>' +
-    '<div><div class="agent-name">' + (info.agent || a.id) +
-      '<span class="tag-count">' + skills.length + ' skills</span></div>' +
+    '<div><div class="agent-name">' + (info.agent || a.id) + '</div>' +
     '<div class="agent-role">' + (info.role || a.description || '') + '</div></div>' +
     '<div class="uptime">' + (status === 'online' ? fmtUptime(info.uptime_seconds) : status) + '</div>' +
     '</div>' +
     '<div class="card-body">' +
     (d._error ? '<div class="error">' + d._error + '</div>' : '') +
+    metaHtml +
     '<div class="section"><div class="section-label">Schedule</div>' + schedHtml + '</div>' +
-    '<div class="section"><div class="section-label">Skills</div>' + skillsHtml + '</div>' +
     (ctxPreview ? '<div class="section"><div class="section-label">Open items</div><div class="context-preview">' + ctxPreview + '</div></div>' : '') +
     '</div>';
 }

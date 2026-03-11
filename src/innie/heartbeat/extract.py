@@ -115,7 +115,7 @@ def _call_anthropic(prompt: str, model: str) -> str:
             "max_tokens": 4096,
             "messages": [{"role": "user", "content": prompt}],
         },
-        timeout=120.0,
+        timeout=300.0,
     )
     resp.raise_for_status()
     body = resp.json()
@@ -138,7 +138,7 @@ def _call_openai_compatible(prompt: str, model: str, url: str, api_key: str = ""
             "max_tokens": 4096,
             "messages": [{"role": "user", "content": prompt}],
         },
-        timeout=120.0,
+        timeout=300.0,
     )
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"]
@@ -265,7 +265,9 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
                 "  external_url = \"http://localhost:11434/v1\"\n"
                 "  model = \"llama3.1:8b\""
             )
-        text = _call_openai_compatible(prompt, model, external_url)
+        import os
+        external_api_key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+        text = _call_openai_compatible(prompt, model, external_url, api_key=external_api_key)
     else:
         text = _call_anthropic(prompt, model)
 

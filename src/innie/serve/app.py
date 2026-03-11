@@ -408,17 +408,28 @@ async def agent_info():
     agent = paths.active_agent()
     profile_path = Path.home() / ".innie" / "agents" / (agent or "") / "profile.yaml"
     role = ""
+    model = None
+    provider = None
     if profile_path.exists():
         import yaml
         try:
             data = yaml.safe_load(profile_path.read_text()) or {}
             role = data.get("role", "")
+            cc = data.get("claude-code", {}) or {}
+            model = cc.get("model")
+            if model:
+                if model.startswith("claude"):
+                    provider = "anthropic"
+                else:
+                    provider = "local"
         except Exception:
             pass
     uptime_s = int(time.time() - _serve_start_time)
     return {
         "agent": agent,
         "role": role,
+        "model": model,
+        "provider": provider,
         "version": "0.2.0",
         "uptime_seconds": uptime_s,
         "timestamp": datetime.now(timezone.utc).isoformat(),

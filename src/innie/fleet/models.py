@@ -43,6 +43,7 @@ class AgentConfig(BaseModel):
     agent_type: AgentType = AgentType.SERVER
     expected_online: bool = True
     tags: list[str] = Field(default_factory=list)
+    tailscale_dns: str | None = None
 
 
 class Agent(BaseModel):
@@ -53,6 +54,7 @@ class Agent(BaseModel):
     agent_type: AgentType = AgentType.SERVER
     expected_online: bool = True
     tags: list[str] = Field(default_factory=list)
+    tailscale_dns: str | None = None
     health: AgentHealth = Field(default_factory=AgentHealth)
 
 

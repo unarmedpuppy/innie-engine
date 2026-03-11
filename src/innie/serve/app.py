@@ -420,9 +420,13 @@ def _read_heartbeat_state(agent: str) -> dict:
         if not state_file.exists():
             return {"last_run": None, "status": "never"}
         data = json.loads(state_file.read_text())
+        raw_ts = data.get("last_run") or data.get("last_processed_at")
+        if isinstance(raw_ts, (int, float)):
+            from datetime import timezone
+            raw_ts = datetime.fromtimestamp(raw_ts, tz=timezone.utc).isoformat()
         return {
-            "last_run": data.get("last_run") or data.get("last_processed_at"),
-            "status": data.get("status", "unknown"),
+            "last_run": raw_ts,
+            "status": data.get("status", "ok"),
         }
     except Exception:
         return {"last_run": None, "status": "unknown"}

@@ -413,6 +413,42 @@ async def _probe_model_provider() -> dict:
         return {"provider": provider, "reachable": False, "error": str(e)}
 
 
+def _detect_service_info(agent: str) -> dict:
+    """Auto-detect restart and install commands from platform + install metadata."""
+    import sys
+
+    # Read direct_url.json from dist-info — tells us how innie-engine was installed
+    install_url: str | None = None
+    try:
+        from importlib.metadata import distribution
+        dist = distribution("innie-engine")
+        raw = dist.read_text("direct_url.json")
+        if raw:
+            data = json.loads(raw)
+            install_url = data.get("url")  # e.g. "file:///path/to/innie-engine" or "ssh://..."
+    except Exception:
+        pass
+
+    # Build install command
+    install_cmd: str | None = None
+    if install_url:
+        if install_url.startswith("file://"):
+            local_path = install_url[7:]
+            install_cmd = f"uv tool install --editable '{local_path}[serve]'"
+        else:
+            install_cmd = f"uv tool install 'innie-engine[serve] @ {install_url}'"
+
+    # Build restart command
+    restart_cmd: str | None = None
+    if sys.platform == "darwin":
+        uid = os.getuid()
+        restart_cmd = f"launchctl kickstart -k gui/{uid}/ai.innie.serve.{agent}"
+    else:
+        restart_cmd = f"sudo systemctl restart innie-{agent}.service"
+
+    return {"restart_cmd": restart_cmd, "install_cmd": install_cmd}
+
+
 def _read_heartbeat_state(agent: str) -> dict:
     """Read last heartbeat run info from state file."""
     try:
@@ -444,6 +480,7 @@ async def health():
     channels = get_channel_health()
     heartbeat = _read_heartbeat_state(agent)
     provider = await _probe_model_provider()
+    service = _detect_service_info(agent)
     uptime_s = int(time.time() - _serve_start_time)
 
     try:
@@ -461,6 +498,7 @@ async def health():
         "channels": channels,
         "heartbeat": heartbeat,
         "model_provider": provider,
+        "service": service,
         "timestamp": datetime.utcnow().isoformat(),
     }
 

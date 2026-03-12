@@ -46,6 +46,11 @@ class ProviderHealth(BaseModel):
     error: str | None = None
 
 
+class ServiceInfo(BaseModel):
+    restart_cmd: str | None = None
+    install_cmd: str | None = None
+
+
 class AgentHealth(BaseModel):
     status: AgentStatus = AgentStatus.UNKNOWN
     last_check: str | None = None
@@ -60,6 +65,7 @@ class AgentHealth(BaseModel):
     channels: list[ChannelHealth] = Field(default_factory=list)
     heartbeat: HeartbeatHealth = Field(default_factory=HeartbeatHealth)
     model_provider: ProviderHealth = Field(default_factory=ProviderHealth)
+    service: ServiceInfo = Field(default_factory=ServiceInfo)
 
 
 class AgentConfig(BaseModel):

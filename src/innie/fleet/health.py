@@ -15,6 +15,7 @@ from innie.fleet.models import (
     FleetStats,
     HeartbeatHealth,
     ProviderHealth,
+    ServiceInfo,
 )
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,13 @@ class HealthMonitor:
             reachable=mp.get("reachable", False),
             latency_ms=mp.get("latency_ms"),
             error=mp.get("error"),
+        )
+
+        # Service info
+        svc = data.get("service", {})
+        health.service = ServiceInfo(
+            restart_cmd=svc.get("restart_cmd"),
+            install_cmd=svc.get("install_cmd"),
         )
 
     def _record_failure(self, health, error: str):

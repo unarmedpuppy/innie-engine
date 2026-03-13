@@ -93,6 +93,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
             channel_hint=bb_cfg.get("channel_hint", ""),
             policy=policy,
             groups=bb_cfg.get("groups", {}),
+            contacts=bb_cfg.get("contacts", {}),
         )
         innie_url = os.environ.get("INNIE_PUBLIC_URL", "http://127.0.0.1:8013")
         await bluebubbles.start(bb, _sessions, agent or "avery", innie_url)

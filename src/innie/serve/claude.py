@@ -80,6 +80,7 @@ async def stream_claude_events(
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         env=env,
+        limit=16 * 1024 * 1024,  # 16MB — default 64KB is too small for claude output
     )
 
     try:
@@ -125,6 +126,10 @@ async def _read_lines(stream: asyncio.StreamReader, timeout: float) -> AsyncGene
         except asyncio.TimeoutError:
             if remaining <= 0:
                 raise
+        except ValueError:
+            # Line exceeded StreamReader buffer — skip and continue
+            logger.warning("[claude] skipped oversized line from stdout (exceeded buffer limit)")
+            continue
 
 
 async def collect_stream(

@@ -162,6 +162,22 @@ Adapters live in `src/innie/channels/`. The loader (`channels/loader.py`) reads 
 2. `MATTERMOST_BOT_TOKEN` from `~/.innie/.env`
 3. Empty string → adapter fails to connect (intentional, not silent)
 
+### BlueBubbles specifics
+
+**Session keying:** Sessions are keyed by `chat_guid`, not `contact_id`. This gives DMs and group chats independent conversation contexts. The `contact_id` (phone number) is still used for policy checks.
+
+**Contact name resolution:** Add a `contacts:` map under `bluebubbles:` in `channels.yaml` to resolve phone numbers/emails to display names. Used in the system prompt so the agent knows who is speaking:
+```yaml
+bluebubbles:
+  contacts:
+    "+16512367878": "Josh"
+    "abigailjenquist@gmail.com": "Abby"
+```
+
+**Rich link previews:** When iMessage converts a URL to a rich link card, the attachment arrives with UTI `com.apple.messages.URLBalloonProvider` and `mimeType: null`. The adapter extracts the URL from `originalURL`, `url`, or `metadata.url` on the attachment object.
+
+**StreamReader buffer:** `claude.py` spawns Claude Code with `limit=16MB` on the subprocess stdout StreamReader. The asyncio default (64KB) is too small for Claude's JSON event lines. Do not reduce this.
+
 ---
 
 ## Subprocess / Claude Code

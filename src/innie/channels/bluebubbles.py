@@ -38,6 +38,8 @@ class BlueBubblesConfig:
     policy: dict = field(default_factory=dict)
     # per-chat overrides: chat_guid → {require_mention: bool}
     groups: dict = field(default_factory=dict)
+    # contact_id → display name
+    contacts: dict = field(default_factory=dict)
 
 
 # ── Startup ───────────────────────────────────────────────────────────────────
@@ -128,6 +130,8 @@ async def _handle_message(payload: dict) -> None:
     is_group = chat_guid.count(";") > 1 and not chat_guid.endswith(f";{contact_id}")
 
     text = msg.get("text", "") or ""
+    # Strip null bytes that iMessage sometimes embeds in link-preview messages
+    text = text.replace("\u0000", "").strip()
     attachments = msg.get("attachments", [])
 
     # Per-chat group overrides
@@ -141,12 +145,15 @@ async def _handle_message(payload: dict) -> None:
     # Build prompt with attachments
     prompt = await _build_prompt(text, attachments, _config)
 
-    session_id = _sessions.get_session("bluebubbles", contact_id)
-    # Store chat_guid if new
-    if _sessions.get_chat_guid("bluebubbles", contact_id) is None:
-        _sessions.update_session("bluebubbles", contact_id, session_id or "", chat_guid)
+    # Key sessions by chat_guid so DMs and group chats have independent sessions
+    session_id = _sessions.get_session("bluebubbles", chat_guid)
 
+    sender_name = _config.contacts.get(contact_id, contact_id)
     system_prompt = build_session_context(agent_name=_agent_name)
+    if is_group:
+        system_prompt += f"\n\nYou are in a group iMessage chat (guid: {chat_guid}). Message is from {sender_name}."
+    else:
+        system_prompt += f"\n\nYou are in a 1:1 iMessage DM with {sender_name}."
     if _config.channel_hint:
         system_prompt += f"\n\n{_config.channel_hint.strip()}"
 
@@ -165,7 +172,7 @@ async def _handle_message(payload: dict) -> None:
         typing_task.cancel()
 
     if result.session_id:
-        _sessions.update_session("bluebubbles", contact_id, result.session_id, chat_guid)
+        _sessions.update_session("bluebubbles", chat_guid, result.session_id, chat_guid)
 
     reply = filter_for_channel(result.text)
     if reply:
@@ -192,9 +199,24 @@ async def _build_prompt(text: str, attachments: list, config: BlueBubblesConfig)
         parts.append(text)
 
     for att in attachments:
-        mime = att.get("mimeType", "")
+        mime = att.get("mimeType") or ""
+        uti = att.get("uti") or ""
         filename = att.get("transferName", att.get("guid", "attachment"))
         guid = att.get("guid", "")
+
+        # Rich link preview (iMessage URL balloon / link card)
+        if "URLBalloonProvider" in uti or mime == "com.apple.messages.URLBalloonProvider":
+            url = (
+                att.get("originalURL")
+                or att.get("url")
+                or (att.get("metadata") or {}).get("url")
+                or (att.get("metadata") or {}).get("originalURL")
+            )
+            if url:
+                parts.append(f"[link: {url}]")
+            else:
+                parts.append(f"[link preview — URL not available in payload]")
+            continue
 
         if mime.startswith("image/") and guid:
             path = await _download_attachment(guid, filename, config)

@@ -7,6 +7,7 @@ Provides:
   - Statistics
 """
 
+import base64
 import json
 import logging
 import os
@@ -33,12 +34,39 @@ from innie.fleet.models import (
 
 REGISTRY_PATH = Path.home() / ".innie" / "fleet-registry.json"
 
+# ── Knowledge base (Gitea) config ────────────────────────────────────────────
+
+GITEA_URL = os.getenv("GITEA_URL", "https://gitea.server.unarmedpuppy.com")
+GITEA_TOKEN = os.getenv("GITEA_TOKEN", "")
+KNOWLEDGE_REPO = os.getenv("KNOWLEDGE_REPO", "homelab/agent-memory")
+
 
 class AgentRegistration(BaseModel):
     agent: str
     endpoint: str
     capabilities: list[str] = []
     version: str = ""
+
+
+class KnowledgeFile(BaseModel):
+    path: str
+    name: str
+    kind: str  # "agents_md" | "skill"
+    skill_name: str | None = None
+
+
+class KnowledgeFileContent(BaseModel):
+    path: str
+    content: str
+    sha: str
+    size: int
+
+
+class KnowledgeUpdateRequest(BaseModel):
+    path: str
+    content: str
+    sha: str
+    message: str | None = None
 
 
 def _load_registry() -> dict:
@@ -570,6 +598,82 @@ async def trigger_agent_schedule_job(agent_id: str, job_name: str):
             raise HTTPException(502, f"Failed to trigger job: {e}")
 
 
+# ── Knowledge base (Gitea) ───────────────────────────────────────────────────
+
+
+def _gitea_headers() -> dict:
+    h = {"Accept": "application/json"}
+    if GITEA_TOKEN:
+        h["Authorization"] = f"token {GITEA_TOKEN}"
+    return h
+
+
+@app.get("/api/knowledge/tree", response_model=list[KnowledgeFile])
+async def knowledge_tree():
+    """List AGENTS.md and all skills from the agent-memory Gitea repo."""
+    files: list[KnowledgeFile] = [
+        KnowledgeFile(path="AGENTS.md", name="AGENTS.md", kind="agents_md")
+    ]
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            f"{GITEA_URL}/api/v1/repos/{KNOWLEDGE_REPO}/contents/skills",
+            headers=_gitea_headers(),
+        )
+        if resp.status_code == 200:
+            for entry in sorted(resp.json(), key=lambda e: e.get("name", "")):
+                if entry.get("type") == "dir":
+                    name = entry["name"]
+                    files.append(KnowledgeFile(
+                        path=f"skills/{name}/SKILL.md",
+                        name=name,
+                        kind="skill",
+                        skill_name=name,
+                    ))
+    return files
+
+
+@app.get("/api/knowledge/file", response_model=KnowledgeFileContent)
+async def knowledge_get_file(path: str = Query(...)):
+    """Fetch a file's content and SHA from the agent-memory repo."""
+    url = f"{GITEA_URL}/api/v1/repos/{KNOWLEDGE_REPO}/contents/{path}"
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(url, headers=_gitea_headers())
+    if resp.status_code == 404:
+        raise HTTPException(404, f"File not found: {path}")
+    if resp.status_code != 200:
+        raise HTTPException(502, f"Gitea returned {resp.status_code}")
+    data = resp.json()
+    decoded = base64.b64decode(data.get("content", "").replace("\n", "")).decode("utf-8")
+    return KnowledgeFileContent(
+        path=path, content=decoded, sha=data.get("sha", ""), size=data.get("size", len(decoded))
+    )
+
+
+@app.put("/api/knowledge/file", response_model=KnowledgeFileContent)
+async def knowledge_update_file(req: KnowledgeUpdateRequest):
+    """Commit a file update to the agent-memory repo via Gitea."""
+    url = f"{GITEA_URL}/api/v1/repos/{KNOWLEDGE_REPO}/contents/{req.path}"
+    payload = {
+        "message": req.message or f"Update {req.path} via fleet gateway",
+        "content": base64.b64encode(req.content.encode()).decode(),
+        "sha": req.sha,
+    }
+    headers = {**_gitea_headers(), "Content-Type": "application/json"}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.put(url, json=payload, headers=headers)
+    if resp.status_code == 409:
+        raise HTTPException(409, "SHA mismatch — reload and try again")
+    if resp.status_code not in (200, 201):
+        raise HTTPException(502, resp.text[:500] or f"Gitea returned {resp.status_code}")
+    file_data = resp.json().get("content", {})
+    return KnowledgeFileContent(
+        path=req.path,
+        content=req.content,
+        sha=file_data.get("sha", req.sha),
+        size=file_data.get("size", len(req.content)),
+    )
+
+
 # ── Dashboard ────────────────────────────────────────────────────────────────
 
 
@@ -581,9 +685,16 @@ _DASHBOARD_HTML = """<!DOCTYPE html>
 <title>innie fleet</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0f0f12;color:#e2e2e7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;padding:24px}
+body{background:#0f0f12;color:#e2e2e7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;padding:24px 24px 0;flex-wrap:wrap;gap:12px}
 h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
-.subtitle{color:#6b7280;font-size:13px;margin-bottom:28px}
+.subtitle{color:#6b7280;font-size:13px}
+.tab-bar{display:flex;gap:2px;border-bottom:1px solid #2a2a35;margin:16px 24px 0}
+.tab-btn{padding:7px 16px;font-size:13px;font-weight:500;color:#6b7280;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.tab-btn:hover{color:#d1d5db}
+.tab-btn.active{color:#e2e2e7;border-bottom-color:#60a5fa}
+.tab-content{padding:20px 24px}
+/* Agents tab */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
 .card{background:#17171c;border:1px solid #2a2a35;border-radius:10px;overflow:hidden}
 .card-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #2a2a35}
@@ -598,9 +709,6 @@ h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
 .section{margin-bottom:14px}
 .section:last-child{margin-bottom:0}
 .section-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#4b5563;margin-bottom:6px;font-weight:600}
-.skill-list{display:flex;flex-direction:column;gap:3px}
-.skill{font-size:12px;color:#9ca3af}
-.skill strong{color:#d1d5db;margin-right:4px}
 .sched-list{display:flex;flex-direction:column;gap:4px}
 .sched-item{font-size:12px;padding:4px 8px;background:#1e1e26;border-radius:5px;color:#9ca3af}
 .sched-item.enabled{border-left:2px solid #22c55e}.sched-item.disabled{border-left:2px solid #374151;opacity:.5}
@@ -616,18 +724,106 @@ h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
 .collapsible-body.closed{max-height:0}
 .error{color:#f87171;font-size:12px;padding:8px;background:#1c1111;border-radius:5px}
 .loading{color:#4b5563;font-size:13px;padding:8px}
-.meta-pill{display:inline-block;font-size:11px;background:#1e2030;color:#818cf8;padding:1px 6px;border-radius:3px;margin-left:4px}
 .meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .meta-item{font-size:12px;color:#9ca3af}.meta-item strong{color:#d1d5db;margin-right:4px}
 .dns-link{font-size:12px;color:#60a5fa;text-decoration:none;font-family:monospace}.dns-link:hover{text-decoration:underline}
+/* Knowledge tab */
+.k-layout{display:flex;height:calc(100vh - 130px);gap:0;border:1px solid #2a2a35;border-radius:10px;overflow:hidden;background:#17171c}
+.k-sidebar{width:220px;flex-shrink:0;border-right:1px solid #2a2a35;overflow-y:auto;background:#12121a}
+.k-sidebar-section{padding:10px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#374151;font-weight:600}
+.k-file-btn{display:flex;align-items:center;gap:7px;width:100%;padding:6px 12px;font-size:12px;color:#9ca3af;background:none;border:none;border-left:2px solid transparent;cursor:pointer;text-align:left;transition:color .12s,background .12s}
+.k-file-btn:hover{color:#d1d5db;background:#1a1a24}
+.k-file-btn.active{color:#60a5fa;background:#1a1a24;border-left-color:#60a5fa}
+.k-file-name{truncate:ellipsis;overflow:hidden;white-space:nowrap;flex:1;min-width:0;font-family:monospace}
+.k-main{flex:1;display:flex;flex-direction:column;min-width:0}
+.k-toolbar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #2a2a35;flex-shrink:0;min-height:40px}
+.k-filepath{font-size:11px;font-family:monospace;color:#4b5563;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.k-save-status{font-size:11px;color:#22c55e;font-family:monospace;flex-shrink:0}
+.k-btn{padding:3px 10px;font-size:12px;border:1px solid #2a2a35;border-radius:4px;background:none;color:#9ca3af;cursor:pointer;transition:color .12s,border-color .12s}
+.k-btn:hover{color:#d1d5db;border-color:#4b5563}
+.k-btn.primary{border-color:#1d4ed8;color:#93c5fd}.k-btn.primary:hover{background:#1e2d4a}
+.k-btn:disabled{opacity:.4;cursor:not-allowed}
+.k-commit-bar{display:flex;gap:8px;padding:6px 14px;border-bottom:1px solid #2a2a35;flex-shrink:0}
+.k-commit-input{flex:1;background:#0f0f12;border:1px solid #2a2a35;border-radius:4px;padding:4px 8px;font-size:12px;color:#d1d5db;font-family:monospace}
+.k-commit-input::placeholder{color:#374151}
+.k-commit-input:focus{outline:none;border-color:#374151}
+.k-content-area{flex:1;overflow:auto;padding:20px 24px}
+.k-empty-state{display:flex;align-items:center;justify-content:center;height:100%;color:#374151;font-size:13px}
+.k-textarea{width:100%;height:100%;background:#0f0f12;color:#d1d5db;border:none;resize:none;font-family:monospace;font-size:12px;line-height:1.6;outline:none;padding:20px 24px}
+/* Markdown rendering */
+.md h1{font-size:18px;font-weight:700;color:#fff;margin:16px 0 8px;border-bottom:1px solid #2a2a35;padding-bottom:6px}
+.md h2{font-size:15px;font-weight:600;color:#e2e2e7;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.06em}
+.md h3{font-size:13px;font-weight:600;color:#d1d5db;margin:10px 0 4px}
+.md p{color:#9ca3af;line-height:1.7;margin:6px 0}
+.md ul,.md ol{color:#9ca3af;padding-left:20px;margin:6px 0}
+.md li{line-height:1.7}
+.md code{background:#1e1e26;color:#7dd3fc;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:12px}
+.md pre{background:#1e1e26;border:1px solid #2a2a35;border-radius:6px;padding:12px;overflow-x:auto;margin:8px 0}
+.md pre code{background:none;padding:0;color:#d1d5db}
+.md table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+.md th{background:#1e1e26;color:#9ca3af;padding:5px 10px;border:1px solid #2a2a35;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.md td{padding:5px 10px;border:1px solid #2a2a35;color:#9ca3af}
+.md a{color:#60a5fa;text-decoration:none}.md a:hover{text-decoration:underline}
+.md blockquote{border-left:2px solid #374151;padding-left:12px;color:#6b7280;margin:6px 0}
+.md strong{color:#d1d5db}
+.md hr{border:none;border-top:1px solid #2a2a35;margin:12px 0}
 </style>
 </head>
 <body>
-<h1>innie fleet</h1>
-<p class="subtitle" id="subtitle">Loading agents…</p>
-<div class="grid" id="grid"></div>
+<div class="page-header">
+  <div>
+    <h1>innie fleet</h1>
+    <p class="subtitle" id="subtitle">Loading…</p>
+  </div>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-agents-btn" onclick="showTab('agents')">Agents</button>
+  <button class="tab-btn" id="tab-knowledge-btn" onclick="showTab('knowledge')">Knowledge</button>
+</div>
+
+<!-- ── Agents tab ── -->
+<div id="tab-agents" class="tab-content">
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ── Knowledge tab ── -->
+<div id="tab-knowledge" class="tab-content" style="display:none">
+  <div class="k-layout">
+    <div class="k-sidebar" id="k-sidebar">
+      <div style="padding:12px;color:#4b5563;font-size:12px">Loading…</div>
+    </div>
+    <div class="k-main">
+      <div class="k-toolbar">
+        <span class="k-filepath" id="k-filepath">—</span>
+        <span class="k-save-status" id="k-save-status"></span>
+        <button class="k-btn" id="k-edit-btn" onclick="kStartEdit()" style="display:none">Edit</button>
+        <button class="k-btn" id="k-cancel-btn" onclick="kCancelEdit()" style="display:none">Cancel</button>
+        <button class="k-btn primary" id="k-save-btn" onclick="kSave()" style="display:none">Commit</button>
+      </div>
+      <div class="k-commit-bar" id="k-commit-bar" style="display:none">
+        <input class="k-commit-input" id="k-commit-msg" placeholder="Commit message (optional)">
+        <span id="k-err" style="font-size:11px;color:#f87171;align-self:center"></span>
+      </div>
+      <div class="k-content-area" id="k-content-area">
+        <div class="k-empty-state">Select a file to view</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const BASE = '';
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function showTab(name) {
+  document.getElementById('tab-agents').style.display = name === 'agents' ? '' : 'none';
+  document.getElementById('tab-knowledge').style.display = name === 'knowledge' ? '' : 'none';
+  document.getElementById('tab-agents-btn').classList.toggle('active', name === 'agents');
+  document.getElementById('tab-knowledge-btn').classList.toggle('active', name === 'knowledge');
+  if (name === 'knowledge' && !kLoaded) kLoad();
+}
+
+// ── Agents tab ─────────────────────────────────────────────────────────────
 async function load() {
   const r = await fetch(BASE + '/api/agents');
   const {agents} = await r.json();
@@ -750,6 +946,202 @@ async function trigger(agentId, jobName, btn) {
   }
   setTimeout(() => { btn.disabled = false; btn.textContent = 'run'; }, 3000);
 }
+
+// ── Knowledge tab ──────────────────────────────────────────────────────────
+let kLoaded = false;
+let kFiles = [];
+let kActive = null;  // {path, sha, content}
+let kEditing = false;
+
+// Minimal markdown renderer (no CDN dependency)
+function renderMd(src) {
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let html = '';
+  const lines = src.split('\\n');
+  let inCode = false, codeLang = '', codeBuf = [];
+  let inTable = false, tableRows = [];
+  function flushTable() {
+    if (!tableRows.length) return;
+    let out = '<table>';
+    tableRows.forEach((r, i) => {
+      const cells = r.split('|').slice(1,-1).map(c => c.trim());
+      if (i === 0) {
+        out += '<tr>' + cells.map(c => '<th>' + inlineRender(esc(c)) + '</th>').join('') + '</tr>';
+      } else if (i === 1 && /^[\s|:-]+$/.test(r)) {
+        // separator row, skip
+      } else {
+        out += '<tr>' + cells.map(c => '<td>' + inlineRender(esc(c)) + '</td>').join('') + '</tr>';
+      }
+    });
+    html += out + '</table>\\n';
+    tableRows = []; inTable = false;
+  }
+  function inlineRender(s) {
+    return s
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
+      .replace(/\\*([^*]+)\\*/g, '<em>$1</em>')
+      .replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank">$1</a>');
+  }
+  for (const raw of lines) {
+    const line = raw;
+    if (line.startsWith('```')) {
+      if (inCode) {
+        html += '<pre><code>' + esc(codeBuf.join('\\n')) + '</code></pre>\\n';
+        inCode = false; codeBuf = [];
+      } else {
+        if (inTable) flushTable();
+        inCode = true; codeLang = line.slice(3).trim();
+      }
+      continue;
+    }
+    if (inCode) { codeBuf.push(line); continue; }
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      if (!inTable) inTable = true;
+      tableRows.push(line);
+      continue;
+    }
+    if (inTable) flushTable();
+    if (!line.trim()) { html += '<p></p>\\n'; continue; }
+    if (line.startsWith('### ')) { html += '<h3>' + inlineRender(esc(line.slice(4))) + '</h3>\\n'; continue; }
+    if (line.startsWith('## ')) { html += '<h2>' + inlineRender(esc(line.slice(3))) + '</h2>\\n'; continue; }
+    if (line.startsWith('# ')) { html += '<h1>' + inlineRender(esc(line.slice(2))) + '</h1>\\n'; continue; }
+    if (line.startsWith('> ')) { html += '<blockquote>' + inlineRender(esc(line.slice(2))) + '</blockquote>\\n'; continue; }
+    if (/^---+$/.test(line.trim())) { html += '<hr>\\n'; continue; }
+    if (/^[-*] /.test(line)) { html += '<li>' + inlineRender(esc(line.slice(2))) + '</li>\\n'; continue; }
+    if (/^\\d+\\.\\s/.test(line)) { html += '<li>' + inlineRender(esc(line.replace(/^\\d+\\.\\s/,''))) + '</li>\\n'; continue; }
+    html += '<p>' + inlineRender(esc(line)) + '</p>\\n';
+  }
+  if (inCode) html += '<pre><code>' + esc(codeBuf.join('\\n')) + '</code></pre>\\n';
+  if (inTable) flushTable();
+  return '<div class="md">' + html + '</div>';
+}
+
+async function kLoad() {
+  kLoaded = true;
+  const r = await fetch(BASE + '/api/knowledge/tree');
+  if (!r.ok) {
+    document.getElementById('k-sidebar').innerHTML = '<div style="padding:12px;color:#f87171;font-size:12px">Failed to load: ' + r.statusText + '</div>';
+    return;
+  }
+  kFiles = await r.json();
+  kRenderSidebar();
+}
+
+function kRenderSidebar() {
+  const sb = document.getElementById('k-sidebar');
+  const coreMd = kFiles.filter(f => f.kind === 'agents_md');
+  const skills = kFiles.filter(f => f.kind === 'skill');
+  let html = '';
+  if (coreMd.length) {
+    html += '<div class="k-sidebar-section">Core</div>';
+    html += coreMd.map(f =>
+      '<button class="k-file-btn' + (kActive && kActive.path === f.path ? ' active' : '') + '" onclick="kSelectFile(' + JSON.stringify(f.path) + ')">' +
+      '<span style="color:#4b5563;font-size:10px">▸</span><span class="k-file-name">' + f.name + '</span></button>'
+    ).join('');
+  }
+  if (skills.length) {
+    html += '<div class="k-sidebar-section">Skills (' + skills.length + ')</div>';
+    html += skills.map(f =>
+      '<button class="k-file-btn' + (kActive && kActive.path === f.path ? ' active' : '') + '" onclick="kSelectFile(' + JSON.stringify(f.path) + ')">' +
+      '<span style="color:#4b5563;font-size:10px">⚡</span><span class="k-file-name">' + f.name + '</span></button>'
+    ).join('');
+  }
+  sb.innerHTML = html;
+}
+
+async function kSelectFile(path) {
+  kCancelEdit();
+  document.getElementById('k-filepath').textContent = path;
+  document.getElementById('k-content-area').innerHTML = '<div class="k-empty-state">Loading…</div>';
+  document.getElementById('k-edit-btn').style.display = 'none';
+  document.getElementById('k-save-status').textContent = '';
+  const r = await fetch(BASE + '/api/knowledge/file?path=' + encodeURIComponent(path));
+  if (!r.ok) {
+    document.getElementById('k-content-area').innerHTML = '<div class="error" style="margin:16px">Failed to load: ' + r.statusText + '</div>';
+    return;
+  }
+  const data = await r.json();
+  kActive = data;
+  kEditing = false;
+  document.getElementById('k-content-area').innerHTML = renderMd(data.content);
+  document.getElementById('k-edit-btn').style.display = '';
+  kRenderSidebar();
+}
+
+function kStartEdit() {
+  if (!kActive) return;
+  kEditing = true;
+  document.getElementById('k-edit-btn').style.display = 'none';
+  document.getElementById('k-cancel-btn').style.display = '';
+  document.getElementById('k-save-btn').style.display = '';
+  document.getElementById('k-commit-bar').style.display = '';
+  document.getElementById('k-err').textContent = '';
+  const area = document.getElementById('k-content-area');
+  const ta = document.createElement('textarea');
+  ta.className = 'k-textarea';
+  ta.id = 'k-editor';
+  ta.value = kActive.content;
+  area.innerHTML = '';
+  area.appendChild(ta);
+  ta.focus();
+}
+
+function kCancelEdit() {
+  if (!kEditing) return;
+  kEditing = false;
+  document.getElementById('k-edit-btn').style.display = kActive ? '' : 'none';
+  document.getElementById('k-cancel-btn').style.display = 'none';
+  document.getElementById('k-save-btn').style.display = 'none';
+  document.getElementById('k-commit-bar').style.display = 'none';
+  document.getElementById('k-err').textContent = '';
+  if (kActive) {
+    document.getElementById('k-content-area').innerHTML = renderMd(kActive.content);
+  }
+}
+
+async function kSave() {
+  const ta = document.getElementById('k-editor');
+  if (!ta || !kActive) return;
+  const saveBtn = document.getElementById('k-save-btn');
+  const cancelBtn = document.getElementById('k-cancel-btn');
+  const errEl = document.getElementById('k-err');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+  errEl.textContent = '';
+  const msg = document.getElementById('k-commit-msg').value.trim();
+  try {
+    const r = await fetch(BASE + '/api/knowledge/file', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({path: kActive.path, content: ta.value, sha: kActive.sha, message: msg || null})
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({detail: r.statusText}));
+      errEl.textContent = d.detail || r.statusText;
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Commit';
+      return;
+    }
+    const updated = await r.json();
+    kActive = updated;
+    kEditing = false;
+    document.getElementById('k-edit-btn').style.display = '';
+    document.getElementById('k-cancel-btn').style.display = 'none';
+    document.getElementById('k-save-btn').style.display = 'none';
+    document.getElementById('k-commit-bar').style.display = 'none';
+    document.getElementById('k-commit-msg').value = '';
+    document.getElementById('k-content-area').innerHTML = renderMd(updated.content);
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('k-save-status').textContent = 'saved ' + now;
+    setTimeout(() => { document.getElementById('k-save-status').textContent = ''; }, 5000);
+  } catch(e) {
+    errEl.textContent = String(e);
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Commit';
+  }
+}
+
 load();
 </script>
 </body>

@@ -116,6 +116,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
             group_policy=mm_cfg.get("group_policy", "open"),
             group_allow_from=mm_cfg.get("group_allow_from", []),
             require_mention=mm_cfg.get("require_mention", False),
+            locked_dm_user_id=mm_cfg.get("locked_dm_user_id"),
         )
         adapter = MattermostAdapter(mm, _sessions, agent or "avery")
         _mm_task = asyncio.create_task(adapter.run())

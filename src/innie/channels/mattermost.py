@@ -27,6 +27,7 @@ class MattermostConfig:
     group_policy: str = "open"
     group_allow_from: list = None  # type: ignore[assignment]
     require_mention: bool = False
+    locked_dm_user_id: str | None = None
 
     def __post_init__(self):
         if self.allow_from is None:
@@ -51,6 +52,7 @@ class MattermostAdapter:
         self._agent_name = agent_name
         self._driver = None
         self._bot_user_id: str | None = None
+        self._locked_channel_id: str | None = None
 
     async def run(self) -> None:
         """Start the WebSocket listener with a reconnect loop. Runs forever as a background task."""
@@ -77,6 +79,21 @@ class MattermostAdapter:
         except Exception as e:
             logger.error(f"[mattermost] init failed: {e}")
             return
+
+        if self._config.locked_dm_user_id:
+            try:
+                channel = await asyncio.to_thread(
+                    self._driver.channels.create_direct_message_channel,
+                    options=[self._bot_user_id, self._config.locked_dm_user_id],
+                )
+                self._locked_channel_id = channel["id"]
+                logger.info(
+                    f"[mattermost] outbound lock active — only channel {self._locked_channel_id} "
+                    f"(DM with {self._config.locked_dm_user_id}) permitted"
+                )
+            except Exception as e:
+                logger.critical(f"[mattermost] failed to resolve locked_dm_user_id — refusing to start: {e}")
+                return
 
         url = self._config.base_url.rstrip("/")
         ws_url = url.replace("https://", "wss://").replace("http://", "ws://")
@@ -179,6 +196,12 @@ class MattermostAdapter:
             await self._send_typing(channel_id)
 
     async def _post_message(self, channel_id: str, message: str, root_id: str) -> None:
+        if self._locked_channel_id is not None and channel_id != self._locked_channel_id:
+            logger.critical(
+                f"[mattermost] OUTBOUND BLOCKED — attempted send to channel {channel_id!r}, "
+                f"only {self._locked_channel_id!r} is permitted. Message dropped."
+            )
+            return
         await asyncio.to_thread(
             self._driver.posts.create_post,
             options={

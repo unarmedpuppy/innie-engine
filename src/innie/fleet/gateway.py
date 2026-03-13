@@ -610,11 +610,12 @@ def _gitea_headers() -> dict:
 
 @app.get("/api/knowledge/tree", response_model=list[KnowledgeFile])
 async def knowledge_tree():
-    """List AGENTS.md and all skills from the agent-memory Gitea repo."""
+    """List AGENTS.md, all skills, and agent schedules from the agent-memory Gitea repo."""
     files: list[KnowledgeFile] = [
         KnowledgeFile(path="AGENTS.md", name="AGENTS.md", kind="agents_md")
     ]
     async with httpx.AsyncClient(timeout=15) as client:
+        # Skills
         resp = await client.get(
             f"{GITEA_URL}/api/v1/repos/{KNOWLEDGE_REPO}/contents/skills",
             headers=_gitea_headers(),
@@ -628,6 +629,20 @@ async def knowledge_tree():
                         name=name,
                         kind="skill",
                         skill_name=name,
+                    ))
+        # Agent schedules
+        resp2 = await client.get(
+            f"{GITEA_URL}/api/v1/repos/{KNOWLEDGE_REPO}/contents/agents",
+            headers=_gitea_headers(),
+        )
+        if resp2.status_code == 200:
+            for entry in sorted(resp2.json(), key=lambda e: e.get("name", "")):
+                if entry.get("type") == "dir":
+                    agent_name = entry["name"]
+                    files.append(KnowledgeFile(
+                        path=f"agents/{agent_name}/schedule.yaml",
+                        name=agent_name,
+                        kind="schedule",
                     ))
     return files
 
@@ -1032,6 +1047,7 @@ function kRenderSidebar() {
   const sb = document.getElementById('k-sidebar');
   const coreMd = kFiles.filter(f => f.kind === 'agents_md');
   const skills = kFiles.filter(f => f.kind === 'skill');
+  const schedules = kFiles.filter(f => f.kind === 'schedule');
   let html = '';
   if (coreMd.length) {
     html += '<div class="k-sidebar-section">Core</div>';
@@ -1045,6 +1061,13 @@ function kRenderSidebar() {
     html += skills.map(f =>
       '<button class="k-file-btn' + (kActive && kActive.path === f.path ? ' active' : '') + '" onclick="kSelectFile(' + JSON.stringify(f.path) + ')">' +
       '<span style="color:#4b5563;font-size:10px">⚡</span><span class="k-file-name">' + f.name + '</span></button>'
+    ).join('');
+  }
+  if (schedules.length) {
+    html += '<div class="k-sidebar-section">Schedules (' + schedules.length + ')</div>';
+    html += schedules.map(f =>
+      '<button class="k-file-btn' + (kActive && kActive.path === f.path ? ' active' : '') + '" onclick="kSelectFile(' + JSON.stringify(f.path) + ')">' +
+      '<span style="color:#4b5563;font-size:10px">⏱</span><span class="k-file-name">' + f.name + '</span></button>'
     ).join('');
   }
   sb.innerHTML = html;

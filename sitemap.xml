@@ -2,226 +2,286 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/IMPLEMENTATION_PLAN/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/getting-started/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0001-journal-first-architecture/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0002-sqlite-hybrid-storage/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0003-backend-plugin-system/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0004-three-phase-heartbeat/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0005-hybrid-search-rrf/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0006-init-wizard-setup-modes/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0007-git-auto-backup/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0008-fleet-gateway/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0009-skills-as-slash-commands/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0010-memory-decay-strategy/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0011-secret-scanning/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0012-migration/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0013-distribution/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0014-two-layer-storage/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0015-config-format-split/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0016-thin-bash-shims/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0017-namespace-hook-merge/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0018-dockerized-embedding-service/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0019-sqlite-tracing/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0020-dcg-guard/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0021-obsidian-compatibility/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0022-engine-scope-boundary/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0023-ai-never-writes-files/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0024-context-injection-token-budget/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0025-uv-primary-distribution/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0026-search-pipeline-improvements/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0027-cli-surface-area-audit/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0028-heartbeat-provider-abstraction/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0029-containerized-heartbeat-scheduler/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0030-textual-tui-framework/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0031-dynamic-agent-registration-a2a/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0032-agent-harness-migration-strategy/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0033-knowledge-contradiction-detection/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/adrs/0034-heartbeat-schema-expansion-and-a2a-inbox/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0035-non-root-container-execution/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0035-per-agent-secrets-env/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0036-claude-subscription-inference/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0037-workspace-volume-separation/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0038-agent-memory-git-boundary/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0039-internal-docker-network-gitea/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0040-innie-home-channel-config-and-auth-fallback/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0041-semver-versioning-and-fleet-health/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0042-live-memory-management/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0043-trigger-heuristics-and-injection-scan/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0044-retrieval-tracking-and-memory-quality/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0045-progressive-disclosure-context-load/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/adrs/0046-session-index-and-search/</loc>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/backends/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/fleet/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/heartbeat-pipeline/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/overview/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/search-engine/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/security/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/architecture/storage-layout/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/diagrams/data-flow/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/diagrams/host-integration/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/diagrams/storage-map/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/implementation/agentic-memory-roadmap/</loc>
+         <lastmod>2026-03-14</lastmod>
+    </url>
+    <url>
+         <loc>https://joshuajenquist.github.io/innie-engine/implementation/consolidation-plan/</loc>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/implementation/master-plan/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/implementation/onboarding-identity-edit-guide/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/implementation/serve-fleet-parity-plan/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/implementation/tui-implementation-guide/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/reference/api-server/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/reference/cli/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/reference/config/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
     <url>
          <loc>https://joshuajenquist.github.io/innie-engine/reference/skills/</loc>
-         <lastmod>2026-03-10</lastmod>
+         <lastmod>2026-03-14</lastmod>
     </url>
 </urlset>

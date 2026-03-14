@@ -1,10 +1,12 @@
 """Search, index, context, and log commands."""
 
+import re
 from datetime import datetime
 from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from innie.core import paths
 
@@ -104,13 +106,334 @@ def index(
     console.print(f"Indexed {count} files.")
 
 
-def context():
+def context_show(agent: Optional[str] = None):
     """Print current CONTEXT.md."""
-    ctx_file = paths.context_file()
+    ctx_file = paths.context_file(agent)
     if not ctx_file.exists():
         console.print("[dim]No CONTEXT.md found.[/dim]")
         return
     console.print(ctx_file.read_text())
+
+
+def context_add(
+    text: str = typer.Argument(..., help="Open item text to add (prefix '- ' optional)"),
+    agent: Optional[str] = typer.Option(None, "--agent", hidden=True),
+):
+    """Add an open item to CONTEXT.md. Takes effect next session."""
+    import json
+    import time
+
+    ctx_file = paths.context_file(agent)
+    if not ctx_file.exists():
+        console.print("[red]No CONTEXT.md found.[/red]")
+        raise typer.Exit(1)
+
+    content = ctx_file.read_text()
+    bullet = text if text.startswith("- ") else f"- {text}"
+
+    # Check for duplicate
+    if bullet in content or text in content:
+        console.print("[dim]Already in CONTEXT.md — skipped.[/dim]")
+        return
+
+    marker = "## Open Items"
+    if marker not in content:
+        content += f"\n\n{marker}\n\n{bullet}\n"
+    else:
+        idx = content.index(marker) + len(marker)
+        next_nl = content.index("\n", idx)
+        content = content[: next_nl + 1] + f"\n{bullet}" + content[next_nl:]
+
+    import re
+    content = re.sub(
+        r"\*Last updated:.*?\*",
+        f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+        content,
+    )
+    ctx_file.write_text(content)
+
+    # Audit trail
+    ops_file = paths.memory_ops_file(agent)
+    ops_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(ops_file, "a") as f:
+        f.write(json.dumps({"ts": int(time.time()), "op": "context_add", "text": bullet}, separators=(",", ":")) + "\n")
+
+    console.print(f"[green]✓[/green] Added: {bullet}")
+    console.print("[dim]Takes effect next session.[/dim]")
+
+
+def context_remove(
+    text: str = typer.Argument(..., help="Substring of the open item to remove"),
+    agent: Optional[str] = typer.Option(None, "--agent", hidden=True),
+):
+    """Remove an open item from CONTEXT.md by substring match."""
+    import json
+    import time
+
+    ctx_file = paths.context_file(agent)
+    if not ctx_file.exists():
+        console.print("[red]No CONTEXT.md found.[/red]")
+        raise typer.Exit(1)
+
+    content = ctx_file.read_text()
+    lines = content.splitlines(keepends=True)
+    new_lines = [l for l in lines if text not in l]
+
+    if len(new_lines) == len(lines):
+        console.print(f"[dim]No match for: {text!r}[/dim]")
+        return
+
+    import re
+    new_content = "".join(new_lines)
+    new_content = re.sub(
+        r"\*Last updated:.*?\*",
+        f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+        new_content,
+    )
+    ctx_file.write_text(new_content)
+
+    ops_file = paths.memory_ops_file(agent)
+    ops_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(ops_file, "a") as f:
+        f.write(json.dumps({"ts": int(time.time()), "op": "context_remove", "text": text}, separators=(",", ":")) + "\n")
+
+    removed = len(lines) - len(new_lines)
+    console.print(f"[green]✓[/green] Removed {removed} line(s) matching: {text!r}")
+    console.print("[dim]Takes effect next session.[/dim]")
+
+
+def context_load(
+    path: str = typer.Argument(..., help="File path relative to data/ (e.g. learnings/tools/2026-03-01-slug.md)"),
+    agent: Optional[str] = typer.Option(None, "--agent", hidden=True),
+):
+    """Print the full content of a knowledge base file.
+
+    Use when memory-context is in index-only mode and you need to read a specific entry.
+    Path is relative to data/; absolute paths are also accepted.
+    """
+    from pathlib import Path as _Path
+
+    a = agent or paths.active_agent()
+    target = paths.data_dir(a) / path.lstrip("/")
+    if not target.exists():
+        abs_path = _Path(path).expanduser()
+        if abs_path.exists():
+            target = abs_path
+        else:
+            console.print(f"[red]Not found:[/red] {path}")
+            raise typer.Exit(1)
+
+    if target.suffix != ".md":
+        console.print("[red]Only .md files supported.[/red]")
+        raise typer.Exit(1)
+
+    console.print(target.read_text())
+
+
+def context_compress(
+    apply: bool = typer.Option(False, "--apply", help="Write compressed output (skip diff prompt)"),
+    agent: Optional[str] = typer.Option(None, "--agent", hidden=True),
+):
+    """Dedup and trim CONTEXT.md Open Items via LLM. Shows diff, prompts before writing."""
+    ctx_file = paths.context_file(agent)
+    if not ctx_file.exists():
+        console.print("[red]No CONTEXT.md found.[/red]")
+        raise typer.Exit(1)
+
+    content = ctx_file.read_text()
+
+    # Extract Open Items section
+    marker = "## Open Items"
+    if marker not in content:
+        console.print("[dim]No Open Items section found.[/dim]")
+        return
+
+    start = content.index(marker)
+    after_header = content.index("\n", start) + 1
+    # Find end: next ## section or EOF
+    next_section = re.search(r"^##\s", content[after_header:], re.MULTILINE)
+    if next_section:
+        end = after_header + next_section.start()
+    else:
+        end = len(content)
+
+    open_items_block = content[after_header:end].strip()
+    if not open_items_block:
+        console.print("[dim]Open Items section is empty.[/dim]")
+        return
+
+    bullets = [l for l in open_items_block.splitlines() if l.strip().startswith("-")]
+    if len(bullets) <= 3:
+        console.print(f"[dim]Only {len(bullets)} items — nothing to compress.[/dim]")
+        return
+
+    console.print(f"[dim]Compressing {len(bullets)} open items via LLM...[/dim]")
+
+    prompt = f"""You are compressing the Open Items section of an AI agent's working memory.
+
+Current open items:
+{open_items_block}
+
+Rules:
+- Remove items that are clearly resolved, superseded, or irrelevant
+- Merge near-duplicate items into one
+- Keep items that are genuinely open and non-obvious
+- Preserve the exact bullet format: "- item text"
+- Return ONLY the compressed bullet list, no explanation, no headers
+
+Output the compressed list:"""
+
+    # Call LLM via heartbeat provider chain
+    try:
+        from innie.heartbeat.extract import _call_anthropic, _call_openai_compatible, _resolve_openclaw
+        from innie.core.config import get
+        from pathlib import Path as _Path
+
+        provider = get("heartbeat.provider", "auto")
+        external_url = get("heartbeat.external_url", "")
+        model = get("heartbeat.model", "auto")
+
+        if provider == "auto":
+            if (_Path.home() / ".openclaw" / "openclaw.json").exists():
+                provider = "openclaw"
+            elif external_url:
+                provider = "external"
+            else:
+                provider = "anthropic"
+
+        if provider == "openclaw":
+            url, key, m = _resolve_openclaw()
+            compressed = _call_openai_compatible(prompt, m, url, api_key=key)
+        elif provider == "external":
+            import os
+            key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+            compressed = _call_openai_compatible(prompt, model if model != "auto" else "default", external_url, api_key=key)
+        else:
+            compressed = _call_anthropic(prompt, "claude-haiku-4-5-20251001")
+    except Exception as e:
+        console.print(f"[red]LLM call failed:[/red] {e}")
+        raise typer.Exit(1)
+
+    compressed = compressed.strip()
+
+    # Show diff
+    old_lines = set(bullets)
+    new_lines = set(l for l in compressed.splitlines() if l.strip().startswith("-"))
+    removed = old_lines - new_lines
+    kept = old_lines & new_lines
+
+    console.print(f"\n[bold]Before:[/bold] {len(bullets)} items  →  [bold]After:[/bold] {len(new_lines)} items")
+    if removed:
+        for r in sorted(removed):
+            console.print(f"  [red]- {r}[/red]")
+    console.print(f"  [dim]{len(kept)} items kept[/dim]")
+
+    if not apply:
+        if not typer.confirm("\nApply?", default=False):
+            console.print("[dim]Aborted.[/dim]")
+            return
+
+    # Write back
+    new_content = content[:after_header] + "\n" + compressed + "\n\n" + content[end:].lstrip("\n")
+    new_content = re.sub(
+        r"\*Last updated:.*?\*",
+        f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+        new_content,
+    )
+    ctx_file.write_text(new_content)
+
+    import json, time
+    ops_file = paths.memory_ops_file(agent)
+    ops_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(ops_file, "a") as f:
+        f.write(json.dumps({
+            "ts": int(time.time()), "op": "context_compress",
+            "removed": len(removed), "kept": len(kept)
+        }, separators=(",", ":")) + "\n")
+
+    console.print(f"[green]✓[/green] Compressed: {len(bullets)} → {len(new_lines)} items")
+    console.print("[dim]Takes effect next session.[/dim]")
+
+
+def ls(
+    path: Optional[str] = typer.Argument(None, help="Subdirectory of data/ to list (e.g. learnings/tools)"),
+    agent: Optional[str] = typer.Option(None, "--agent", hidden=True),
+):
+    """Browse the knowledge base directory structure."""
+    import yaml
+
+    base = paths.data_dir(agent)
+    if not base.exists():
+        console.print("[dim]No knowledge base found.[/dim]")
+        return
+
+    target = base / path.lstrip("/") if path else base
+
+    if not target.exists():
+        console.print(f"[red]Not found:[/red] {path}")
+        raise typer.Exit(1)
+
+    if not target.is_dir():
+        console.print(f"[red]Not a directory:[/red] {path}")
+        raise typer.Exit(1)
+
+    # If top-level data/, show subdirectories with file counts
+    if target == base:
+        table = Table(show_header=True, header_style="bold", title="Knowledge Base")
+        table.add_column("Directory")
+        table.add_column("Files", justify="right", style="dim")
+        for subdir in sorted(target.iterdir()):
+            if subdir.is_dir() and not subdir.name.startswith("."):
+                count = sum(1 for _ in subdir.rglob("*.md"))
+                table.add_row(subdir.name, str(count))
+        console.print(table)
+        return
+
+    # List .md files in the target directory (recursive one level)
+    files = sorted(target.rglob("*.md"))
+    if not files:
+        console.print("[dim]No files found.[/dim]")
+        return
+
+    table = Table(show_header=True, header_style="bold", title=str(target.relative_to(base)))
+    table.add_column("Date", style="dim", width=12)
+    table.add_column("Title / Abstract")
+    table.add_column("Conf", width=6, style="dim")
+
+    for f in files:
+        date_str = ""
+        title = f.stem
+        confidence = ""
+        abstract = ""
+
+        # Parse frontmatter for metadata
+        text = f.read_text(encoding="utf-8", errors="ignore")
+        if text.startswith("---"):
+            try:
+                end = text.index("---", 3)
+                fm = yaml.safe_load(text[3:end])
+                if isinstance(fm, dict):
+                    date_str = str(fm.get("date", ""))
+                    confidence = str(fm.get("confidence", ""))
+                    abstract = str(fm.get("abstract_l0", ""))
+            except Exception:
+                pass
+
+        if not abstract:
+            # Fall back to first non-header, non-empty line after frontmatter
+            body = text[text.index("---", 3) + 3:].strip() if text.startswith("---") else text
+            for line in body.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and not line.startswith("---"):
+                    abstract = line[:80]
+                    break
+
+        if not abstract:
+            abstract = title.replace("-", " ")
+
+        table.add_row(date_str, abstract, confidence)
+
+    console.print(table)
 
 
 def log(

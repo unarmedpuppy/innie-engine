@@ -93,8 +93,17 @@ def route_learnings(extraction: HeartbeatExtraction, agent: str | None = None) -
         cat_dir.mkdir(parents=True, exist_ok=True)
 
         slug = _slugify(learning.title)
-        learning_file = cat_dir / f"{today}-{slug}.md"
 
+        # Skip if a live-stored file with matching slug already exists in this category
+        existing = list(cat_dir.glob(f"*-{slug}.md"))
+        live_exists = any(
+            "source: live" in f.read_text(encoding="utf-8", errors="ignore")
+            for f in existing
+        )
+        if live_exists:
+            continue
+
+        learning_file = cat_dir / f"{today}-{slug}.md"
         content = _frontmatter(
             date=today,
             type="learning",
@@ -182,6 +191,9 @@ def route_open_items(extraction: HeartbeatExtraction, agent: str | None = None) 
 
     for item in extraction.open_items:
         if item.action == "add":
+            # Skip if already present (substring match)
+            if item.text in content:
+                continue
             # Add to Open Items section
             marker = "## Open Items"
             if marker in content:
@@ -214,7 +226,11 @@ def route_open_items(extraction: HeartbeatExtraction, agent: str | None = None) 
     return changes
 
 
-def route_metrics(extraction: HeartbeatExtraction, agent: str | None = None) -> None:
+def route_metrics(
+    extraction: HeartbeatExtraction,
+    agent: str | None = None,
+    decay_candidates: int = 0,
+) -> None:
     """Append daily metrics to data/metrics/daily.jsonl."""
     metrics_dir = paths.metrics_dir(agent)
     metrics_dir.mkdir(parents=True, exist_ok=True)
@@ -227,6 +243,7 @@ def route_metrics(extraction: HeartbeatExtraction, agent: str | None = None) -> 
         "learnings": len(extraction.learnings),
         "decisions": len(extraction.decisions),
         "sessions_processed": extraction.processed_sessions.count,
+        "decay_candidates": decay_candidates,
     }
 
     with open(metrics_file, "a") as f:
@@ -391,12 +408,114 @@ def route_inbox_archive(collected: dict, agent: str | None = None) -> int:
     return count
 
 
+def route_sessions(collected: dict | None, agent: str | None = None) -> int:
+    """Index raw session content into sessions_meta + session_fts for searchability.
+
+    Called with the full collected dict from collect_all(). Returns count of newly indexed sessions.
+    """
+    if not collected:
+        return 0
+
+    session_data = collected.get("sessions", {})
+    sessions = session_data.get("sessions", []) if isinstance(session_data, dict) else []
+    if not sessions:
+        return 0
+
+    try:
+        from innie.core.search import index_session, open_db
+
+        conn = open_db(paths.index_db(agent))
+        agent_name = agent or paths.active_agent()
+        count = 0
+        for s in sessions:
+            sid = s.get("id", "")
+            content = s.get("content", "").strip()
+            if not sid or not content:
+                continue
+            meta = s.get("metadata", {}) if isinstance(s.get("metadata"), dict) else {}
+            source = meta.get("source", "")
+            file_path = meta.get("file", "")
+            newly = index_session(
+                conn,
+                session_id=sid,
+                started=s.get("started", 0.0),
+                ended=s.get("ended", 0.0),
+                agent=agent_name,
+                source=source,
+                content=content,
+                file_path=file_path,
+            )
+            if newly:
+                count += 1
+        conn.close()
+        return count
+    except Exception:
+        return 0
+
+
+def route_confidence_decay(agent: str | None = None, threshold_days: int = 30) -> int:
+    """Scan for low-confidence learnings not retrieved recently.
+
+    Returns count of decay candidates (files that are old, low-confidence, and
+    have not appeared in retrieval-log.jsonl within threshold_days).
+    Does not modify any files — candidates surface in `innie memory quality`.
+    """
+    import json
+
+    learnings_dir = paths.learnings_dir(agent)
+    if not learnings_dir.exists():
+        return 0
+
+    log_file = paths.retrieval_log_file(agent)
+    cutoff = time.time() - (threshold_days * 86400)
+
+    # Collect files retrieved within threshold window
+    recently_retrieved: set[str] = set()
+    if log_file.exists():
+        try:
+            for line in log_file.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                entry = json.loads(line)
+                if entry.get("ts", 0) >= cutoff:
+                    for f in entry.get("files", []):
+                        recently_retrieved.add(f)
+        except Exception:
+            pass
+
+    candidates = 0
+    for f in learnings_dir.rglob("*.md"):
+        try:
+            text = f.read_text(encoding="utf-8", errors="ignore")
+            if not text.startswith("---"):
+                continue
+            end = text.find("---", 3)
+            if end == -1:
+                continue
+            fm_text = text[3:end]
+            if "confidence: low" not in fm_text:
+                continue
+            if "superseded: true" in fm_text:
+                continue
+            # File is old if mtime > threshold_days ago
+            if f.stat().st_mtime > cutoff:
+                continue
+            if str(f) not in recently_retrieved:
+                candidates += 1
+        except Exception:
+            continue
+
+    return candidates
+
+
 def route_all(
     extraction: HeartbeatExtraction,
     agent: str | None = None,
     collected: dict | None = None,
 ) -> dict[str, int]:
     """Run all routing for a heartbeat extraction. Returns counts per route."""
+    decay_candidates = route_confidence_decay(agent)
     results = {
         "journal": route_journal(extraction, agent),
         "learnings": route_learnings(extraction, agent),
@@ -407,9 +526,11 @@ def route_all(
         "people": route_people(extraction, agent),
         "inbox_out": route_inbox_out(extraction, agent),
         "inbox_archived": route_inbox_archive(collected or {}, agent),
+        "sessions_indexed": route_sessions(collected, agent),
+        "decay_candidates": decay_candidates,
     }
 
-    route_metrics(extraction, agent)
+    route_metrics(extraction, agent, decay_candidates=decay_candidates)
 
     # Update heartbeat state — processed_sessions is a per-backend dict {sid: timestamp}
     state = load_heartbeat_state(agent)

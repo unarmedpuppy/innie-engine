@@ -62,12 +62,23 @@ def build_session_context(
         used += len(ctx)
 
     # 4. Semantic search results — remaining budget
+    # Switch to index-only mode when knowledge base exceeds threshold (saves tokens)
+    index_threshold = get("context.index_threshold", 200)
+    index_only = False
+    try:
+        data_dir = paths.data_dir(agent_name)
+        if data_dir.exists():
+            file_count = sum(1 for _ in data_dir.rglob("*.md"))
+            index_only = file_count > index_threshold
+    except Exception:
+        pass
+
     remaining = budget - used
     if remaining > 200 and cwd:
         try:
             from innie.core.search import search_for_context
 
-            results = search_for_context(cwd, agent_name, max_chars=remaining)
+            results = search_for_context(cwd, agent_name, max_chars=remaining, index_only=index_only)
             if results:
                 parts.append(f"<memory-context>\n{results}\n</memory-context>")
         except Exception:
@@ -88,6 +99,30 @@ def build_session_context(
     status_lines.append("</session-status>")
     parts.append("\n".join(status_lines))
 
+    # 6. Memory tools reference — fixed budget, not squeezed
+    load_hint = (
+        '  innie context load PATH                           # read full file from data/ (index-only mode active)\n'
+        if index_only else ""
+    )
+    parts.append(
+        "<memory-tools>\n"
+        "Live knowledge base ops (call anytime — no need to wait for heartbeat):\n"
+        '  innie search "query"                              # search knowledge base\n'
+        '  innie ls [path]                                   # browse data/ directory\n'
+        + load_hint +
+        '  innie memory store learning "Title" "Content"     # store a learning\n'
+        "    --category debugging|patterns|tools|infrastructure|processes\n"
+        "    --confidence high|medium|low\n"
+        '  innie memory store decision "Title" "Content"     # store a decision\n'
+        "    --project PROJECT\n"
+        '  innie memory store project "Name" "Progress"      # update project context\n'
+        '  innie memory forget PATH "Why it\'s wrong"         # supersede (PATH relative to data/)\n'
+        '  innie context add "- Open item text"              # add open item (next session)\n'
+        '  innie context remove "text"                       # remove open item (next session)\n'
+        "  innie context compress                            # LLM dedup of open items\n"
+        "</memory-tools>"
+    )
+
     return "\n\n".join(parts)
 
 
@@ -96,14 +131,16 @@ def build_precompact_warning(agent_name: str | None = None) -> str:
     name = agent_name or paths.active_agent()
     ctx_path = paths.context_file(name)
     return f"""<system-reminder priority="critical">
-CONTEXT COMPACTION IMMINENT — Save your working memory NOW.
+CONTEXT COMPACTION IMMINENT — Flush your working memory NOW before it is lost.
 
-Before this context is compressed, you MUST update {ctx_path} with:
-1. What you were working on (current focus)
-2. Key decisions made this session
-3. Any open items or blockers
-4. Important context that would be lost
+Run these in order:
+1. `innie memory store learning "Title" "Content"` — for any non-obvious discoveries made this session
+2. `innie memory store decision "Title" "Content" --project NAME` — for any arch choices made
+3. `innie memory forget PATH "reason"` — for anything you now know is wrong
+4. `innie context add "- item"` — for new open items not yet in CONTEXT.md
+5. `innie context remove "text"` — for anything now resolved
+6. Update {ctx_path} directly for any focus shift or critical state
 
 Keep CONTEXT.md under 200 lines. Prune stale entries.
-Confirm when saved.
+Confirm when done.
 </system-reminder>"""

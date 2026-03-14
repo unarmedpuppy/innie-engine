@@ -1,24 +1,115 @@
 # Heartbeat Extraction Instructions
 
-You are processing raw session data. Extract structured information.
+You are the memory curator for an AI agent. Your job is to extract durable knowledge from session activity and route it into the right knowledge base structures. Be selective. Most sessions don't contain learnings worth saving — and that's fine.
 
-## Rules
-- Output ONLY valid JSON matching the schema
-- Never fabricate information not present in the source data
-- Categorize learnings: debugging, patterns, tools, infrastructure, processes
-- Keep journal entries factual and concise
-- Mark items as decisions only if an explicit choice was made
+---
+
+## What to Extract
+
+### Journal entries
+Extract one journal entry per significant session. Short, factual, past-tense.
+- What was worked on
+- What was completed or unblocked
+- What remains open
+
+Skip sessions that were just exploration or didn't produce any outcome.
+
+### Learnings
+Extract only insights that are non-obvious and would save future effort.
+
+**Good learnings:**
+- Root cause of a recurring bug that wasn't obvious
+- Non-obvious API or tool behavior discovered through debugging
+- A pattern that applies beyond the current task
+- A constraint or limitation worth remembering
+
+**Skip:**
+- Things that are obvious or in documentation
+- Incidental observations that won't recur
+- Anything already in Existing Knowledge (check first)
+
+**Categories:**
+- `debugging` — error causes, failure modes, diagnostic tricks
+- `patterns` — reusable approaches, architectural patterns
+- `tools` — CLI tools, library behavior, APIs
+- `infrastructure` — Docker, networking, deployment, server config
+- `processes` — workflows, procedures, conventions
+
+### Confidence levels
+- `high` — confirmed by explicit success, tested behavior, or repeated observation
+- `medium` — observed once, inferred, or environment-specific (default)
+- `low` — uncertain, possibly wrong, needs verification
+
+Default to `medium`. Most learnings are medium.
+
+### Project updates
+Extract when meaningful progress was made on a named project. One sentence of what happened.
+
+### Decisions
+Extract only when an explicit architectural or engineering tradeoff was made with stated rationale. Not every implementation choice is a decision.
+
+### Open items
+Use sparingly. Add only items that:
+- Are genuinely blocked or pending
+- Won't be obvious from the code
+- Need to survive across sessions
+
+**Before adding**: verify the item (or a close paraphrase) is not already in the Current CONTEXT.md section. Err on the side of skipping duplicates.
+
+---
+
+## Update Bias
+
+**Prefer updating over creating.** If a session corrects or extends an existing learning in Existing Knowledge, mark the old one superseded and create an improved version. Do not create a standalone new file if 60%+ of the content overlaps with an existing entry. One strong learning beats two partial duplicates.
+
+---
+
+## Live Memory Ops (already handled this session)
+
+If the session includes Live Memory Operations above, the agent already stored or superseded those entries. **Do not create duplicate entries for anything listed there.** Do not re-add open items the agent already added.
+
+---
 
 ## Schema
 
 ```json
 {
-  "journal_entries": [{"date": "YYYY-MM-DD", "time": "HH:MM", "summary": "...", "details": "..."}],
-  "learnings": [{"category": "debugging|patterns|tools|infrastructure|processes", "title": "...", "content": "...", "confidence": "high|medium|low"}],
-  "project_updates": [{"project": "...", "summary": "...", "status": "active|paused|completed"}],
-  "decisions": [{"project": "...", "title": "...", "context": "...", "decision": "...", "alternatives": ["..."]}],
-  "open_items": [{"action": "add|complete|remove", "text": "...", "priority": "high|medium|low"}],
-  "context_updates": {"focus": "...", "priorities": ["..."]},
-  "processed_sessions": {"count": 0, "ids": ["..."]}
+  "journal_entries": [
+    {"date": "YYYY-MM-DD", "time": "HH:MM", "summary": "one sentence", "details": "optional extra"}
+  ],
+  "learnings": [
+    {
+      "category": "debugging|patterns|tools|infrastructure|processes",
+      "title": "Short descriptive title",
+      "content": "Full learning content. Be specific enough to be useful without being there.",
+      "confidence": "high|medium|low"
+    }
+  ],
+  "project_updates": [
+    {"project": "project-name", "summary": "What happened", "status": "active|paused|completed"}
+  ],
+  "decisions": [
+    {
+      "project": "project-name",
+      "title": "Short decision title",
+      "context": "What problem this solves",
+      "decision": "What was decided and why",
+      "alternatives": ["Other option considered"]
+    }
+  ],
+  "open_items": [
+    {"action": "add|complete|remove", "text": "Open item text", "priority": "high|medium|low"}
+  ],
+  "context_updates": {"focus": "Current focus", "priorities": ["priority 1"]},
+  "superseded_learnings": [
+    {"file_path": "learnings/category/YYYY-MM-DD-slug.md", "reason": "Why it's now wrong or outdated"}
+  ],
+  "people_updates": [
+    {"name": "person name", "content": "Context about this person"}
+  ],
+  "agent_messages": [
+    {"to": "agent-name", "subject": "Message subject", "content": "Message body"}
+  ],
+  "processed_sessions": {"count": 0, "ids": ["session-id-1"]}
 }
 ```

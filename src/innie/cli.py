@@ -58,10 +58,12 @@ def _register_commands():
         heartbeat,
         inbox,
         init,
+        memory,
         migrate,
         search,
         secrets,
         serve,
+        session,
         skills,
         trace,
         update,
@@ -74,8 +76,31 @@ def _register_commands():
     app.command("switch")(agent.switch)
     app.command("search")(search.search)
     app.command("index")(search.index)
-    app.command("context")(search.context)
+    app.command("ls")(search.ls)
     app.command("log")(search.log)
+
+    # Context sub-app (replaces simple context command)
+    context_app = typer.Typer(help="View and edit CONTEXT.md working memory.", invoke_without_command=True)
+
+    @context_app.callback()
+    def _context_cb(ctx: typer.Context) -> None:
+        if ctx.invoked_subcommand is None:
+            search.context_show()
+
+    context_app.command("add")(search.context_add)
+    context_app.command("remove")(search.context_remove)
+    context_app.command("compress")(search.context_compress)
+    context_app.command("load")(search.context_load)
+    app.add_typer(context_app, name="context")
+
+    # Memory sub-app — live in-session knowledge base ops
+    memory_app = typer.Typer(help="Live knowledge base read/write operations.")
+    memory_app.command("store")(memory.store)
+    memory_app.command("forget")(memory.forget)
+    memory_app.command("ops")(memory.ops)
+    memory_app.command("quality")(memory.quality)
+    app.add_typer(memory_app, name="memory")
+
     app.command("handle")(init.handle)
     app.command("status")(doctor.status)
     app.command("doctor")(doctor.doctor)
@@ -163,6 +188,14 @@ def _register_commands():
     skill_app.command("show")(skills.show_skill)
     skill_app.command("remove")(skills.remove_skill)
     app.add_typer(skill_app, name="skill")
+
+    # Session subcommands — search indexed session content
+    session_app = typer.Typer(help="Search and list indexed session content.")
+    session_app.command("list")(session.list_sessions)
+    session_app.command("search")(session.search_sessions)
+    session_app.command("read")(session.read_session)
+    session_app.command("backfill")(session.backfill_sessions)
+    app.add_typer(session_app, name="session")
 
     # Trace subcommands
     trace_app = typer.Typer(help="Session traces and observability.")

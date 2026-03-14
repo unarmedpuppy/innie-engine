@@ -67,6 +67,26 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
         for entry in existing:
             existing_text += f"[{entry['file']}]\n{entry['summary']}\n\n"
 
+    # Live memory ops — what the agent already handled this session
+    live_ops = collected.get("live_memory_ops", [])
+    live_ops_text = ""
+    if live_ops:
+        live_ops_text = "\n--- Live Memory Operations (agent already handled these this session) ---\n"
+        live_ops_text += (
+            "Do NOT create duplicate entries for anything listed below.\n"
+            "Do NOT re-add open items already present in CONTEXT.md above.\n\n"
+        )
+        for op in live_ops:
+            from datetime import datetime
+            ts = datetime.fromtimestamp(op.get("ts", 0)).strftime("%Y-%m-%d %H:%M")
+            op_type = op.get("op", "?")
+            if op_type == "store":
+                live_ops_text += f"[{ts}] stored {op.get('type', '')}: {op.get('file', '')} ({op.get('title', '')})\n"
+            elif op_type == "forget":
+                live_ops_text += f"[{ts}] superseded: {op.get('file', '')} — {op.get('reason', '')}\n"
+            elif op_type in ("context_add", "context_remove"):
+                live_ops_text += f"[{ts}] {op_type}: {op.get('text', '')}\n"
+
     return f"""{instructions}
 
 ## Raw Data
@@ -76,6 +96,7 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
 {context_text}
 {inbox_text}
 {existing_text}
+{live_ops_text}
 
 ## Task
 

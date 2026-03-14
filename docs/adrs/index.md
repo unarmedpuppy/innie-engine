@@ -50,3 +50,9 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0038](0038-agent-memory-git-boundary.md) | Agent Memory Git Repo Rooted at `$AGENT_DIR/data/` | Accepted | 2026-03 |
 | [0039](0039-internal-docker-network-gitea.md) | Internal Docker Network Hostnames for Gitea Communication | Accepted | 2026-03 |
 | [0040](0040-innie-home-channel-config-and-auth-fallback.md) | INNIE_HOME-Aware Channel Config and Auth Token Env Fallback | Accepted | 2026-03 |
+| [0041](0041-semver-versioning-and-fleet-health.md) | Semver Versioning and Rich Fleet Health Endpoint | Accepted | 2026-03-11 |
+| [0042](0042-live-memory-management.md) | Live In-Session Memory Management | Accepted | 2026-03-14 |
+| [0043](0043-trigger-heuristics-and-injection-scan.md) | Trigger Heuristics and Prompt Injection Scanning | Accepted | 2026-03-14 |
+| [0044](0044-retrieval-tracking-and-memory-quality.md) | Retrieval Tracking and Memory Quality Dashboard | Accepted | 2026-03-14 |
+| [0045](0045-progressive-disclosure-context-load.md) | Progressive Disclosure and `innie context load` | Accepted | 2026-03-14 |
+| [0046](0046-session-index-and-search.md) | Session Index and Search | Accepted | 2026-03-14 |

@@ -137,3 +137,13 @@ def env_file(agent: str | None = None) -> Path:
 def shared_env_file() -> Path:
     """Shared secrets for all agents. ~/.innie/.env"""
     return home() / ".env"
+
+
+def memory_ops_file(agent: str | None = None) -> Path:
+    """Audit trail for live in-session memory ops. data/memory-ops.jsonl"""
+    return data_dir(agent) / "memory-ops.jsonl"
+
+
+def retrieval_log_file(agent: str | None = None) -> Path:
+    """Retrieval event log for memory quality tracking. state/retrieval-log.jsonl"""
+    return state_dir(agent) / "retrieval-log.jsonl"

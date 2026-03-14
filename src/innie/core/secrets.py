@@ -122,6 +122,35 @@ def scan_directory(directory: Path, extensions: set[str] | None = None) -> list[
     return findings
 
 
+INJECTION_PATTERNS = [
+    re.compile(r"ignore (all |previous |prior |your )?instructions", re.I),
+    re.compile(r"disregard (your |all |previous )?instructions", re.I),
+    re.compile(r"forget (your |all |previous )?instructions", re.I),
+    re.compile(r"you are now (a |an )?", re.I),
+    re.compile(r"new (system )?instructions?:", re.I),
+    re.compile(r"override (your |previous )?instructions", re.I),
+    re.compile(r"do not follow", re.I),
+    re.compile(r"system prompt", re.I),
+    re.compile(r"<\|?system\|?>", re.I),
+    re.compile(r"\[INST\]", re.I),
+    re.compile(r"jailbreak", re.I),
+    re.compile(r"DAN mode", re.I),
+]
+
+
+def scan_for_injection(text: str) -> list[str]:
+    """Scan text for prompt injection patterns.
+
+    Returns list of matched pattern descriptions. Empty list = clean.
+    Called by `innie memory store` before writing any content to disk.
+    """
+    matched = []
+    for pattern in INJECTION_PATTERNS:
+        if pattern.search(text):
+            matched.append(pattern.pattern)
+    return matched
+
+
 def should_index_file(filepath: Path) -> bool:
     """Check if a file is safe to index (no secrets detected)."""
     if filepath.name in SKIP_NAMES:

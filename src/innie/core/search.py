@@ -56,8 +56,30 @@ def open_db(db_path: Path | None = None, agent: str | None = None) -> sqlite3.Co
             chunk_id  INTEGER PRIMARY KEY,
             embedding float[768]
         );
+        CREATE TABLE IF NOT EXISTS sessions_meta (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id  TEXT UNIQUE NOT NULL,
+            started     REAL,
+            ended       REAL,
+            agent       TEXT,
+            source      TEXT,
+            file_path   TEXT,
+            content     TEXT,
+            indexed_at  REAL
+        );
+        CREATE VIRTUAL TABLE IF NOT EXISTS session_fts USING fts5(
+            content,
+            content='sessions_meta',
+            content_rowid='id'
+        );
     """)
     conn.commit()
+    # Additive migration: add file_path to existing sessions_meta tables
+    try:
+        conn.execute("ALTER TABLE sessions_meta ADD COLUMN file_path TEXT")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
     return conn
 
 
@@ -508,8 +530,161 @@ def format_results(results: list[dict[str, Any]], home: Path | None = None) -> s
     return "\n".join(lines)
 
 
-def search_for_context(cwd: str, agent: str | None = None, max_chars: int = 2000) -> str:
-    """Search index using cwd as query context. Returns formatted string."""
+def format_results_index(
+    results: list[dict[str, Any]],
+    data_dir: Path | None = None,
+) -> str:
+    """Compact index-only format — data/-relative paths and scores, no content snippets.
+
+    Paths are shown relative to data/ so they can be passed directly to
+    `innie context load <path>` without further manipulation.
+    """
+    if not results:
+        return ""
+    lines = ["Relevant memory (index-only — use `innie context load <path>` for full content):\n"]
+    for i, r in enumerate(results, 1):
+        fp = r["file_path"]
+        if data_dir:
+            try:
+                fp = str(Path(fp).relative_to(data_dir))
+            except ValueError:
+                pass
+        lines.append(f"[{i}] score={r['score']:.2f}  {fp}")
+    return "\n".join(lines)
+
+
+# ── Session index ─────────────────────────────────────────────────────────────
+
+
+def index_session(
+    conn: sqlite3.Connection,
+    session_id: str,
+    started: float,
+    ended: float,
+    agent: str,
+    source: str,
+    content: str,
+    file_path: str = "",
+) -> bool:
+    """Insert a session into sessions_meta + session_fts. Returns True if newly indexed."""
+    existing = conn.execute(
+        "SELECT id, file_path FROM sessions_meta WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if existing:
+        # Backfill file_path if we now have one and the row doesn't
+        if file_path and not existing[1]:
+            conn.execute(
+                "UPDATE sessions_meta SET file_path = ? WHERE id = ?",
+                (file_path, existing[0]),
+            )
+            conn.commit()
+        return False
+
+    now = time.time()
+    cur = conn.execute(
+        "INSERT INTO sessions_meta (session_id, started, ended, agent, source, file_path, content, indexed_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (session_id, started, ended, agent, source, file_path or None, content, now),
+    )
+    row_id = cur.lastrowid
+    conn.execute(
+        "INSERT INTO session_fts(rowid, content) VALUES (?, ?)",
+        (row_id, content),
+    )
+    conn.commit()
+    return True
+
+
+def search_sessions(
+    conn: sqlite3.Connection, query: str, limit: int = 10
+) -> list[dict[str, Any]]:
+    """FTS5 keyword search across indexed session content."""
+    rows = conn.execute(
+        """
+        SELECT m.session_id, m.started, m.ended, m.agent, m.source, m.file_path,
+               snippet(session_fts, 0, '[', ']', '...', 30) AS snippet,
+               rank
+        FROM session_fts fts
+        JOIN sessions_meta m ON m.id = fts.rowid
+        WHERE session_fts MATCH ?
+        ORDER BY rank
+        LIMIT ?
+        """,
+        (query, limit),
+    ).fetchall()
+    return [
+        {
+            "session_id": r[0],
+            "started": r[1],
+            "ended": r[2],
+            "agent": r[3],
+            "source": r[4],
+            "file_path": r[5],
+            "snippet": r[6],
+            "score": -r[7],
+        }
+        for r in rows
+    ]
+
+
+def list_sessions_kb(
+    conn: sqlite3.Connection,
+    agent: str | None = None,
+    limit: int = 20,
+    since: float | None = None,
+) -> list[dict[str, Any]]:
+    """List indexed sessions ordered by start time descending."""
+    clauses = []
+    params: list[Any] = []
+    if agent:
+        clauses.append("agent = ?")
+        params.append(agent)
+    if since:
+        clauses.append("started >= ?")
+        params.append(since)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(limit)
+    rows = conn.execute(
+        f"SELECT session_id, started, ended, agent, source, file_path FROM sessions_meta"
+        f" {where} ORDER BY started DESC LIMIT ?",
+        params,
+    ).fetchall()
+    return [
+        {"session_id": r[0], "started": r[1], "ended": r[2], "agent": r[3], "source": r[4], "file_path": r[5]}
+        for r in rows
+    ]
+
+
+def sessions_count(conn: sqlite3.Connection) -> int:
+    """Return total number of indexed sessions."""
+    return conn.execute("SELECT COUNT(*) FROM sessions_meta").fetchone()[0]
+
+
+def _log_retrieval(results: list[dict], query: str, agent: str | None = None) -> None:
+    """Append retrieval event to state/retrieval-log.jsonl. Fails silently."""
+    try:
+        import json
+
+        log_file = paths.retrieval_log_file(agent)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        files = list({r["file_path"] for r in results})
+        entry = {"ts": time.time(), "query": query, "files": files}
+        with open(log_file, "a") as f:
+            f.write(json.dumps(entry, separators=(",", ":")) + "\n")
+    except Exception:
+        pass
+
+
+def search_for_context(
+    cwd: str,
+    agent: str | None = None,
+    max_chars: int = 2000,
+    index_only: bool = False,
+) -> str:
+    """Search index using cwd as query context. Returns formatted string.
+
+    When index_only=True, returns compact data/-relative path+score lines with no snippets.
+    """
     try:
         db_path = paths.index_db(agent)
         if not db_path.exists():
@@ -519,7 +694,11 @@ def search_for_context(cwd: str, agent: str | None = None, max_chars: int = 2000
         query = Path(cwd).name
         results = search_hybrid(conn, query, limit=3)
         conn.close()
-        formatted = format_results(results)
+        _log_retrieval(results, query, agent)
+        if index_only:
+            formatted = format_results_index(results, data_dir=paths.data_dir(agent))
+        else:
+            formatted = format_results(results)
         return formatted[:max_chars]
     except Exception:
         return ""

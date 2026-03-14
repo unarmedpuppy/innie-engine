@@ -229,8 +229,35 @@ def collect_inbox(agent: str | None = None) -> list[dict]:
     return messages
 
 
+def collect_live_memory_ops(agent: str | None = None, since: float = 0) -> list[dict]:
+    """Read memory-ops.jsonl entries since last heartbeat run.
+
+    Returns list of op dicts so the extractor knows what the agent already did
+    this session and can avoid creating duplicates.
+    """
+    ops_file = paths.memory_ops_file(agent)
+    if not ops_file.exists():
+        return []
+
+    entries = []
+    for line in ops_file.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+            if entry.get("ts", 0) >= since:
+                entries.append(entry)
+        except json.JSONDecodeError:
+            continue
+    return entries
+
+
 def collect_all(agent: str | None = None, since_override: float | None = None) -> dict:
     """Run full Phase 1 collection."""
+    state = load_heartbeat_state(agent)
+    last_run = state.get("last_run", 0)
+
     session_data = collect_session_data(agent, since_override=since_override)
     return {
         "timestamp": time.time(),
@@ -239,4 +266,5 @@ def collect_all(agent: str | None = None, since_override: float | None = None) -
         "current_context": collect_current_context(agent),
         "existing_knowledge": collect_existing_knowledge(agent, session_data.get("sessions", [])),
         "inbox_messages": collect_inbox(agent),
+        "live_memory_ops": collect_live_memory_ops(agent, since=last_run),
     }

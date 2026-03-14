@@ -74,6 +74,116 @@ innie status --agent mybot
 
 ---
 
+## Memory Commands
+
+Live in-session knowledge base operations. No need to wait for heartbeat — writes take effect immediately.
+
+### `innie memory store <type> <title> <content>`
+Write a learning, decision, or project update directly to the knowledge base.
+
+```bash
+# Store a learning
+innie memory store learning "sqlite-vec requires integer chunk_id" \
+  "vec0 tables require the rowid column to be explicitly declared INTEGER PRIMARY KEY" \
+  --category tools --confidence high
+
+# Store a decision
+innie memory store decision "Use RRF for hybrid search fusion" \
+  "Chose Reciprocal Rank Fusion over linear interpolation — simpler, no tuning required" \
+  --project innie-engine
+
+# Append a project update
+innie memory store project "innie-engine" "Completed Phase 1 live memory management"
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--category` | `tools` | Learning category: `debugging` \| `patterns` \| `tools` \| `infrastructure` \| `processes` |
+| `--confidence` | `medium` | `high` \| `medium` \| `low` |
+| `--project` | `general` | Project name (for `decision` type) |
+
+Writes to `data/`, immediately indexes for search, appends to `data/memory-ops.jsonl`.
+
+---
+
+### `innie memory forget <path> <reason>`
+Mark a knowledge base entry as superseded. Does not delete — marks with `superseded: true` frontmatter.
+
+```bash
+innie memory forget learnings/tools/2026-03-01-foo.md "API changed in v0.6 — use bar() instead"
+```
+
+Path is relative to `data/`.
+
+---
+
+### `innie memory ops [--since N]`
+Show recent memory operations from this session.
+
+```bash
+innie memory ops             # Last 8 hours (default)
+innie memory ops --since 24  # Last 24 hours
+```
+
+---
+
+### `innie memory quality [--days N]`
+Show memory quality stats: top retrieved files, never-retrieved learnings, confidence distribution, and decay candidates.
+
+```bash
+innie memory quality          # Last 7 days (default)
+innie memory quality --days 30
+```
+
+Output panels:
+- **Top Retrieved** — files most frequently surfaced in context injection
+- **Learnings Never Retrieved** — `data/learnings/` files with zero hits (up to 15)
+- **Confidence Distribution** — bar chart of high/medium/low/none across all files
+- **Decay candidates** — low-confidence learnings never retrieved (act with `innie memory forget`)
+
+---
+
+### `innie context`
+View and manage CONTEXT.md working memory.
+
+```bash
+# Print current CONTEXT.md
+innie context
+
+# Add an open item (takes effect next session)
+innie context add "- Wire TailSweep into Mercury main app"
+
+# Remove an open item by substring match (takes effect next session)
+innie context remove "Wire TailSweep"
+
+# Dedup and trim Open Items via LLM (shows diff, prompts before writing)
+innie context compress
+innie context compress --apply   # Write directly without confirmation
+
+# Load and print a full knowledge base file (for index-only mode)
+innie context load learnings/tools/2026-03-01-slug.md
+```
+
+Note: all `context` subcommands write to disk immediately but the live session context is a frozen snapshot — changes appear at next session start.
+
+**Index-only mode:** When `data/` exceeds `context.index_threshold` files (default: 200), `<memory-context>` switches to path+score references only. `innie context load` is the on-demand fetch for full file content.
+
+---
+
+### `innie ls [path]`
+Browse the knowledge base directory structure.
+
+```bash
+# Show top-level directories with file counts
+innie ls
+
+# List files in a specific subdirectory
+innie ls learnings/tools
+innie ls projects
+```
+
+---
+
 ## Search Commands
 
 ### `innie search <query>`
@@ -175,6 +285,36 @@ Run a built-in skill.
 innie skill run daily --args '{"summary": "Shipped auth feature"}'
 innie skill run learn --args '{"category": "patterns", "title": "RRF", "content": "..."}'
 innie skill run inbox --args '{"content": "Remember to update docs"}'
+```
+
+---
+
+## Session Commands
+
+Search across indexed session content. Sessions are indexed automatically at heartbeat time.
+
+### `innie session list [--days N] [--limit N]`
+List recently indexed sessions with start time, duration, and source.
+
+```bash
+innie session list              # Last 30 days (default)
+innie session list --days 7
+```
+
+### `innie session search "query" [--limit N]`
+FTS keyword search across session transcripts with highlighted excerpts. Shows source file path when available.
+
+```bash
+innie session search "Traefik certificate"
+innie session search "docker compose port mapping" --limit 10
+```
+
+### `innie session read <session-id>`
+Read full session content. Reads the raw source JSONL if still on disk; falls back to the cached transcript from the index.
+
+```bash
+innie session read abc123             # Full or prefix match
+innie session read abc123 --raw       # Print raw JSONL lines
 ```
 
 ---

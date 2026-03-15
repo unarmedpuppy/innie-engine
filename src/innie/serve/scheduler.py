@@ -171,14 +171,96 @@ def _register_expire_stale(job: ScheduledJob) -> None:
     logger.info(f"[scheduler] registered expire_stale_sessions every {hours}h")
 
 
+async def _fetch_mm_dm_history(channel_id: str, agent: str, limit: int = 60) -> str:
+    """Fetch recent Mattermost DM history for a channel. Returns formatted text or ''."""
+    try:
+        import httpx
+        from innie.channels.loader import load_channels_config
+
+        cfg = load_channels_config(agent)
+        if not cfg:
+            return ""
+        mm_cfg = cfg.get("mattermost", {})
+        base_url = mm_cfg.get("base_url", "").rstrip("/")
+        bot_token = mm_cfg.get("bot_token", "") or os.environ.get("MATTERMOST_BOT_TOKEN", "")
+        josh_username = mm_cfg.get("josh_mm_username", "shua")
+        if not base_url or not bot_token:
+            return ""
+
+        headers = {"Authorization": f"Bearer {bot_token}"}
+        async with httpx.AsyncClient() as client:
+            # Get recent posts
+            r = await client.get(
+                f"{base_url}/api/v4/channels/{channel_id}/posts",
+                headers=headers,
+                params={"per_page": limit},
+                timeout=10.0,
+            )
+            if r.status_code != 200:
+                return ""
+
+            data = r.json()
+            posts = data.get("posts", {})
+            order = data.get("order", [])
+            if not order:
+                return ""
+
+            # Resolve bot ID for sender labeling
+            me_r = await client.get(f"{base_url}/api/v4/users/me", headers=headers, timeout=5.0)
+            bot_id = me_r.json().get("id", "") if me_r.status_code == 200 else ""
+
+            user_cache: dict[str, str] = {}
+            lines = []
+            from datetime import datetime
+
+            for post_id in reversed(order):  # oldest first
+                post = posts.get(post_id, {})
+                uid = post.get("user_id", "")
+                text = post.get("message", "").strip()
+                ts = post.get("create_at", 0) / 1000
+                if not text:
+                    continue
+                if uid not in user_cache:
+                    if uid == bot_id:
+                        user_cache[uid] = "agent"
+                    else:
+                        try:
+                            ur = await client.get(
+                                f"{base_url}/api/v4/users/{uid}", headers=headers, timeout=5.0
+                            )
+                            user_cache[uid] = ur.json().get("username", josh_username) if ur.status_code == 200 else josh_username
+                        except Exception:
+                            user_cache[uid] = josh_username
+                dt = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+                lines.append(f"[{dt}] {user_cache[uid]}: {text}")
+
+        if not lines:
+            return ""
+        return "[Recent Mattermost DM conversation — use as context]\n" + "\n".join(lines) + "\n[End of conversation]\n\n"
+    except Exception:
+        return ""
+
+
 async def _run_scheduled_job(job: ScheduledJob) -> None:
     """Execute a scheduled Claude job and deliver the result."""
     from innie.serve.claude import collect_stream
 
     logger.info(f"[scheduler] running job '{job.name}'")
     try:
+        prompt = job.prompt or ""
+
+        # Prepend recent Mattermost DM history for jobs that post to a DM channel
+        mm_channel_id = None
+        if job.reply_to and job.reply_to.startswith("mattermost://"):
+            mm_channel_id = job.reply_to.removeprefix("mattermost://")
+        if mm_channel_id:
+            agent = paths.active_agent()
+            history = await _fetch_mm_dm_history(mm_channel_id, agent)
+            if history:
+                prompt = history + prompt
+
         result = await collect_stream(
-            prompt=job.prompt or "",
+            prompt=prompt,
             model=job.model,
             permission_mode=job.permission_mode,
             working_directory=job.working_directory or str(Path.home()),

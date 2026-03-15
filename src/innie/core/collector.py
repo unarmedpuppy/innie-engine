@@ -5,6 +5,7 @@ No AI involved — pure data collection.
 """
 
 import json
+import os
 import re
 import subprocess
 import time
@@ -253,6 +254,92 @@ def collect_live_memory_ops(agent: str | None = None, since: float = 0) -> list[
     return entries
 
 
+def collect_mattermost_dms(agent: str | None = None, since: float = 0) -> list[dict]:
+    """Collect Mattermost DM history with Josh since last heartbeat run.
+
+    Returns list of {ts, sender, text} dicts, oldest-first.
+    Silently returns [] if Mattermost is not configured or unreachable.
+    """
+    try:
+        from innie.channels.loader import load_channels_config
+
+        cfg = load_channels_config(agent)
+        if not cfg:
+            return []
+        mm_cfg = cfg.get("mattermost", {})
+        base_url = mm_cfg.get("base_url", "").rstrip("/")
+        bot_token = mm_cfg.get("bot_token", "") or os.environ.get("MATTERMOST_BOT_TOKEN", "")
+        josh_username = mm_cfg.get("josh_mm_username", "shua")
+        if not base_url or not bot_token:
+            return []
+
+        import httpx
+
+        headers = {"Authorization": f"Bearer {bot_token}"}
+
+        # Resolve user IDs
+        r = httpx.get(f"{base_url}/api/v4/users/username/{josh_username}", headers=headers, timeout=10.0)
+        if r.status_code != 200:
+            return []
+        josh_id = r.json()["id"]
+
+        r = httpx.get(f"{base_url}/api/v4/users/me", headers=headers, timeout=10.0)
+        if r.status_code != 200:
+            return []
+        bot_info = r.json()
+        bot_id = bot_info["id"]
+        bot_username = bot_info.get("username", agent or "agent")
+
+        # Get or create DM channel
+        r = httpx.post(
+            f"{base_url}/api/v4/channels/direct",
+            headers=headers,
+            json=[josh_id, bot_id],
+            timeout=10.0,
+        )
+        if r.status_code not in (200, 201):
+            return []
+        channel_id = r.json()["id"]
+
+        # Fetch posts since last run (Mattermost uses milliseconds)
+        since_ms = int(since * 1000) if since else 0
+        r = httpx.get(
+            f"{base_url}/api/v4/channels/{channel_id}/posts",
+            headers=headers,
+            params={"since": since_ms, "per_page": 200},
+            timeout=10.0,
+        )
+        if r.status_code != 200:
+            return []
+
+        data = r.json()
+        posts = data.get("posts", {})
+        order = data.get("order", [])
+        if not order:
+            return []
+
+        user_cache: dict[str, str] = {josh_id: josh_username, bot_id: bot_username}
+        messages = []
+        for post_id in reversed(order):  # oldest first
+            post = posts.get(post_id, {})
+            uid = post.get("user_id", "")
+            text = post.get("message", "").strip()
+            ts = post.get("create_at", 0) / 1000
+            if not text:
+                continue
+            if uid not in user_cache:
+                try:
+                    ur = httpx.get(f"{base_url}/api/v4/users/{uid}", headers=headers, timeout=5.0)
+                    user_cache[uid] = ur.json().get("username", uid) if ur.status_code == 200 else uid
+                except Exception:
+                    user_cache[uid] = uid
+            messages.append({"ts": ts, "sender": user_cache[uid], "text": text})
+
+        return messages
+    except Exception:
+        return []
+
+
 def collect_all(agent: str | None = None, since_override: float | None = None) -> dict:
     """Run full Phase 1 collection."""
     state = load_heartbeat_state(agent)
@@ -267,4 +354,5 @@ def collect_all(agent: str | None = None, since_override: float | None = None) -
         "existing_knowledge": collect_existing_knowledge(agent, session_data.get("sessions", [])),
         "inbox_messages": collect_inbox(agent),
         "live_memory_ops": collect_live_memory_ops(agent, since=last_run),
+        "mattermost_dms": collect_mattermost_dms(agent, since=last_run),
     }

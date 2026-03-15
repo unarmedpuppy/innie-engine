@@ -45,6 +45,18 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
     context = collected.get("current_context", "")
     context_text = f"\n--- Current CONTEXT.md ---\n{context}\n" if context else ""
 
+    # Mattermost DM conversation history
+    dm_msgs = collected.get("mattermost_dms", [])
+    dm_text = ""
+    if dm_msgs:
+        from datetime import datetime
+
+        dm_text = "\n--- Mattermost DM Conversation ---\n"
+        dm_text += "Direct messages between the agent and Josh since the last heartbeat.\n\n"
+        for msg in dm_msgs:
+            dt = datetime.fromtimestamp(msg["ts"]).strftime("%Y-%m-%d %H:%M")
+            dm_text += f"[{dt}] {msg['sender']}: {msg['text']}\n"
+
     # Inbox messages from other agents
     inbox_msgs = collected.get("inbox_messages", [])
     inbox_text = ""
@@ -94,6 +106,7 @@ def _build_extraction_prompt(collected: dict, agent: str | None = None) -> str:
 {sessions_text}
 {git_text}
 {context_text}
+{dm_text}
 {inbox_text}
 {existing_text}
 {live_ops_text}

@@ -270,7 +270,7 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
         elif provider == "openclaw":
             pass  # model resolved by _resolve_openclaw below
         else:
-            model = "default"
+            pass  # pass model as-is to the external provider
 
     if provider == "openclaw":
         oc_url, oc_key, oc_model = _resolve_openclaw()

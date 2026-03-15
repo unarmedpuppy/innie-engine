@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "innie-engine"
-version = "0.5.1"
+version = "0.5.2"
 description = "Persistent memory and identity for AI coding assistants"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -29,7 +29,8 @@ dependencies = [
     "pyyaml>=6.0",
     "jinja2>=3.1",
     "httpx>=0.27",
-    "sqlite-vec>=0.1",
+    "sqlite-vec>=0.1.7a10; sys_platform == 'linux' and platform_machine == 'aarch64'",
+    "sqlite-vec>=0.1; sys_platform != 'linux' or platform_machine != 'aarch64'",
     "textual>=0.89",
 ]
 
@@ -67,6 +68,11 @@ cursor = "innie.backends.cursor:CursorBackend"
 Homepage = "https://github.com/joshuajenquist/innie-engine"
 Repository = "https://github.com/joshuajenquist/innie-engine"
 Issues = "https://github.com/joshuajenquist/innie-engine/issues"
+
+[tool.uv]
+# Allow pre-release sqlite-vec on linux/aarch64 — 0.1.6 ships a 32-bit .so on that platform;
+# 0.1.7a10 is the first version with a correct 64-bit aarch64 binary.
+prerelease = "if-necessary-and-explicit"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/innie"]

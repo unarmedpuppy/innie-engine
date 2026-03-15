@@ -3,8 +3,25 @@
 import asyncio
 import json
 import logging
+import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+# Temp dir for inbound attachments downloaded from Mattermost
+_TEMP_DIR = Path(tempfile.gettempdir()) / "innie-mm"
+
+
+def _parse_upload_markers(text: str) -> tuple[str, list[str]]:
+    """Extract [[upload:/path/to/file]] markers from agent response text.
+
+    Returns (clean_text, [file_paths]). Markers are stripped from the message
+    before posting; files at the extracted paths are uploaded as attachments.
+    """
+    pattern = r"\[\[upload:([^\]]+)\]\]"
+    paths = re.findall(pattern, text)
+    clean = re.sub(pattern, "", text).strip()
+    return clean, paths
 
 import httpx
 
@@ -127,6 +144,22 @@ class MattermostAdapter:
         user_id = post["user_id"]
         text = post.get("message", "")
 
+        # Download any file attachments and append local paths to the prompt
+        file_ids = post.get("file_ids") or []
+        file_meta = {f["id"]: f for f in post.get("metadata", {}).get("files", [])}
+        if file_ids:
+            attachment_lines = []
+            for fid in file_ids:
+                meta = file_meta.get(fid, {})
+                filename = meta.get("name", f"{fid}.bin")
+                local_path = await self._download_attachment(fid, filename)
+                if local_path:
+                    attachment_lines.append(
+                        f"[Attached file saved at: {local_path} — use the Read tool to view it]"
+                    )
+            if attachment_lines:
+                text = (text + "\n" if text else "") + "\n".join(attachment_lines)
+
         if not is_allowed(self._config.as_policy_dict(), user_id, is_group, text, self._agent_name):
             return
 
@@ -178,12 +211,68 @@ class MattermostAdapter:
             await asyncio.sleep(5)
             await self._send_typing(channel_id)
 
+    async def _download_attachment(self, file_id: str, filename: str) -> Path | None:
+        """Download a Mattermost file attachment to a local temp file. Returns path or None."""
+        _TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        dest = _TEMP_DIR / f"{file_id}-{filename}"
+        if dest.exists():
+            return dest
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(
+                    f"{self._config.base_url.rstrip('/')}/api/v4/files/{file_id}",
+                    headers={"Authorization": f"Bearer {self._config.bot_token}"},
+                    timeout=30.0,
+                )
+                if r.status_code != 200:
+                    logger.warning(f"[mattermost] failed to download file {file_id}: HTTP {r.status_code}")
+                    return None
+                dest.write_bytes(r.content)
+            return dest
+        except Exception as e:
+            logger.warning(f"[mattermost] failed to download file {file_id}: {e}")
+            return None
+
+    async def _upload_file(self, file_path: Path, channel_id: str) -> str | None:
+        """Upload a local file to Mattermost. Returns file_id or None on failure."""
+        try:
+            async with httpx.AsyncClient() as client:
+                with open(file_path, "rb") as f:
+                    r = await client.post(
+                        f"{self._config.base_url.rstrip('/')}/api/v4/files",
+                        headers={"Authorization": f"Bearer {self._config.bot_token}"},
+                        data={"channel_id": channel_id},
+                        files={"files": (file_path.name, f)},
+                        timeout=60.0,
+                    )
+                if r.status_code not in (200, 201):
+                    logger.warning(f"[mattermost] file upload failed: HTTP {r.status_code}")
+                    return None
+                file_infos = r.json().get("file_infos", [])
+                return file_infos[0]["id"] if file_infos else None
+        except Exception as e:
+            logger.warning(f"[mattermost] upload failed for {file_path.name}: {e}")
+            return None
+
     async def _post_message(self, channel_id: str, message: str, root_id: str) -> None:
-        await asyncio.to_thread(
-            self._driver.posts.create_post,
-            options={
-                "channel_id": channel_id,
-                "message": message,
-                "root_id": root_id,
-            },
-        )
+        # Extract [[upload:/path/to/file]] markers and upload the files
+        clean_message, upload_paths = _parse_upload_markers(message)
+        file_ids = []
+        for path_str in upload_paths:
+            p = Path(path_str.strip())
+            if p.exists():
+                fid = await self._upload_file(p, channel_id)
+                if fid:
+                    file_ids.append(fid)
+            else:
+                logger.warning(f"[mattermost] upload path not found: {path_str}")
+
+        options: dict = {
+            "channel_id": channel_id,
+            "message": clean_message,
+            "root_id": root_id,
+        }
+        if file_ids:
+            options["file_ids"] = file_ids
+
+        await asyncio.to_thread(self._driver.posts.create_post, options=options)

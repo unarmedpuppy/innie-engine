@@ -563,6 +563,42 @@ async def _trigger_launchd_restart(agent: str) -> None:
     )
 
 
+@app.post("/v1/agent/wake")
+async def wake_agent(background_tasks: BackgroundTasks):
+    """Run heartbeat + trigger all enabled scheduled jobs. Returns immediately."""
+    agent = paths.active_agent()
+    background_tasks.add_task(_run_wake, agent)
+    return {"status": "waking", "agent": agent, "timestamp": datetime.utcnow().isoformat()}
+
+
+async def _run_wake(agent: str) -> None:
+    import subprocess
+    import sys
+    from pathlib import Path as _Path
+
+    from innie.serve.scheduler import _load_schedule, trigger_job
+
+    # Trigger all enabled scheduled jobs via APScheduler
+    sched_jobs = _load_schedule(agent)
+    for j in sched_jobs:
+        if j.enabled:
+            try:
+                await trigger_job(j.name, agent)
+            except Exception as e:
+                logger.warning(f"[wake] failed to trigger {j.name}: {e}")
+
+    # Run heartbeat as a fire-and-forget subprocess
+    innie_bin = _Path(sys.executable).parent / "innie"
+    cmd = [str(innie_bin), "heartbeat", "run"] if innie_bin.exists() else [sys.executable, "-m", "innie.cli", "heartbeat", "run"]
+    subprocess.Popen(
+        cmd,
+        env={**os.environ, "INNIE_AGENT": agent},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    logger.info(f"[wake] heartbeat launched for {agent}")
+
+
 @app.get("/v1/agent/skills")
 async def agent_skills():
     from innie.skills.registry import discover_skills

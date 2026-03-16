@@ -101,6 +101,7 @@ def _register_commands():
     memory_app.command("forget")(memory.forget)
     memory_app.command("ops")(memory.ops)
     memory_app.command("quality")(memory.quality)
+    memory_app.command("consolidate")(memory.consolidate)
     app.add_typer(memory_app, name="memory")
 
     app.command("handle")(init.handle)

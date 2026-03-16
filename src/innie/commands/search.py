@@ -242,7 +242,7 @@ def context_compress(
 
     content = ctx_file.read_text()
 
-    # Extract Open Items section
+    # Extract Open Items section for preview/diff
     marker = "## Open Items"
     if marker not in content:
         console.print("[dim]No Open Items section found.[/dim]")
@@ -250,14 +250,10 @@ def context_compress(
 
     start = content.index(marker)
     after_header = content.index("\n", start) + 1
-    # Find end: next ## section or EOF
     next_section = re.search(r"^##\s", content[after_header:], re.MULTILINE)
-    if next_section:
-        end = after_header + next_section.start()
-    else:
-        end = len(content)
-
+    end = after_header + next_section.start() if next_section else len(content)
     open_items_block = content[after_header:end].strip()
+
     if not open_items_block:
         console.print("[dim]Open Items section is empty.[/dim]")
         return
@@ -269,89 +265,43 @@ def context_compress(
 
     console.print(f"[dim]Compressing {len(bullets)} open items via LLM...[/dim]")
 
-    prompt = f"""You are compressing the Open Items section of an AI agent's working memory.
-
-Current open items:
-{open_items_block}
-
-Rules:
-- Remove items that are clearly resolved, superseded, or irrelevant
-- Merge near-duplicate items into one
-- Keep items that are genuinely open and non-obvious
-- Preserve the exact bullet format: "- item text"
-- Return ONLY the compressed bullet list, no explanation, no headers
-
-Output the compressed list:"""
-
-    # Call LLM via heartbeat provider chain
-    try:
-        from innie.heartbeat.extract import _call_anthropic, _call_openai_compatible, _resolve_openclaw
-        from innie.core.config import get
-        from pathlib import Path as _Path
-
-        provider = get("heartbeat.provider", "auto")
-        external_url = get("heartbeat.external_url", "")
-        model = get("heartbeat.model", "auto")
-
-        if provider == "auto":
-            if (_Path.home() / ".openclaw" / "openclaw.json").exists():
-                provider = "openclaw"
-            elif external_url:
-                provider = "external"
-            else:
-                provider = "anthropic"
-
-        if provider == "openclaw":
-            url, key, m = _resolve_openclaw()
-            compressed = _call_openai_compatible(prompt, m, url, api_key=key)
-        elif provider == "external":
-            import os
-            key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
-            compressed = _call_openai_compatible(prompt, model if model != "auto" else "default", external_url, api_key=key)
-        else:
-            compressed = _call_anthropic(prompt, "claude-haiku-4-5-20251001")
-    except Exception as e:
-        console.print(f"[red]LLM call failed:[/red] {e}")
-        raise typer.Exit(1)
-
-    compressed = compressed.strip()
-
-    # Show diff
-    old_lines = set(bullets)
-    new_lines = set(l for l in compressed.splitlines() if l.strip().startswith("-"))
-    removed = old_lines - new_lines
-    kept = old_lines & new_lines
-
-    console.print(f"\n[bold]Before:[/bold] {len(bullets)} items  →  [bold]After:[/bold] {len(new_lines)} items")
-    if removed:
-        for r in sorted(removed):
-            console.print(f"  [red]- {r}[/red]")
-    console.print(f"  [dim]{len(kept)} items kept[/dim]")
+    # Snapshot content before compression for diff display
+    old_bullets = set(bullets)
 
     if not apply:
+        # Preview mode: need to show diff before writing — do a dry-run pass
+        # We'll call the core function on a temp copy, then show diff, then confirm
+        import shutil, tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as tmp:
+            tmp.write(content)
+            tmp_path = Path(tmp.name)
+        try:
+            from innie.core.context import compress_context_open_items
+            before, after = compress_context_open_items(tmp_path, agent)
+        finally:
+            # Don't actually persist the temp result yet
+            tmp_path.unlink(missing_ok=True)
+
+        if before == 0:
+            console.print("[red]LLM call failed or nothing to compress.[/red]")
+            raise typer.Exit(1)
+
+        console.print(f"\n[bold]Before:[/bold] {before} items  →  [bold]After:[/bold] {after} items")
+        console.print(f"  [dim]{after} items kept[/dim]")
+
         if not typer.confirm("\nApply?", default=False):
             console.print("[dim]Aborted.[/dim]")
             return
 
-    # Write back
-    new_content = content[:after_header] + "\n" + compressed + "\n\n" + content[end:].lstrip("\n")
-    new_content = re.sub(
-        r"\*Last updated:.*?\*",
-        f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
-        new_content,
-    )
-    ctx_file.write_text(new_content)
+    # Apply compression for real
+    from innie.core.context import compress_context_open_items
+    before, after = compress_context_open_items(ctx_file, agent)
 
-    import json, time
-    ops_file = paths.memory_ops_file(agent)
-    ops_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(ops_file, "a") as f:
-        f.write(json.dumps({
-            "ts": int(time.time()), "op": "context_compress",
-            "removed": len(removed), "kept": len(kept)
-        }, separators=(",", ":")) + "\n")
+    if before == 0:
+        console.print("[red]LLM call failed or nothing to compress.[/red]")
+        raise typer.Exit(1)
 
-    console.print(f"[green]✓[/green] Compressed: {len(bullets)} → {len(new_lines)} items")
+    console.print(f"[green]✓[/green] Compressed: {before} → {after} items")
     console.print("[dim]Takes effect next session.[/dim]")
 
 

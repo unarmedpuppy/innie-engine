@@ -40,6 +40,7 @@ def open_db(db_path: Path | None = None, agent: str | None = None) -> sqlite3.Co
             content   TEXT NOT NULL,
             mtime     REAL NOT NULL,
             indexed_at REAL NOT NULL,
+            confidence TEXT DEFAULT 'medium',
             UNIQUE(file_path, chunk_idx)
         );
         CREATE TABLE IF NOT EXISTS file_index (
@@ -74,12 +75,16 @@ def open_db(db_path: Path | None = None, agent: str | None = None) -> sqlite3.Co
         );
     """)
     conn.commit()
-    # Additive migration: add file_path to existing sessions_meta tables
-    try:
-        conn.execute("ALTER TABLE sessions_meta ADD COLUMN file_path TEXT")
-        conn.commit()
-    except Exception:
-        pass  # Column already exists
+    # Additive migrations — each wrapped individually so one failure doesn't block others
+    for migration in [
+        "ALTER TABLE sessions_meta ADD COLUMN file_path TEXT",
+        "ALTER TABLE chunks ADD COLUMN confidence TEXT DEFAULT 'medium'",
+    ]:
+        try:
+            conn.execute(migration)
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
     return conn
 
 
@@ -199,6 +204,22 @@ def _chunk_markdown(text: str, chunk_words: int, overlap: int) -> list[str]:
 
 
 # ── Indexing ─────────────────────────────────────────────────────────────────
+
+
+_CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
+
+
+def _extract_confidence(text: str) -> str:
+    """Extract confidence field from YAML frontmatter. Returns 'medium' if absent."""
+    if not text.startswith("---"):
+        return "medium"
+    end = text.find("---", 3)
+    if end == -1:
+        return "medium"
+    m = re.search(r"(?m)^confidence:\s*(\w+)\s*$", text[3:end])
+    if m and m.group(1) in _CONFIDENCE_VALUES:
+        return m.group(1)
+    return "medium"
 
 
 def _is_superseded(file_path: Path) -> bool:
@@ -325,6 +346,9 @@ def index_files(
         if not chunks:
             continue
 
+        # Extract confidence from frontmatter (applies to all chunks in this file)
+        confidence = _extract_confidence(text)
+
         # Get embeddings if available
         embeddings: list[list[float]] | None = None
         if use_embeddings:
@@ -340,10 +364,10 @@ def index_files(
         for idx, chunk in enumerate(chunks):
             sql = (
                 "INSERT INTO chunks"
-                " (file_path, chunk_idx, content, mtime, indexed_at)"
-                " VALUES (?,?,?,?,?)"
+                " (file_path, chunk_idx, content, mtime, indexed_at, confidence)"
+                " VALUES (?,?,?,?,?,?)"
             )
-            cur = conn.execute(sql, (fp, idx, chunk, mtime, now))
+            cur = conn.execute(sql, (fp, idx, chunk, mtime, now, confidence))
             row_id = cur.lastrowid
 
             # FTS5 index
@@ -390,7 +414,7 @@ def search_keyword(conn: sqlite3.Connection, query: str, limit: int = 10) -> lis
     """FTS5 keyword search."""
     rows = conn.execute(
         """
-        SELECT c.file_path, c.content, c.chunk_idx, rank
+        SELECT c.file_path, c.content, c.chunk_idx, c.mtime, c.confidence, rank
         FROM chunk_fts fts
         JOIN chunks c ON c.id = fts.rowid
         WHERE chunk_fts MATCH ?
@@ -399,7 +423,11 @@ def search_keyword(conn: sqlite3.Connection, query: str, limit: int = 10) -> lis
         """,
         (query, limit),
     ).fetchall()
-    return [{"file_path": r[0], "content": r[1], "chunk_idx": r[2], "score": -r[3]} for r in rows]
+    return [
+        {"file_path": r[0], "content": r[1], "chunk_idx": r[2], "mtime": r[3],
+         "confidence": r[4] or "medium", "score": -r[5]}
+        for r in rows
+    ]
 
 
 def search_semantic(conn: sqlite3.Connection, query: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -407,7 +435,7 @@ def search_semantic(conn: sqlite3.Connection, query: str, limit: int = 10) -> li
     q_emb = embed_batch([query])[0]
     rows = conn.execute(
         """
-        SELECT c.file_path, c.content, c.chunk_idx,
+        SELECT c.file_path, c.content, c.chunk_idx, c.mtime, c.confidence,
                vec_distance_cosine(ce.embedding, ?) AS distance
         FROM chunk_embeddings ce
         JOIN chunks c ON c.id = ce.chunk_id
@@ -417,7 +445,8 @@ def search_semantic(conn: sqlite3.Connection, query: str, limit: int = 10) -> li
         (serialize_f32(q_emb), limit),
     ).fetchall()
     return [
-        {"file_path": r[0], "content": r[1], "chunk_idx": r[2], "score": round(1.0 - r[3], 4)}
+        {"file_path": r[0], "content": r[1], "chunk_idx": r[2], "mtime": r[3],
+         "confidence": r[4] or "medium", "score": round(1.0 - r[5], 4)}
         for r in rows
     ]
 
@@ -458,12 +487,18 @@ def _expand_query(query: str) -> str | None:
 
 
 def search_hybrid(conn: sqlite3.Connection, query: str, limit: int = 5) -> list[dict[str, Any]]:
-    """Hybrid search using Reciprocal Rank Fusion (RRF).
+    """Hybrid search using Reciprocal Rank Fusion (RRF) with optional recency decay.
 
     When search.query_expansion is enabled, generates one alternative query phrasing
     and fuses results from both queries via RRF, with the original query weighted 2x.
     Falls back to keyword-only if embeddings are unavailable.
+
+    When search.recency_decay_lambda > 0 (default 0.005), applies exponential time decay
+    to RRF scores: adjusted = rrf * exp(-lambda * age_in_days). This softly surfaces recent
+    results without overriding strong semantic matches.
     """
+    import math
+
     k = 60
 
     alt_query = _expand_query(query)
@@ -508,6 +543,21 @@ def search_hybrid(conn: sqlite3.Connection, query: str, limit: int = 5) -> list[
         except Exception:
             pass
         _rrf_add(scores, best_content, alt_sem, weight=1)
+
+    # Recency decay + confidence boost — applied together after RRF fusion
+    _CONFIDENCE_BOOST: dict[str, float] = {"high": 1.2, "medium": 1.0, "low": 0.85}
+    lambda_ = get("search.recency_decay_lambda", 0.005)
+    now = time.time()
+    for key in list(scores.keys()):
+        item = best_content[key]
+        # Recency decay
+        if lambda_ > 0:
+            mtime = item.get("mtime", now)
+            age_days = max(0.0, (now - mtime) / 86400)
+            scores[key] *= math.exp(-lambda_ * age_days)
+        # Confidence boost
+        conf = item.get("confidence", "medium")
+        scores[key] *= _CONFIDENCE_BOOST.get(conf, 1.0)
 
     ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]
     return [{**best_content[key], "score": round(score, 4)} for key, score in ranked]

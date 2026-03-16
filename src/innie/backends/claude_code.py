@@ -48,6 +48,11 @@ class ClaudeCodeBackend(Backend):
                 command=f"bash {hooks_dir}/dcg-guard.sh",
                 timeout=5000,
             ),
+            HookConfig(
+                event="UserPromptSubmit",
+                command=f"bash {hooks_dir}/prompt-submit.sh",
+                timeout=3000,
+            ),
         ]
 
     def _is_innie_entry(self, entry: dict) -> bool:

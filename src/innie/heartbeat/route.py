@@ -509,6 +509,71 @@ def route_confidence_decay(agent: str | None = None, threshold_days: int = 30) -
     return candidates
 
 
+def route_topic_catalog(agent: str | None = None) -> bool:
+    """Generate and save the topic catalog. Returns True on success."""
+    try:
+        from innie.core.catalog import build_topic_catalog, save_topic_catalog
+        catalog = build_topic_catalog(agent)
+        save_topic_catalog(catalog, agent)
+        return True
+    except Exception:
+        return False
+
+
+def _build_recent_context(collected: dict | None) -> str:
+    """Extract a compact recent-activity summary from collected session data.
+
+    Used as the freshness lock signal for context auto-compression — tells the
+    LLM which topics are currently in play so it doesn't compress them away.
+    """
+    if not collected:
+        return ""
+
+    session_data = collected.get("sessions", {})
+    sessions = session_data.get("sessions", []) if isinstance(session_data, dict) else []
+    if not sessions:
+        return ""
+
+    # Take last 3 sessions, extract first 150 chars of content each
+    recent = sessions[-3:]
+    snippets = []
+    for s in recent:
+        content = s.get("content", "").strip()
+        if content:
+            snippets.append(content[:150].replace("\n", " "))
+
+    return " | ".join(snippets) if snippets else ""
+
+
+def route_auto_compress_context(agent: str | None = None, collected: dict | None = None) -> int:
+    """Auto-compress CONTEXT.md if it exceeds the configured token threshold.
+
+    Returns the number of open items removed, or 0 if no compression ran.
+    """
+    from innie.core.config import get
+    from innie.core.context import compress_context_open_items, estimate_tokens
+
+    threshold = get("heartbeat.context_compress_threshold", 1500)
+    if threshold <= 0:
+        return 0
+
+    ctx_file = paths.context_file(agent)
+    if not ctx_file.exists():
+        return 0
+
+    try:
+        text = ctx_file.read_text(encoding="utf-8")
+    except OSError:
+        return 0
+
+    if estimate_tokens(text) <= threshold:
+        return 0
+
+    recent_context = _build_recent_context(collected)
+    before, after = compress_context_open_items(ctx_file, agent, recent_context=recent_context)
+    return max(0, before - after)
+
+
 def route_all(
     extraction: HeartbeatExtraction,
     agent: str | None = None,
@@ -528,6 +593,8 @@ def route_all(
         "inbox_archived": route_inbox_archive(collected or {}, agent),
         "sessions_indexed": route_sessions(collected, agent),
         "decay_candidates": decay_candidates,
+        "context_compressed": route_auto_compress_context(agent, collected),
+        "catalog_updated": int(route_topic_catalog(agent)),
     }
 
     route_metrics(extraction, agent, decay_candidates=decay_candidates)

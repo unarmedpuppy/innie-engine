@@ -147,3 +147,14 @@ def memory_ops_file(agent: str | None = None) -> Path:
 def retrieval_log_file(agent: str | None = None) -> Path:
     """Retrieval event log for memory quality tracking. state/retrieval-log.jsonl"""
     return state_dir(agent) / "retrieval-log.jsonl"
+
+
+def topic_catalog_file(agent: str | None = None) -> Path:
+    """Topic catalog for session-start discovery signal. state/topic-catalog.json"""
+    return state_dir(agent) / "topic-catalog.json"
+
+
+def hook_cache_file(session_id: str, agent: str | None = None) -> Path:
+    """Per-session dedup cache for prompt-submit hook. state/hook-cache-<id>.txt"""
+    safe_id = session_id[:24].replace("/", "_").replace(".", "_")
+    return state_dir(agent) / f"hook-cache-{safe_id}.txt"

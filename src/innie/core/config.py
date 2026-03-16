@@ -93,6 +93,7 @@ model = "auto"                # model name, or "auto" to pick per provider
 external_url = ""             # OpenAI-compatible endpoint (vLLM, Ollama, etc.)
 collect_git = true
 collect_sessions = true
+context_compress_threshold = 1500  # auto-compress CONTEXT.md when estimated tokens exceed this; 0 = disabled
 
 [index]
 chunk_words = 300
@@ -109,6 +110,11 @@ auto_push = false           # Auto-push after commit (requires remote)
 [search]
 query_expansion = false
 expansion_model = "auto"
+recency_decay_lambda = 0.005  # exponential decay factor for time-weighting search results; 0 = disabled
+
+[hook]
+prompt_submit_threshold = 0.08   # min FTS5 score to inject; 0 = inject top results always
+prompt_submit_limit = 3          # max results to inject per user prompt
 
 [update]
 source = ""                 # git URL or local path — set by `innie init`

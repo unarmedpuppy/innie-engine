@@ -694,6 +694,88 @@ def handle(event: str):
 
         threading.Thread(target=_run_index, daemon=True).start()
 
+    elif event == "prompt-submit":
+        # UserPromptSubmit hook — proactive memory injection before model responds.
+        # Reads JSON from stdin, extracts prompt text, runs FTS search,
+        # injects high-score results as <memory-context> block.
+        try:
+            import json as _json
+            import re as _re
+
+            raw = sys.stdin.read()
+            data = _json.loads(raw) if raw.strip() else {}
+            prompt_text = data.get("prompt", "")
+            session_id = data.get("session_id", "unknown")
+
+            if not prompt_text.strip():
+                sys.exit(0)
+
+            from innie.core.config import get
+            from innie.core import paths as _paths
+
+            threshold = get("hook.prompt_submit_threshold", 0.08)
+            limit = int(get("hook.prompt_submit_limit", 3))
+
+            # Build a safe FTS5 query from the prompt — strip operators and special chars
+            safe_query = _re.sub(r"[^\w\s]", " ", prompt_text[:300])
+            safe_query = _re.sub(r"\b(AND|OR|NOT)\b", " ", safe_query, flags=_re.IGNORECASE)
+            safe_query = " ".join(safe_query.split()[:20])
+            if not safe_query.strip():
+                sys.exit(0)
+
+            db_path = _paths.index_db()
+            if not db_path.exists():
+                sys.exit(0)
+
+            from innie.core.search import open_db, search_keyword, format_results
+
+            conn = open_db(db_path)
+            results = search_keyword(conn, safe_query, limit=limit * 4)
+            conn.close()
+
+            if not results:
+                sys.exit(0)
+
+            # Dedup against already-injected files this session
+            cache_file = _paths.hook_cache_file(session_id)
+            injected: set[str] = set()
+            if cache_file.exists():
+                try:
+                    injected = set(cache_file.read_text().splitlines())
+                except OSError:
+                    pass
+
+            fresh = [r for r in results if r["score"] >= threshold and r["file_path"] not in injected]
+            fresh = fresh[:limit]
+
+            if not fresh:
+                sys.exit(0)
+
+            # Output injection block
+            output = format_results(fresh)
+            sys.stdout.write(
+                f'<system-reminder>\n'
+                f'Memory retrieved for current prompt:\n\n'
+                f'{output}'
+                f'</system-reminder>\n'
+            )
+
+            # Update session dedup cache
+            new_paths = "\n".join(r["file_path"] for r in fresh)
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                if cache_file.exists():
+                    existing = cache_file.read_text()
+                    cache_file.write_text(existing + "\n" + new_paths)
+                else:
+                    cache_file.write_text(new_paths)
+            except OSError:
+                pass
+
+        except Exception as e:
+            sys.stderr.write(f"[innie] prompt-submit error: {e}\n")
+            sys.exit(0)
+
     elif event == "pre-compact":
         try:
             from innie.core.context import build_precompact_warning

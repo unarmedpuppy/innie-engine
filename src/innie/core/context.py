@@ -1,12 +1,16 @@
-"""Context assembly + XML-tag injection for session-start hooks.
+"""Context assembly, compression utilities, and XML-tag injection for session-start hooks.
 
 Assembles identity, working memory, semantic search results, and session
 metadata into XML-tagged blocks that get injected into the AI backend's
 system prompt via stdout.
 """
 
+import json
+import re
+import time
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from innie.core import paths
 from innie.core.profile import load_profile
@@ -104,6 +108,17 @@ def build_session_context(
         '  innie context load PATH                           # read full file from data/ (index-only mode active)\n'
         if index_only else ""
     )
+
+    # Load topic catalog for discovery signal
+    catalog_lines = ""
+    try:
+        from innie.core.catalog import format_catalog_for_context, load_topic_catalog
+        catalog = load_topic_catalog(agent_name)
+        if catalog:
+            catalog_lines = format_catalog_for_context(catalog) + "\n"
+    except Exception:
+        pass
+
     parts.append(
         "<memory-tools>\n"
         "Live knowledge base ops (call anytime — no need to wait for heartbeat):\n"
@@ -120,7 +135,8 @@ def build_session_context(
         '  innie context add "- Open item text"              # add open item (next session)\n'
         '  innie context remove "text"                       # remove open item (next session)\n'
         "  innie context compress                            # LLM dedup of open items\n"
-        "</memory-tools>"
+        + catalog_lines
+        + "</memory-tools>"
     )
 
     return "\n\n".join(parts)
@@ -144,3 +160,148 @@ Run these in order:
 Keep CONTEXT.md under 200 lines. Prune stale entries.
 Confirm when done.
 </system-reminder>"""
+
+
+# ── Context compression ───────────────────────────────────────────────────────
+
+_WORDS_PER_TOKEN = 1.3
+
+
+def estimate_tokens(text: str) -> int:
+    """Rough token estimate via word count. Conservative (overshoots slightly)."""
+    return int(len(text.split()) * _WORDS_PER_TOKEN)
+
+
+def compress_context_open_items(
+    ctx_file: Path,
+    agent: Optional[str] = None,
+    recent_context: Optional[str] = None,
+) -> tuple[int, int]:
+    """LLM-compress the Open Items section of a CONTEXT.md file.
+
+    Calls the configured heartbeat LLM provider to deduplicate and trim open items.
+    Writes the result in-place. Appends to memory-ops.jsonl.
+
+    Args:
+        ctx_file: Path to CONTEXT.md
+        agent: Agent name override
+        recent_context: Optional summary of recently active topics/projects. When
+            provided, the LLM is instructed not to remove items related to these
+            active areas (freshness lock — prevents post-compaction amnesia).
+
+    Returns:
+        (before_count, after_count) — bullet counts before and after.
+        Returns (0, 0) if the section is empty, too small, or the LLM call fails.
+        Never raises.
+    """
+    try:
+        from innie.core.config import get
+        from innie.heartbeat.extract import (
+            _call_anthropic,
+            _call_openai_compatible,
+            _resolve_openclaw,
+        )
+
+        content = ctx_file.read_text(encoding="utf-8")
+
+        marker = "## Open Items"
+        if marker not in content:
+            return (0, 0)
+
+        start = content.index(marker)
+        after_header = content.index("\n", start) + 1
+        next_section = re.search(r"^##\s", content[after_header:], re.MULTILINE)
+        end = after_header + next_section.start() if next_section else len(content)
+
+        open_items_block = content[after_header:end].strip()
+        if not open_items_block:
+            return (0, 0)
+
+        bullets = [line for line in open_items_block.splitlines() if line.strip().startswith("-")]
+        if len(bullets) <= 3:
+            return (0, 0)
+
+        freshness_clause = ""
+        if recent_context and recent_context.strip():
+            freshness_clause = (
+                f"\nActive right now (DO NOT remove open items related to these):\n"
+                f"{recent_context.strip()}\n"
+            )
+
+        prompt = f"""You are compressing the Open Items section of an AI agent's working memory.
+
+Current open items:
+{open_items_block}
+{freshness_clause}
+Rules:
+- Remove items that are clearly resolved, superseded, or irrelevant
+- Merge near-duplicate items into one
+- Keep items that are genuinely open and non-obvious
+- NEVER remove items related to currently active topics listed above
+- Preserve the exact bullet format: "- item text"
+- Return ONLY the compressed bullet list, no explanation, no headers
+
+Output the compressed list:"""
+
+        provider = get("heartbeat.provider", "auto")
+        external_url = get("heartbeat.external_url", "")
+        model = get("heartbeat.model", "auto")
+
+        if provider == "auto":
+            if (Path.home() / ".openclaw" / "openclaw.json").exists():
+                provider = "openclaw"
+            elif external_url:
+                provider = "external"
+            else:
+                provider = "anthropic"
+
+        if provider == "openclaw":
+            url, key, m = _resolve_openclaw()
+            compressed = _call_openai_compatible(prompt, m, url, api_key=key)
+        elif provider == "external":
+            import os
+            key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+            compressed = _call_openai_compatible(
+                prompt,
+                model if model != "auto" else "default",
+                external_url,
+                api_key=key,
+            )
+        else:
+            compressed = _call_anthropic(prompt, "claude-haiku-4-5-20251001")
+
+        compressed = compressed.strip()
+        new_bullets = [line for line in compressed.splitlines() if line.strip().startswith("-")]
+        if not new_bullets:
+            return (0, 0)
+
+        new_content = (
+            content[:after_header]
+            + "\n"
+            + compressed
+            + "\n\n"
+            + content[end:].lstrip("\n")
+        )
+        new_content = re.sub(
+            r"\*Last updated:.*?\*",
+            f"*Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+            new_content,
+        )
+        ctx_file.write_text(new_content, encoding="utf-8")
+
+        # Audit trail
+        ops_file = paths.memory_ops_file(agent)
+        ops_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(ops_file, "a") as f:
+            f.write(json.dumps({
+                "ts": int(time.time()),
+                "op": "context_compress",
+                "source": "heartbeat",
+                "removed": len(bullets) - len(new_bullets),
+                "kept": len(new_bullets),
+            }, separators=(",", ":")) + "\n")
+
+        return (len(bullets), len(new_bullets))
+
+    except Exception:
+        return (0, 0)

@@ -305,6 +305,217 @@ def quality(
                 console.print(f"  {lvl:8s} {count:4d}  [dim]{bar}[/dim]")
 
 
+def consolidate(
+    category: Optional[str] = typer.Argument(None, help="Category to consolidate (omit to list candidates)"),
+    min_files: int = typer.Option(8, "--min-files", "-m", help="Minimum files required to consolidate"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be consolidated without writing"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing _consolidated.md without prompting"),
+    agent: Optional[str] = typer.Option(None, "--agent", hidden=True),
+):
+    """Consolidate a learning category into a navigable overview document.
+
+    Reads all non-superseded files in learnings/<category>/, calls an LLM to
+    produce a structured summary, and writes learnings/<category>/_consolidated.md.
+
+    When called without a category, lists all categories with their file counts.
+    """
+    import yaml
+
+    learnings_base = paths.learnings_dir(agent)
+
+    if not learnings_base.exists():
+        console.print("[dim]No learnings directory found.[/dim]")
+        return
+
+    # No category given — list candidates
+    if category is None:
+        table = Table(show_header=True, header_style="bold", title="Consolidation Candidates")
+        table.add_column("Category")
+        table.add_column("Files", justify="right", style="dim")
+        table.add_column("Consolidated?", style="dim")
+        for cat_dir in sorted(learnings_base.iterdir()):
+            if not cat_dir.is_dir():
+                continue
+            files = [
+                f for f in cat_dir.glob("*.md")
+                if not f.name.startswith("_") and not _is_superseded_file(f)
+            ]
+            consolidated = (cat_dir / "_consolidated.md").exists()
+            status = "[green]yes[/green]" if consolidated else "no"
+            if len(files) < min_files:
+                status = f"[dim]below threshold ({len(files)})[/dim]"
+            table.add_row(cat_dir.name, str(len(files)), status)
+        console.print(table)
+        return
+
+    cat_dir = learnings_base / category
+    if not cat_dir.exists():
+        console.print(f"[red]Category not found:[/red] {category}")
+        raise typer.Exit(1)
+
+    files = sorted(
+        f for f in cat_dir.glob("*.md")
+        if not f.name.startswith("_") and not _is_superseded_file(f)
+    )
+
+    if len(files) < min_files:
+        console.print(f"[dim]Only {len(files)} files in '{category}' — need {min_files}. Skipping.[/dim]")
+        console.print(f"[dim]Use --min-files to lower the threshold.[/dim]")
+        return
+
+    out_file = cat_dir / "_consolidated.md"
+    if out_file.exists() and not force and not dry_run:
+        if not typer.confirm(f"_consolidated.md already exists for '{category}'. Overwrite?", default=False):
+            console.print("[dim]Aborted.[/dim]")
+            return
+
+    # Build input: title + first ~200 words per file
+    entries = []
+    for f in files:
+        text = f.read_text(encoding="utf-8", errors="ignore")
+        title = f.stem
+        body = text
+        if text.startswith("---"):
+            end = text.find("---", 3)
+            if end != -1:
+                try:
+                    fm = yaml.safe_load(text[3:end])
+                    if isinstance(fm, dict) and fm.get("superseded"):
+                        continue  # double-check
+                except Exception:
+                    pass
+                body = text[end + 3:].strip()
+            # Extract title from first # heading
+            for line in body.splitlines():
+                if line.startswith("# "):
+                    title = line[2:].strip()
+                    break
+        # Trim body to ~200 words
+        words = body.split()
+        snippet = " ".join(words[:200])
+        entries.append({"file": f.name, "title": title, "snippet": snippet})
+
+    if dry_run:
+        console.print(f"Would consolidate [bold]{len(entries)}[/bold] files in '{category}':")
+        for e in entries:
+            console.print(f"  [dim]{e['file']}[/dim] — {e['title']}")
+        return
+
+    console.print(f"[dim]Consolidating {len(entries)} files in '{category}' via LLM...[/dim]")
+
+    # Build prompt
+    files_block = "\n\n".join(
+        f"## {e['title']}\n{e['snippet']}" for e in entries
+    )
+    prompt = f"""You are consolidating a category of AI agent learnings into a navigable overview.
+Category: {category}
+Source files ({len(entries)} total):
+
+{files_block}
+
+Produce a concise structured summary with exactly these sections:
+## Key Patterns
+(recurring themes, established best practices)
+
+## Common Failure Modes
+(errors or pitfalls that appeared multiple times)
+
+## Tooling Notes
+(specific CLIs, APIs, configs worth remembering)
+
+## Active Open Questions
+(things still uncertain or partially understood)
+
+Be specific. Prefer concrete examples over generalizations.
+No padding. Maximum 800 words total.
+Output only the four sections above, no preamble."""
+
+    try:
+        from innie.core.config import get
+        from innie.heartbeat.extract import (
+            _call_anthropic,
+            _call_openai_compatible,
+            _resolve_openclaw,
+        )
+
+        provider = get("heartbeat.provider", "auto")
+        external_url = get("heartbeat.external_url", "")
+        model = get("heartbeat.model", "auto")
+
+        if provider == "auto":
+            from pathlib import Path as _Path
+            if (_Path.home() / ".openclaw" / "openclaw.json").exists():
+                provider = "openclaw"
+            elif external_url:
+                provider = "external"
+            else:
+                provider = "anthropic"
+
+        if provider == "openclaw":
+            url, key, m = _resolve_openclaw()
+            summary = _call_openai_compatible(prompt, m, url, api_key=key)
+        elif provider == "external":
+            import os
+            key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+            summary = _call_openai_compatible(
+                prompt,
+                model if model != "auto" else "default",
+                external_url,
+                api_key=key,
+            )
+        else:
+            summary = _call_anthropic(prompt, "claude-haiku-4-5-20251001")
+    except Exception as e:
+        console.print(f"[red]LLM call failed:[/red] {e}")
+        raise typer.Exit(1)
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    fm = _frontmatter(
+        date=today,
+        type="consolidated",
+        category=category,
+        source_count=len(entries),
+        generated=today,
+        tags=["learning", category, "consolidated"],
+    )
+    content = fm
+    content += f"# {category.title()} Knowledge — Consolidated\n\n"
+    content += summary.strip() + "\n\n"
+    content += "## Source Files\n\n"
+    for e in entries:
+        content += f"- learnings/{category}/{e['file']}\n"
+
+    out_file.write_text(content, encoding="utf-8")
+    _append_op({"op": "consolidate", "category": category, "source_count": len(entries)}, agent)
+
+    # Index immediately
+    try:
+        from innie.core.search import index_files, open_db
+        conn = open_db(paths.index_db(agent))
+        index_files(conn, [out_file], changed_only=False, use_embeddings=False)
+        conn.close()
+    except Exception:
+        pass
+
+    console.print(f"[green]✓[/green] learnings/{category}/_consolidated.md ({len(entries)} sources)")
+    console.print("[dim]Use 'innie index --changed-only' to pick up embedding for this file.[/dim]")
+
+
+def _is_superseded_file(path: Path) -> bool:
+    """Return True if the file has superseded: true in frontmatter."""
+    import re as _re
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if not text.startswith("---"):
+            return False
+        end = text.find("---", 3)
+        if end == -1:
+            return False
+        return bool(_re.search(r"(?m)^superseded:\s*true\s*$", text[3:end]))
+    except OSError:
+        return False
+
+
 def ops(
     since: float = typer.Option(8.0, "--since", "-s", help="Hours to look back"),
     agent: Optional[str] = typer.Option(None, "--agent", hidden=True),

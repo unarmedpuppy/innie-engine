@@ -208,6 +208,7 @@ def _self_update():
 
 def _restart_serve_after_update() -> None:
     """After a successful auto-update, restart the serve process so new code takes effect."""
+    import os
     import subprocess
     import sys
     from pathlib import Path

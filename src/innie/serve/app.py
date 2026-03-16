@@ -169,9 +169,11 @@ async def lifespan(app: FastAPI):
     _ensure_dirs()
     _ensure_skills_symlink()
     _ensure_git_identity()
-    await _register_with_fleet()
+    from innie.core.agent_env import inject_into_os_env
     from innie.channels.loader import start_channels, stop_channels
     from innie.serve.scheduler import setup_scheduler, teardown_scheduler
+    inject_into_os_env(paths.active_agent())
+    await _register_with_fleet()
     await start_channels(app)
     agent = paths.active_agent()
     if agent:

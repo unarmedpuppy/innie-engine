@@ -39,6 +39,13 @@ def run(
     mode = " [dim](dry run)[/dim]" if dry_run else ""
     console.print(f"Running heartbeat for agent: [bold]{agent}[/bold]{mode}")
 
+    # Load .env secrets so extraction can reach LLM providers
+    try:
+        from innie.core.agent_env import inject_into_os_env
+        inject_into_os_env(agent)
+    except Exception:
+        pass
+
     # Sync: pull latest from remote before collecting
     if not dry_run:
         _git_pull()

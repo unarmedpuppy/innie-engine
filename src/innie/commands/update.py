@@ -44,6 +44,7 @@ def update(
             if result.returncode != 0:
                 raise typer.Exit(1)
         _prompt_reindex(yes)
+        _run_boot(yes)
         return
 
     # Remote install via uv or pip
@@ -64,6 +65,15 @@ def update(
 
     console.print("\n  [green]✓[/green] Upgrade complete.")
     _prompt_reindex(yes)
+    _run_boot(yes)
+
+
+def _run_boot(yes: bool) -> None:
+    """Run innie boot after a successful update (skip version re-check and heartbeat)."""
+    console.print()
+    from innie.commands.boot import boot
+
+    boot(skip_heartbeat=True, force_update=False, no_restart=False)
 
 
 def _prompt_reindex(yes: bool) -> None:

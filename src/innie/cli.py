@@ -49,6 +49,7 @@ def _register_commands():
         agent,
         alias,
         backend,
+        boot,
         docker_services,
         doctor,
         edit,
@@ -69,6 +70,7 @@ def _register_commands():
         update,
     )
 
+    app.command("boot")(boot.boot)
     app.command("init")(init.init)
     app.command("create")(agent.create)
     app.command("list")(agent.list_agents)

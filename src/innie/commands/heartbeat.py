@@ -201,8 +201,39 @@ def _self_update():
 
     if result.returncode == 0:
         console.print("  [green]✓[/green] innie-engine updated")
+        _restart_serve_after_update()
     else:
         console.print(f"  [yellow]![/yellow] innie-engine update failed: {result.stderr.strip()[:120]}")
+
+
+def _restart_serve_after_update() -> None:
+    """After a successful auto-update, restart the serve process so new code takes effect."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    if sys.platform != "darwin":
+        return
+
+    agent = paths.active_agent()
+    label = f"ai.innie.serve.{agent}"
+    uid = os.getuid() if hasattr(os, "getuid") else None
+    if uid is None:
+        return
+
+    plist_path = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+    if not plist_path.exists():
+        return
+
+    result = subprocess.run(
+        ["launchctl", "kickstart", "-k", f"gui/{uid}/{label}"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        console.print(f"  [green]✓[/green] Serve restarted ({label})")
+    else:
+        console.print(f"  [yellow]![/yellow] Serve restart failed: {result.stderr.strip()[:80]}")
 
 
 def _has_remote():

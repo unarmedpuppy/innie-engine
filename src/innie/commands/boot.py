@@ -158,9 +158,29 @@ def _step_heartbeat_scheduler() -> None:
             _check_result("Heartbeat cron installed", "innie" in result2.stdout)
 
 
+def _step_skills_symlink() -> None:
+    """Ensure ~/.claude/skills → ~/.innie/skills/ symlink is in place."""
+    console.print("\n[bold]3. Skills Symlink[/bold]")
+    shared = paths.shared_skills_dir()
+    claude_skills = Path.home() / ".claude" / "skills"
+
+    if claude_skills.is_symlink() and claude_skills.resolve() == shared.resolve():
+        _check_result(f"~/.claude/skills → {shared}", True)
+        return
+
+    try:
+        claude_skills.parent.mkdir(parents=True, exist_ok=True)
+        if claude_skills.exists() or claude_skills.is_symlink():
+            claude_skills.unlink()
+        claude_skills.symlink_to(shared)
+        _check_result(f"~/.claude/skills → {shared} (created)", True)
+    except Exception as e:
+        _check_result(f"~/.claude/skills symlink", False, str(e)[:80])
+
+
 def _step_restart_serve(agent: str, port: int) -> bool:
     """Restart (or start) the serve process. Returns True if serve is up after."""
-    console.print("\n[bold]3. Serve / Message Gateways[/bold]")
+    console.print("\n[bold]4. Serve / Message Gateways[/bold]")
 
     if sys.platform != "darwin":
         console.print("  [dim]Non-macOS: serve management not implemented — skip.[/dim]")
@@ -209,7 +229,7 @@ def _step_restart_serve(agent: str, port: int) -> bool:
 
 def _step_run_heartbeat(agent: str, skip: bool) -> None:
     """Run one heartbeat cycle (in-process, non-interactive path)."""
-    console.print("\n[bold]4. Heartbeat[/bold]")
+    console.print("\n[bold]5. Heartbeat[/bold]")
 
     if skip:
         console.print("  [dim]Skipped (--skip-heartbeat).[/dim]")
@@ -230,7 +250,7 @@ def _step_run_heartbeat(agent: str, skip: bool) -> None:
 
 def _step_health_check(agent: str, port: int) -> None:
     """Full health check: fleet registration, channels, env vars, context files."""
-    console.print("\n[bold]5. Health Check[/bold]")
+    console.print("\n[bold]6. Health Check[/bold]")
 
     health = _hit_health(port)
     if health is None:
@@ -328,11 +348,12 @@ def boot(
 
     _step_version_check(agent, force_update)
     _step_heartbeat_scheduler()
+    _step_skills_symlink()
 
     if not no_restart:
         _step_restart_serve(agent, port)
     else:
-        console.print("\n[bold]3. Serve / Message Gateways[/bold]  [dim]skipped (--no-restart)[/dim]")
+        console.print("\n[bold]4. Serve / Message Gateways[/bold]  [dim]skipped (--no-restart)[/dim]")
 
     _step_run_heartbeat(agent, skip_heartbeat)
     _step_health_check(agent, port)

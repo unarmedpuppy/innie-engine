@@ -55,6 +55,7 @@ def agents():
     table.add_column("Name")
     table.add_column("Type")
     table.add_column("Status")
+    table.add_column("Version", style="dim")
     table.add_column("Endpoint", style="dim")
     table.add_column("Response", justify="right")
 
@@ -71,11 +72,13 @@ def agents():
         color = status_colors.get(status, "dim")
         rt = health.get("response_time_ms")
         rt_str = f"{rt:.0f}ms" if rt else "-"
+        version = health.get("version") or "-"
         table.add_row(
             agent["id"],
             agent.get("name", ""),
             agent.get("agent_type", ""),
             f"[{color}]{status}[/{color}]",
+            version,
             agent.get("endpoint", ""),
             rt_str,
         )

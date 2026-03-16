@@ -56,6 +56,7 @@ def agents():
     table.add_column("Type")
     table.add_column("Status")
     table.add_column("Version", style="dim")
+    table.add_column("Model/Provider", style="dim")
     table.add_column("Endpoint", style="dim")
     table.add_column("Response", justify="right")
 
@@ -73,12 +74,17 @@ def agents():
         rt = health.get("response_time_ms")
         rt_str = f"{rt:.0f}ms" if rt else "-"
         version = health.get("version") or "-"
+        mp = health.get("model_provider") or {}
+        provider = mp.get("provider") or "-"
+        reachable = mp.get("reachable", False)
+        provider_str = f"[green]{provider}[/green]" if reachable else f"[red]{provider}[/red]" if provider != "-" else "-"
         table.add_row(
             agent["id"],
             agent.get("name", ""),
             agent.get("agent_type", ""),
             f"[{color}]{status}[/{color}]",
             version,
+            provider_str,
             agent.get("endpoint", ""),
             rt_str,
         )

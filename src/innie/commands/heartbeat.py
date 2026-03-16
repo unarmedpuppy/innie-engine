@@ -208,9 +208,24 @@ def _self_update():
 
     if result.returncode == 0:
         console.print("  [green]✓[/green] innie-engine updated")
+        _reinstall_hooks_after_update()
         _restart_serve_after_update()
     else:
         console.print(f"  [yellow]![/yellow] innie-engine update failed: {result.stderr.strip()[:120]}")
+
+
+def _reinstall_hooks_after_update() -> None:
+    """Re-register hooks for all detected backends after a successful auto-update."""
+    from pathlib import Path
+
+    from innie.backends.registry import detect_backends
+
+    hooks_dir = Path(__file__).parent.parent / "hooks"
+    for backend in detect_backends():
+        try:
+            backend.install_hooks(hooks_dir)
+        except Exception:
+            pass  # fail-silent in heartbeat context
 
 
 def _restart_serve_after_update() -> None:

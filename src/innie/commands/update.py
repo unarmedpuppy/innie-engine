@@ -43,6 +43,7 @@ def update(
             result = subprocess.run(["git", "-C", expanded, "pull"], text=True)
             if result.returncode != 0:
                 raise typer.Exit(1)
+        _reinstall_hooks()
         _prompt_reindex(yes)
         _run_boot(yes)
         return
@@ -64,8 +65,23 @@ def update(
         raise typer.Exit(1)
 
     console.print("\n  [green]✓[/green] Upgrade complete.")
+    _reinstall_hooks()
     _prompt_reindex(yes)
     _run_boot(yes)
+
+
+def _reinstall_hooks() -> None:
+    """Re-register hooks for all detected backends after an upgrade."""
+    from innie.backends.registry import detect_backends
+
+    hooks_dir = Path(__file__).parent.parent / "hooks"
+    backends = detect_backends()
+    for backend in backends:
+        try:
+            backend.install_hooks(hooks_dir)
+            console.print(f"  [green]✓[/green] Hooks updated for [bold]{backend.name()}[/bold]")
+        except Exception as e:
+            console.print(f"  [yellow]![/yellow] Hook update failed for {backend.name()}: {e}")
 
 
 def _run_boot(yes: bool) -> None:

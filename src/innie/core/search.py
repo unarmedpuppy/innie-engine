@@ -13,7 +13,16 @@ from innie.core.config import get
 
 logger = logging.getLogger(__name__)
 
-EMBEDDING_DIMS = 768
+EMBEDDING_DIMS = 768  # default; use get_embedding_dims() at call sites for override support
+
+
+def get_embedding_dims() -> int:
+    """Return configured embedding dimensions. Reads INNIE_EMBEDDING_DIMS env, then config, then 768."""
+    import os
+    val = os.environ.get("INNIE_EMBEDDING_DIMS", "")
+    if val.isdigit():
+        return int(val)
+    return get("embedding.dims", EMBEDDING_DIMS)
 
 
 def serialize_f32(v: list[float]) -> bytes:
@@ -357,7 +366,17 @@ def index_files(
         embeddings: list[list[float]] | None = None
         if use_embeddings:
             try:
-                embeddings = embed_all(chunks)
+                raw_embeddings = embed_all(chunks)
+                expected_dims = get_embedding_dims()
+                if raw_embeddings and len(raw_embeddings[0]) != expected_dims:
+                    logger.error(
+                        "Embedding dimension mismatch for %s: got %d, expected %d "
+                        "(set INNIE_EMBEDDING_DIMS=%d or update embedding.dims in config.toml). "
+                        "Skipping vector index for this file.",
+                        f, len(raw_embeddings[0]), expected_dims, len(raw_embeddings[0]),
+                    )
+                else:
+                    embeddings = raw_embeddings
             except Exception as e:
                 logger.warning("Embedding failed for %s, falling back to FTS-only: %s", f, e)
 

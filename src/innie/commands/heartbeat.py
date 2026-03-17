@@ -146,8 +146,8 @@ def run(
         conn.close()
         if indexed:
             console.print(f"    Indexed {indexed} files")
-    except Exception:
-        pass
+    except Exception as e:
+        console.print(f"  [yellow]![/yellow] Re-indexing failed: {e}")
 
     # Git auto-commit if enabled
     _git_autocommit()
@@ -349,11 +349,15 @@ def _git_autocommit():
         cwd=innie_home,
         capture_output=True,
     )
-    subprocess.run(
+    commit_result = subprocess.run(
         ["git", "commit", "-m", f"heartbeat: auto-commit {now}"],
         cwd=innie_home,
         capture_output=True,
+        text=True,
     )
+    if commit_result.returncode != 0:
+        console.print(f"  [yellow]![/yellow] Git commit failed: {commit_result.stderr.strip()[:120]}")
+        return
 
     # Push if remote exists
     if _has_remote():

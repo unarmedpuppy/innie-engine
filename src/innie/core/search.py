@@ -126,24 +126,36 @@ def _get_embedding_headers() -> dict[str, str]:
     return headers
 
 
-def embed_batch(texts: list[str]) -> list[list[float]]:
+def embed_batch(texts: list[str], _retries: int = 3) -> list[list[float]]:
+    import time as _time
+
     import httpx
 
     url = _get_embedding_url()
     model = get("embedding.model", "bge-base-en")
 
-    resp = httpx.post(
-        f"{url}/v1/embeddings",
-        headers=_get_embedding_headers(),
-        json={"model": model, "input": texts},
-        timeout=60.0,
-    )
-    resp.raise_for_status()
-    body = resp.json()
-    if "data" not in body:
-        raise RuntimeError(f"Unexpected embedding response: {list(body.keys())}")
-    body["data"].sort(key=lambda x: x["index"])
-    return [d["embedding"] for d in body["data"]]
+    last_exc: Exception = RuntimeError("embed_batch: no attempts made")
+    for attempt in range(_retries):
+        try:
+            resp = httpx.post(
+                f"{url}/v1/embeddings",
+                headers=_get_embedding_headers(),
+                json={"model": model, "input": texts},
+                timeout=60.0,
+            )
+            resp.raise_for_status()
+            body = resp.json()
+            if "data" not in body:
+                raise RuntimeError(f"Unexpected embedding response: {list(body.keys())}")
+            body["data"].sort(key=lambda x: x["index"])
+            return [d["embedding"] for d in body["data"]]
+        except (httpx.TransportError, httpx.TimeoutException) as e:
+            last_exc = e
+            if attempt < _retries - 1:
+                delay = 2 ** attempt
+                logger.warning("Embedding request failed (attempt %d/%d), retrying in %ds: %s", attempt + 1, _retries, delay, e)
+                _time.sleep(delay)
+    raise last_exc
 
 
 def embed_all(texts: list[str], batch_size: int = 32) -> list[list[float]]:

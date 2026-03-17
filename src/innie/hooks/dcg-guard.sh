@@ -9,14 +9,14 @@
 
 # Only guard Bash commands
 if [ "$TOOL_NAME" != "Bash" ]; then
-    echo '{"decision": "allow"}'
+    echo '{"decision": "approve"}'
     exit 0
 fi
 
 # Check if this agent has dcg enabled
 AGENT="${INNIE_AGENT:-}"
 if [ -z "$AGENT" ]; then
-    echo '{"decision": "allow"}'
+    echo '{"decision": "approve"}'
     exit 0
 fi
 
@@ -26,24 +26,24 @@ PROFILE="$INNIE_HOME/agents/$AGENT/profile.yaml"
 # Quick check: does profile mention dcg? (avoids parsing YAML in bash)
 if [ -f "$PROFILE" ]; then
     if ! grep -q 'engine:.*dcg' "$PROFILE" 2>/dev/null; then
-        echo '{"decision": "allow"}'
+        echo '{"decision": "approve"}'
         exit 0
     fi
 else
-    echo '{"decision": "allow"}'
+    echo '{"decision": "approve"}'
     exit 0
 fi
 
 # Check if dcg is installed
 if ! command -v dcg &>/dev/null; then
-    echo '{"decision": "allow"}'
+    echo '{"decision": "approve"}'
     exit 0
 fi
 
 # Extract command from tool input
 COMMAND=$(echo "$TOOL_INPUT" | jq -r '.command // empty' 2>/dev/null)
 if [ -z "$COMMAND" ]; then
-    echo '{"decision": "allow"}'
+    echo '{"decision": "approve"}'
     exit 0
 fi
 
@@ -63,5 +63,5 @@ if [ $DCG_EXIT -ne 0 ] && [ -n "$DCG_OUTPUT" ]; then
     [ -z "$REASON" ] && REASON="Command blocked by destructive command guard (dcg)"
     echo "{\"decision\": \"block\", \"reason\": \"$REASON\"}"
 else
-    echo '{"decision": "allow"}'
+    echo '{"decision": "approve"}'
 fi

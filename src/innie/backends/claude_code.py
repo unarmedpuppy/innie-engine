@@ -5,10 +5,13 @@ namespace-based merge (only touches entries containing 'innie').
 """
 
 import json
+import logging
 import shutil
 from pathlib import Path
 
 from innie.backends.base import Backend, HookConfig, SessionData
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeCodeBackend(Backend):
@@ -214,7 +217,8 @@ class ClaudeCodeBackend(Backend):
             if not isinstance(data, list) or not data:
                 return None
             return [{"content": t.get("content", ""), "status": t.get("status", "")} for t in data]
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to load todos for %s: %s", todo_path, e)
             return None
 
     def _session_dirs(self) -> list[tuple[Path, str]]:
@@ -312,7 +316,8 @@ class ClaudeCodeBackend(Backend):
                                 metadata=metadata,
                             )
                         )
-                except Exception:
+                except Exception as e:
+                    logger.warning("Failed to parse session file %s: %s", jsonl_file, e)
                     continue
 
         return sessions

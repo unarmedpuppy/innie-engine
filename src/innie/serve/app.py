@@ -101,8 +101,8 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
                     endpoint = resp.json().get("endpoint", "")
                     if endpoint:
                         return endpoint.rstrip("/")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Fleet endpoint lookup failed for %s: %s", agent_name, e)
     env_key = f"INNIE_AGENT_{agent_name.upper()}_URL"
     return os.environ.get(env_key, "").rstrip("/")
 
@@ -118,8 +118,8 @@ def _ensure_dirs() -> None:
     ]:
         try:
             d.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to create directory %s: %s", d, e)
 
 
 def _ensure_skills_symlink() -> None:
@@ -338,8 +338,8 @@ async def execute_job(job_id: str) -> None:
         mem_ctx = search_for_context(working_dir, job.agent)
         if mem_ctx:
             context = (context or "") + f"\n\n{mem_ctx}"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Memory context injection failed for job %s: %s", job_id, e)
 
     try:
         result = await collect_stream(
@@ -402,8 +402,8 @@ async def _probe_model_provider() -> dict:
             if model and not model.startswith("claude"):
                 provider = "local"
                 probe_url = os.environ.get("ANTHROPIC_BASE_URL", "http://localhost:8080")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Could not read model provider from profile.yaml: %s", e)
 
     try:
         start = time.monotonic()
@@ -428,8 +428,8 @@ def _detect_service_info(agent: str) -> dict:
         if raw:
             data = json.loads(raw)
             install_url = data.get("url")  # e.g. "file:///path/to/innie-engine" or "ssh://..."
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Could not detect install URL from dist-info: %s", e)
 
     # Build install command
     install_cmd: str | None = None
@@ -629,8 +629,8 @@ async def agent_schedule():
                 job = _scheduler.get_job(j.name)
                 if job and job.next_run_time:
                     next_run = job.next_run_time.isoformat()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Failed to get next_run for scheduled job %s: %s", j.name, e)
         result.append({
             "name": j.name,
             "enabled": j.enabled,

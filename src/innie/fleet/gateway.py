@@ -73,8 +73,8 @@ def _load_registry() -> dict:
     if REGISTRY_PATH.exists():
         try:
             return json.loads(REGISTRY_PATH.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to load agent registry from %s: %s", REGISTRY_PATH, e)
     return {}
 
 
@@ -366,7 +366,8 @@ async def list_jobs(
                     for job in data.get("jobs", []):
                         job["agent_id"] = agent.id
                         all_jobs.append(job)
-            except Exception:
+            except Exception as e:
+                logger.debug("Agent %s unreachable during job list: %s", agent.id, e)
                 continue
 
     all_jobs.sort(key=lambda j: j.get("created_at", ""), reverse=True)
@@ -393,7 +394,8 @@ async def get_job(job_id: str, agent_id: str | None = None):
                     data = resp.json()
                     data["agent_id"] = agent.id
                     return data
-            except Exception:
+            except Exception as e:
+                logger.debug("Agent %s unreachable during job lookup %s: %s", agent.id, job_id, e)
                 continue
 
     raise HTTPException(404, f"Job '{job_id}' not found")
@@ -417,7 +419,8 @@ async def cancel_job(job_id: str, agent_id: str | None = None):
                 )
                 if resp.status_code == 200:
                     return resp.json()
-            except Exception:
+            except Exception as e:
+                logger.debug("Agent %s unreachable during job cancel %s: %s", agent.id, job_id, e)
                 continue
 
     raise HTTPException(404, f"Job '{job_id}' not found or not cancellable")
@@ -450,7 +453,8 @@ async def list_traces(
                     for session in data.get("sessions", []):
                         session["agent_id"] = agent.id
                         all_traces.append(session)
-            except Exception:
+            except Exception as e:
+                logger.debug("Agent %s unreachable during trace list: %s", agent.id, e)
                 continue
 
     all_traces.sort(key=lambda t: t.get("start_time", 0), reverse=True)
@@ -502,7 +506,8 @@ async def trace_stats(
                         )
 
                     combined["sessions_by_machine"][agent.id] = data.get("total_sessions", 0)
-            except Exception:
+            except Exception as e:
+                logger.debug("Agent %s unreachable during trace stats: %s", agent.id, e)
                 continue
 
     return combined
@@ -528,7 +533,8 @@ async def get_trace(session_id: str, agent_id: str | None = None):
                     data = resp.json()
                     data["agent_id"] = agent.id
                     return data
-            except Exception:
+            except Exception as e:
+                logger.debug("Agent %s unreachable during trace lookup %s: %s", agent.id, session_id, e)
                 continue
 
     raise HTTPException(404, f"Trace '{session_id}' not found")
@@ -578,8 +584,8 @@ async def get_agent_avatar(agent_id: str):
             resp = await client.get(f"{agent.endpoint}/v1/agent/avatar", timeout=5.0)
             if resp.status_code == 200:
                 return Response(content=resp.content, media_type=resp.headers.get("content-type", "image/png"))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to fetch avatar for agent %s: %s", agent_id, e)
     raise HTTPException(404, "No avatar")
 
 

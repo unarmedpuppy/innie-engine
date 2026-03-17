@@ -8,6 +8,7 @@ and wikilinks to related entries (projects, people, decisions).
 """
 
 import json
+import logging
 import re
 import time
 from datetime import datetime
@@ -15,6 +16,8 @@ from datetime import datetime
 from innie.core import paths
 from innie.core.collector import load_heartbeat_state, save_heartbeat_state
 from innie.heartbeat.schema import HeartbeatExtraction
+
+logger = logging.getLogger(__name__)
 
 
 def _slugify(text: str) -> str:
@@ -302,7 +305,8 @@ def route_superseded(extraction: HeartbeatExtraction, agent: str | None = None) 
 
             target.write_text(text, encoding="utf-8")
             count += 1
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to mark %s as superseded: %s", item.path, e)
             continue
 
     return count
@@ -449,7 +453,8 @@ def route_sessions(collected: dict | None, agent: str | None = None) -> int:
                 count += 1
         conn.close()
         return count
-    except Exception:
+    except Exception as e:
+        logger.warning("Session indexing failed: %s", e)
         return 0
 
 
@@ -481,8 +486,8 @@ def route_confidence_decay(agent: str | None = None, threshold_days: int = 30) -
                 if entry.get("ts", 0) >= cutoff:
                     for f in entry.get("files", []):
                         recently_retrieved.add(f)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to read retrieval log for decay check: %s", e)
 
     candidates = 0
     for f in learnings_dir.rglob("*.md"):
@@ -503,7 +508,8 @@ def route_confidence_decay(agent: str | None = None, threshold_days: int = 30) -
                 continue
             if str(f) not in recently_retrieved:
                 candidates += 1
-        except Exception:
+        except Exception as e:
+            logger.debug("Failed to check decay for %s: %s", f, e)
             continue
 
     return candidates
@@ -516,7 +522,8 @@ def route_topic_catalog(agent: str | None = None) -> bool:
         catalog = build_topic_catalog(agent)
         save_topic_catalog(catalog, agent)
         return True
-    except Exception:
+    except Exception as e:
+        logger.warning("route_topic_catalog failed: %s", e)
         return False
 
 

@@ -5,6 +5,7 @@ No AI involved — pure data collection.
 """
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -13,6 +14,8 @@ from pathlib import Path
 
 from innie.core import paths
 from innie.core.config import get
+
+logger = logging.getLogger(__name__)
 
 
 def load_heartbeat_state(agent: str | None = None) -> dict:
@@ -41,7 +44,8 @@ def collect_session_data(agent: str | None = None, since_override: float | None 
         try:
             sessions = backend.collect_sessions(since)
             all_sessions.extend(sessions)
-        except Exception:
+        except Exception as e:
+            logger.warning("Backend %s failed to collect sessions: %s", backend.__class__.__name__, e, exc_info=True)
             continue
 
     # Filter out already-processed sessions
@@ -102,7 +106,8 @@ def collect_git_activity(workspace: str | None = None) -> list[dict]:
                             "commit": line,
                         }
                     )
-        except Exception:
+        except Exception as e:
+            logger.debug("Git log failed for %s: %s", repo_dir.name, e)
             continue
 
     return activity
@@ -163,8 +168,8 @@ def collect_existing_knowledge(agent: str | None = None, sessions: list[dict] | 
                         "file": rel,
                         "summary": hit["content"][:300].strip(),
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Hybrid search failed in collect_existing_knowledge: %s", e)
 
     # Fallback: most recently modified files from learnings/ and decisions/
     if not results:
@@ -181,7 +186,8 @@ def collect_existing_knowledge(agent: str | None = None, sessions: list[dict] | 
                 # Skip frontmatter
                 body = re.sub(r"^---\n.*?\n---\n?", "", text, flags=re.DOTALL).strip()
                 results.append({"file": rel, "summary": body[:300]})
-            except Exception:
+            except Exception as e:
+                logger.debug("Failed to read knowledge file %s: %s", fp, e)
                 continue
 
     # Apply total char budget
@@ -224,7 +230,8 @@ def collect_inbox(agent: str | None = None) -> list[dict]:
                 "from_agent": from_agent,
                 "content": content,
             })
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to read inbox file %s: %s", f.name, e)
             continue
 
     return messages
@@ -336,7 +343,8 @@ def collect_mattermost_dms(agent: str | None = None, since: float = 0) -> list[d
             messages.append({"ts": ts, "sender": user_cache[uid], "text": text})
 
         return messages
-    except Exception:
+    except Exception as e:
+        logger.warning("Mattermost DM collection failed: %s", e)
         return []
 
 

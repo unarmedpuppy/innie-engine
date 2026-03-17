@@ -1,10 +1,13 @@
 """OpenCode backend adapter."""
 
 import json
+import logging
 import sqlite3
 from pathlib import Path
 
 from innie.backends.base import Backend, HookConfig, SessionData
+
+logger = logging.getLogger(__name__)
 
 
 class OpenCodeBackend(Backend):
@@ -85,7 +88,7 @@ class OpenCodeBackend(Backend):
                     )
 
             conn.close()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("OpenCode SQLite query failed at %s: %s", db_path, e)
 
         return sessions

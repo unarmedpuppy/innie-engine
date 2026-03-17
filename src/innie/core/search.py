@@ -1,5 +1,6 @@
 """Hybrid keyword (FTS5) + vector (sqlite-vec) search with Reciprocal Rank Fusion."""
 
+import logging
 import re
 import sqlite3
 import struct
@@ -9,6 +10,8 @@ from typing import Any
 
 from innie.core import paths
 from innie.core.config import get
+
+logger = logging.getLogger(__name__)
 
 EMBEDDING_DIMS = 768
 
@@ -253,7 +256,8 @@ def _vault_path(agent: str | None = None) -> Path | None:
         if not raw:
             return None
         return Path(raw).expanduser()
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to read vault path from profile.yaml: %s", e)
         return None
 
 
@@ -354,8 +358,8 @@ def index_files(
         if use_embeddings:
             try:
                 embeddings = embed_all(chunks)
-            except Exception:
-                pass  # Fall back to FTS-only
+            except Exception as e:
+                logger.warning("Embedding failed for %s, falling back to FTS-only: %s", f, e)
 
         fp = str(f)
         now = time.time()
@@ -520,8 +524,8 @@ def search_hybrid(conn: sqlite3.Connection, query: str, limit: int = 5) -> list[
     sem_results: list[dict[str, Any]] = []
     try:
         sem_results = search_semantic(conn, query, limit=limit * 2)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Semantic search unavailable, using FTS-only: %s", e)
 
     if not sem_results and not alt_query:
         return kw_results[:limit]
@@ -540,8 +544,8 @@ def search_hybrid(conn: sqlite3.Connection, query: str, limit: int = 5) -> list[
         alt_sem: list[dict[str, Any]] = []
         try:
             alt_sem = search_semantic(conn, alt_query, limit=limit * 2)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Semantic search for alt query failed: %s", e)
         _rrf_add(scores, best_content, alt_sem, weight=1)
 
     # Recency decay + confidence boost — applied together after RRF fusion
@@ -750,5 +754,6 @@ def search_for_context(
         else:
             formatted = format_results(results)
         return formatted[:max_chars]
-    except Exception:
+    except Exception as e:
+        logger.warning("search_for_context failed for %s: %s", cwd, e)
         return ""

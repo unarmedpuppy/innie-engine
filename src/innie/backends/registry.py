@@ -1,8 +1,11 @@
 """Backend discovery via entry points."""
 
+import logging
 from importlib.metadata import entry_points
 
 from innie.backends.base import Backend
+
+logger = logging.getLogger(__name__)
 
 
 def discover_backends() -> dict[str, type[Backend]]:
@@ -18,7 +21,8 @@ def discover_backends() -> dict[str, type[Backend]]:
             cls = ep.load()
             if isinstance(cls, type) and issubclass(cls, Backend):
                 backends[ep.name] = cls
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to load backend plugin %r: %s", ep.name, e)
             continue
     return backends
 

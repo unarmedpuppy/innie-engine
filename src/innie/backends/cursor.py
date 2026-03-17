@@ -1,4 +1,9 @@
-"""Cursor backend adapter (stub)."""
+"""Cursor backend adapter.
+
+NOTE: collect_sessions() is not yet implemented — this backend is detected
+but returns no sessions. Hook installation is also not implemented (Cursor
+does not have a public hook mechanism equivalent to Claude Code).
+"""
 
 from pathlib import Path
 

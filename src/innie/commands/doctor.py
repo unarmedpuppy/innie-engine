@@ -168,16 +168,65 @@ def doctor():
     # 10. Embedding service
     provider = get("embedding.provider", "none")
     if provider != "none":
+        from innie.core.search import get_embedding_dims
+
         url = get(f"embedding.{provider}.url", get("embedding.docker.url", "http://localhost:8766"))
+        embed_healthy = False
         try:
             import httpx
 
             resp = httpx.get(f"{url}/health", timeout=3.0)
-            check("Embedding service healthy", resp.status_code == 200)
+            embed_healthy = resp.status_code == 200
+            check("Embedding service healthy", embed_healthy, "Run: innie docker up")
         except Exception:
             check("Embedding service healthy", False, "Run: innie docker up")
 
-    # 11. Index exists
+        if embed_healthy:
+            # Verify returned dimensions match configured INNIE_EMBEDDING_DIMS / embedding.dims
+            expected = get_embedding_dims()
+            try:
+                import httpx
+
+                model = get("embedding.model", "bge-base-en")
+                r = httpx.post(
+                    f"{url}/v1/embeddings",
+                    json={"model": model, "input": ["ping"]},
+                    timeout=10.0,
+                )
+                r.raise_for_status()
+                actual = len(r.json()["data"][0]["embedding"])
+                dims_ok = actual == expected
+                check(
+                    f"Embedding dims match ({actual})",
+                    dims_ok,
+                    f"Set INNIE_EMBEDDING_DIMS={actual} or embedding.dims={actual} in config.toml"
+                    if not dims_ok else "",
+                )
+            except Exception as e:
+                check("Embedding dims validated", False, f"Could not verify: {e}")
+
+    # 11. Extraction endpoint reachable
+    hb_provider = get("heartbeat.provider", "auto")
+    hb_url = get("heartbeat.external_url", "")
+    if hb_provider in ("external", "openclaw") or (hb_provider == "auto" and hb_url):
+        resolve_url = hb_url
+        if hb_provider == "openclaw":
+            try:
+                from innie.heartbeat.extract import _resolve_openclaw
+                resolve_url, _, _ = _resolve_openclaw()
+            except Exception:
+                resolve_url = ""
+        if resolve_url:
+            try:
+                import httpx
+                resp = httpx.get(f"{resolve_url.rstrip('/')}/models", timeout=5.0)
+                check("Extraction LLM endpoint reachable", resp.status_code in (200, 404),
+                      f"Check heartbeat.external_url points to a running vLLM/Ollama at {resolve_url}")
+            except Exception:
+                check("Extraction LLM endpoint reachable", False,
+                      f"Check heartbeat.external_url — {resolve_url} is not responding")
+
+    # 12. Index exists
     check("Semantic index exists", paths.index_db(agent).exists(), "Run: innie index")
 
     console.print(f"\n  {checks_passed}/{checks_total} checks passed.")

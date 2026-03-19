@@ -98,8 +98,17 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
                     timeout=3.0,
                 )
                 if resp.status_code == 200:
-                    endpoint = resp.json().get("endpoint", "")
+                    data = resp.json()
+                    endpoint = data.get("endpoint", "")
+                    tailscale_dns = data.get("tailscale_dns", "")
                     if endpoint:
+                        from urllib.parse import urlparse
+
+                        hostname = urlparse(endpoint).hostname or ""
+                        # Docker-internal hostnames have no dots — prefer tailscale_dns for
+                        # cross-machine A2A (e.g. "ralph" → "ralph.server.unarmedpuppy.com")
+                        if "." not in hostname and tailscale_dns:
+                            return f"https://{tailscale_dns}"
                         return endpoint.rstrip("/")
         except Exception as e:
             logger.debug("Fleet endpoint lookup failed for %s: %s", agent_name, e)

@@ -61,6 +61,7 @@ def _register_commands():
         init,
         memory,
         migrate,
+        ollama,
         search,
         secrets,
         serve,
@@ -206,6 +207,14 @@ def _register_commands():
     trace_app.command("show")(trace.show)
     trace_app.command("stats")(trace.stats)
     app.add_typer(trace_app, name="trace")
+
+    # Ollama subcommands
+    ollama_app = typer.Typer(help="Manage local Ollama models for heartbeat extraction.")
+    ollama_app.command("status")(ollama.status)
+    ollama_app.command("list")(ollama.list_models)
+    ollama_app.command("pull")(ollama.pull)
+    ollama_app.command("use")(ollama.use)
+    app.add_typer(ollama_app, name="ollama")
 
 
 _register_commands()

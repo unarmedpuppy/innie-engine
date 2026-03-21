@@ -170,7 +170,6 @@ class MattermostAdapter:
         try:
             result = await collect_stream(
             prompt=text,
-            model="claude-sonnet-4-6",
             system_prompt=build_session_context(agent_name=self._agent_name),
             permission_mode="yolo",
             session_id=session_id,

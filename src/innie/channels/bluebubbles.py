@@ -162,7 +162,6 @@ async def _handle_message(payload: dict) -> None:
     try:
         result = await collect_stream(
             prompt=prompt,
-            model="claude-sonnet-4-6",
             system_prompt=system_prompt,
             permission_mode="yolo",
             session_id=session_id,

@@ -201,7 +201,11 @@ def launch(
     env = _build_env(agent, mode)
     cmd = _build_claude_cmd(agent)
 
-    no_tmux = os.environ.get("INNIE_NO_TMUX") or not shutil.which("tmux")
+    no_tmux = (
+        os.environ.get("INNIE_NO_TMUX")
+        or not shutil.which("tmux")
+        or os.environ.get("TERM", "").startswith("xterm-ghostty")
+    )
 
     if no_tmux:
         # Direct exec — replaces this process

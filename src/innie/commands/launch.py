@@ -116,21 +116,13 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
         env.pop("ANTHROPIC_API_KEY", None)
         env.pop("ANTHROPIC_OAUTH_TOKEN", None)
     else:
-        # Default — route through LLM router using agent env credentials.
-        # Supports LLM_ROUTER_API_KEY (shared env canonical name) or
-        # LLM_ROUTER_KEY (legacy agent env name).
-        router_url = merged.get("LLM_ROUTER_URL", "")
-        router_key = merged.get("LLM_ROUTER_API_KEY") or merged.get("LLM_ROUTER_KEY", "")
-        if router_url and router_key:
-            # Strip trailing /v1 — the Anthropic SDK appends its own path segments
-            base_url = router_url.rstrip("/")
-            if base_url.endswith("/v1"):
-                base_url = base_url[:-3]
-            env["ANTHROPIC_BASE_URL"] = base_url
-            env["ANTHROPIC_API_KEY"] = router_key
+        # Default — use ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY from agent .env.
+        # Agents set these to point at the homelab router (lai_ key).
+        # Falls back to local proxy if not configured.
+        env["ANTHROPIC_BASE_URL"] = merged.get("ANTHROPIC_BASE_URL", "http://localhost:9292")
+        if api_key := merged.get("ANTHROPIC_API_KEY"):
+            env["ANTHROPIC_API_KEY"] = api_key
         else:
-            # Fall back to local proxy if LLM router not configured
-            env["ANTHROPIC_BASE_URL"] = "http://localhost:9292"
             env.pop("ANTHROPIC_API_KEY", None)
         env.pop("ANTHROPIC_OAUTH_TOKEN", None)
 

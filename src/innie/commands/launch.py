@@ -122,9 +122,10 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
         if token := merged.get("CLAUDE_PROXY_TOKEN"):
             env["ANTHROPIC_OAUTH_TOKEN"] = token
     else:
-        # Remove any ANTHROPIC_BASE_URL from env so we use normal Anthropic oauth
+        # Remove Anthropic overrides so claude.ai oauth is used normally
         env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_OAUTH_TOKEN", None)
+        env.pop("ANTHROPIC_API_KEY", None)
 
     return env
 

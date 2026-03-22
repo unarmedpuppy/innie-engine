@@ -59,6 +59,7 @@ def _register_commands():
         heartbeat,
         inbox,
         init,
+        launch,
         memory,
         migrate,
         ollama,
@@ -131,11 +132,20 @@ def _register_commands():
     docker_app.command("logs")(docker_services.logs)
     app.add_typer(docker_app, name="docker")
 
+    # Launch command
+    app.command("launch")(launch.launch)
+
+    # Env check command
+    env_check_app = typer.Typer(help="Validate required env vars across .env files.")
+    env_check_app.command("check")(launch.env_check)
+    app.add_typer(env_check_app, name="env-check")
+
     # Alias subcommands
     alias_app = typer.Typer(help="Manage shell aliases.")
     alias_app.command("add")(alias.add)
     alias_app.command("show")(alias.show)
     alias_app.command("remove")(alias.remove)
+    alias_app.command("generate-all")(alias.generate_all)
     app.add_typer(alias_app, name="alias")
 
     # Backend subcommands

@@ -122,13 +122,12 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
             env["ANTHROPIC_OAUTH_TOKEN"] = token
         env.pop("ANTHROPIC_API_KEY", None)
     else:
-        # Default — route through LLM router (local models: 3090/GLM)
-        # Router expects ANTHROPIC_OAUTH_TOKEN set to the router API key
-        if url := merged.get("LLM_ROUTER_URL"):
-            env["ANTHROPIC_BASE_URL"] = url
-        if key := merged.get("LLM_ROUTER_API_KEY"):
-            env["ANTHROPIC_OAUTH_TOKEN"] = key
+        # Default — route through local llm-proxy (localhost:9292)
+        # The proxy strips Claude's auth and injects the router key before
+        # forwarding to the LLM router. No auth conflict this way.
+        env["ANTHROPIC_BASE_URL"] = "http://localhost:9292"
         env.pop("ANTHROPIC_API_KEY", None)
+        env.pop("ANTHROPIC_OAUTH_TOKEN", None)
 
     return env
 

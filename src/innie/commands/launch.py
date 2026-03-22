@@ -116,16 +116,18 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
     env.update(merged)
 
     if mode == "claude":
-        # Use ANTHROPIC_BASE_URL from .env (agent wins over shared), fallback to localhost proxy
+        # Anthropic proxy — routes through homelab proxy service using oauth token
         env["ANTHROPIC_BASE_URL"] = merged.get("ANTHROPIC_BASE_URL", "http://localhost:9292")
-        # Map CLAUDE_PROXY_TOKEN → ANTHROPIC_OAUTH_TOKEN for the proxy service
         if token := merged.get("CLAUDE_PROXY_TOKEN"):
             env["ANTHROPIC_OAUTH_TOKEN"] = token
-    else:
-        # Remove Anthropic overrides so claude.ai oauth is used normally
-        env.pop("ANTHROPIC_BASE_URL", None)
-        env.pop("ANTHROPIC_OAUTH_TOKEN", None)
         env.pop("ANTHROPIC_API_KEY", None)
+    else:
+        # Default — route through LLM router (local models: 3090/GLM)
+        if url := merged.get("LLM_ROUTER_URL"):
+            env["ANTHROPIC_BASE_URL"] = url
+        if key := merged.get("LLM_ROUTER_API_KEY"):
+            env["ANTHROPIC_API_KEY"] = key
+        env.pop("ANTHROPIC_OAUTH_TOKEN", None)
 
     return env
 

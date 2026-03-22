@@ -36,6 +36,8 @@ ENV_SCHEMA: dict[str, list[str]] = {
     ],
     "agent": [
         "MATTERMOST_BOT_TOKEN",
+        "LLM_ROUTER_API_KEY",
+        "LLM_ROUTER_URL",
     ],
     "claude": [
         "ANTHROPIC_BASE_URL",

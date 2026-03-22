@@ -129,23 +129,31 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
     return env
 
 
-def _shell_env_prefix(env: dict[str, str]) -> str:
-    """Build a shell-safe 'KEY=VAL KEY2=VAL2 ...' prefix string."""
-    return " ".join(f"{k}={shlex.quote(v)}" for k, v in env.items())
-
-
 def _exec_direct(cmd: list[str], env: dict[str, str]) -> None:
-    """Replace current process with claude (for the no-tmux path)."""
-    # Expand $(...) in --append-system-prompt by running via shell
-    full_env = {**os.environ, **env}
-    env_prefix = _shell_env_prefix(env)
-    shell_cmd = env_prefix + " " + " ".join(cmd)
-    os.execlp("sh", "sh", "-c", shell_cmd)
+    """Replace current process with claude (for the no-tmux path).
+
+    Sets env vars directly in os.environ (safe for multiline values like private keys),
+    then execs sh to handle $(...) subshell expansion in --append-system-prompt.
+    """
+    for k, v in env.items():
+        os.environ[k] = v
+    # Properly quote all args except $(...) subshells which need shell expansion
+    parts = []
+    for c in cmd:
+        if c.startswith("$("):
+            parts.append(c)
+        else:
+            parts.append(shlex.quote(c))
+    os.execlp("sh", "sh", "-c", " ".join(parts))
 
 
 def _tmux_inner_cmd(agent: str, mode: str) -> str:
-    """Build the shell command tmux will run inside the new window/session."""
-    parts = [f"INNIE_NO_TMUX=1 innie launch {shlex.quote(agent)}"]
+    """Build the shell command tmux will run inside the new window/session.
+
+    Env vars are passed via tmux -e flags, not embedded in the command string,
+    so multiline values (private keys etc.) don't break shell parsing.
+    """
+    parts = [f"innie launch {shlex.quote(agent)}"]
     if mode != "default":
         parts.append(f"--mode {shlex.quote(mode)}")
     # Keep the window alive after claude exits so the user can see output
@@ -197,11 +205,10 @@ def launch(
 
     if in_tmux:
         # Already in tmux — open new window
-        os.execlp("tmux", "tmux", "new-window", "-n", agent, inner)
+        # Pass INNIE_NO_TMUX via -e so multiline env vars don't break shell parsing
+        os.execlp("tmux", "tmux", "new-window", "-n", agent, "-e", "INNIE_NO_TMUX=1", inner)
     else:
         # Outside tmux — create session if needed, then attach
-        # new-session -A: attach if session exists, create if not
-        # -s: session name  -d: start detached so we can attach cleanly
         exists = subprocess.run(
             ["tmux", "has-session", "-t", agent],
             capture_output=True,
@@ -209,7 +216,7 @@ def launch(
 
         if not exists:
             subprocess.run(
-                ["tmux", "new-session", "-d", "-s", agent, inner],
+                ["tmux", "new-session", "-d", "-s", agent, "-e", "INNIE_NO_TMUX=1", inner],
                 check=True,
             )
 

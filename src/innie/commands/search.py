@@ -77,9 +77,18 @@ def search(
 def index(
     changed_only: bool = typer.Option(False, "--changed-only", help="Only index modified files"),
     status_only: bool = typer.Option(False, "--status", help="Show index stats only"),
+    mode: str = typer.Option("default", "--mode", "-m", help="LLM routing mode: default | claude (routes any LLM calls through local proxy)"),
 ):
     """Build or refresh the semantic index."""
+    from innie.core import paths
     from innie.core.search import collect_files, index_files, index_status, open_db
+
+    if mode != "default":
+        try:
+            from innie.commands.launch import apply_mode_env
+            apply_mode_env(paths.active_agent(), mode)
+        except Exception:
+            pass
 
     conn = open_db()
 

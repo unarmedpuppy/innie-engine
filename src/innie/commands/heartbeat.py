@@ -17,6 +17,7 @@ def run(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview what would be collected and extracted without writing anything"),
     batch_size: int = typer.Option(0, "--batch-size", "-b", help="Max sessions to process per run (0 = unlimited). Use for retroactive backfill."),
     retroactive: bool = typer.Option(False, "--retroactive", "-r", help="Process all historical sessions regardless of last_run timestamp. Uses processed_sessions to avoid duplicates."),
+    mode: str = typer.Option("default", "--mode", "-m", help="LLM routing mode: default | claude (routes extraction through local proxy)"),
 ):
     """Run one heartbeat cycle: collect → extract → route."""
     sys.argv[0] = "innie-heartbeat"
@@ -39,7 +40,14 @@ def run(
     mode = " [dim](dry run)[/dim]" if dry_run else ""
     console.print(f"Running heartbeat for agent: [bold]{agent}[/bold]{mode}")
 
-    # Load .env secrets so extraction can reach LLM providers
+    # Apply mode-specific env vars first (proxy routing), then load .env secrets
+    if mode != "default":
+        try:
+            from innie.commands.launch import apply_mode_env
+            apply_mode_env(agent, mode)
+        except Exception:
+            pass
+
     try:
         from innie.core.agent_env import inject_into_os_env
         inject_into_os_env(agent)
@@ -195,7 +203,7 @@ def _self_update():
 
     if is_editable and source_dir:
         result = subprocess.run(
-            ["uv", "tool", "install", "-e", source_dir, "--reinstall"],
+            ["uv", "tool", "install", "--editable", f"{source_dir}[serve]", "--reinstall"],
             capture_output=True,
             text=True,
         )

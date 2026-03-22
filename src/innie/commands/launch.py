@@ -152,6 +152,17 @@ def _tmux_inner_cmd(agent: str, mode: str) -> str:
     return " ".join(parts) + "; exec $SHELL"
 
 
+def apply_mode_env(agent: str, mode: str) -> None:
+    """Inject mode-specific env vars into os.environ in-process.
+
+    Use this in commands (heartbeat, index) that need proxy routing
+    without replacing the process. Same logic as launch --mode.
+    """
+    env = _build_env(agent, mode)
+    for k, v in env.items():
+        os.environ[k] = v
+
+
 def launch(
     agent: str = typer.Argument(..., help="Agent name to launch"),
     mode: str = typer.Option("default", "--mode", "-m", help="Launch mode: default | claude"),

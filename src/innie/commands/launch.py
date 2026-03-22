@@ -123,11 +123,12 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
         env.pop("ANTHROPIC_API_KEY", None)
     else:
         # Default — route through LLM router (local models: 3090/GLM)
-        # Only set base URL; let oauth token handle auth with the router
+        # Router expects ANTHROPIC_OAUTH_TOKEN set to the router API key
         if url := merged.get("LLM_ROUTER_URL"):
             env["ANTHROPIC_BASE_URL"] = url
+        if key := merged.get("LLM_ROUTER_API_KEY"):
+            env["ANTHROPIC_OAUTH_TOKEN"] = key
         env.pop("ANTHROPIC_API_KEY", None)
-        env.pop("ANTHROPIC_OAUTH_TOKEN", None)
 
     return env
 

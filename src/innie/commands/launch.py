@@ -138,6 +138,10 @@ def _exec_direct(cmd: list[str], env: dict[str, str]) -> None:
     """
     for k, v in env.items():
         os.environ[k] = v
+    # Always start claude in ~/workspace to avoid "do you trust this folder" prompts
+    workspace = os.path.expanduser("~/workspace")
+    if os.path.isdir(workspace):
+        os.chdir(workspace)
     # Properly quote all args. $(...) subshells are double-quoted to allow shell
     # expansion while preventing word-splitting on multiline output (SOUL.md etc.)
     parts = []

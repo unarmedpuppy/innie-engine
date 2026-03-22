@@ -137,11 +137,12 @@ def _exec_direct(cmd: list[str], env: dict[str, str]) -> None:
     """
     for k, v in env.items():
         os.environ[k] = v
-    # Properly quote all args except $(...) subshells which need shell expansion
+    # Properly quote all args. $(...) subshells are double-quoted to allow shell
+    # expansion while preventing word-splitting on multiline output (SOUL.md etc.)
     parts = []
     for c in cmd:
         if c.startswith("$("):
-            parts.append(c)
+            parts.append(f'"{c}"')
         else:
             parts.append(shlex.quote(c))
     os.execlp("sh", "sh", "-c", " ".join(parts))

@@ -122,10 +122,10 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
             env["ANTHROPIC_OAUTH_TOKEN"] = token
         env.pop("ANTHROPIC_API_KEY", None)
     else:
-        # Default — route through local llm-proxy (localhost:9292)
+        # Default — route through llm-proxy (localhost:9292 unless overridden in .env)
         # The proxy strips Claude's auth and injects the router key before
         # forwarding to the LLM router. No auth conflict this way.
-        env["ANTHROPIC_BASE_URL"] = "http://localhost:9292"
+        env["ANTHROPIC_BASE_URL"] = merged.get("ANTHROPIC_BASE_URL", "http://localhost:9292")
         env.pop("ANTHROPIC_API_KEY", None)
         env.pop("ANTHROPIC_OAUTH_TOKEN", None)
 

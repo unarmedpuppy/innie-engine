@@ -6,9 +6,10 @@ Behavior:
   - tmux unavailable → exec claude directly
 
 Modes:
-  default   — use Anthropic oauth/API as-is (no overrides)
+  default   — route through LLM router (LLM_ROUTER_URL + LLM_ROUTER_API_KEY/LLM_ROUTER_KEY)
+              falls back to localhost:9292 if LLM router not configured
   claude    — inject ANTHROPIC_BASE_URL + ANTHROPIC_OAUTH_TOKEN from .env
-              for routing through the local Anthropic proxy service
+              for routing through the Anthropic proxy service (e.g. mac-mini)
 """
 
 import os
@@ -122,11 +123,22 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
             env["ANTHROPIC_OAUTH_TOKEN"] = token
         env.pop("ANTHROPIC_API_KEY", None)
     else:
-        # Default — route through local llm-proxy (localhost:9292)
-        # The proxy strips Claude's auth and injects the router key before
-        # forwarding to the LLM router. No auth conflict this way.
-        env["ANTHROPIC_BASE_URL"] = "http://localhost:9292"
-        env.pop("ANTHROPIC_API_KEY", None)
+        # Default — route through LLM router using agent env credentials.
+        # Supports LLM_ROUTER_API_KEY (shared env canonical name) or
+        # LLM_ROUTER_KEY (legacy agent env name).
+        router_url = merged.get("LLM_ROUTER_URL", "")
+        router_key = merged.get("LLM_ROUTER_API_KEY") or merged.get("LLM_ROUTER_KEY", "")
+        if router_url and router_key:
+            # Strip trailing /v1 — the Anthropic SDK appends its own path segments
+            base_url = router_url.rstrip("/")
+            if base_url.endswith("/v1"):
+                base_url = base_url[:-3]
+            env["ANTHROPIC_BASE_URL"] = base_url
+            env["ANTHROPIC_API_KEY"] = router_key
+        else:
+            # Fall back to local proxy if LLM router not configured
+            env["ANTHROPIC_BASE_URL"] = "http://localhost:9292"
+            env.pop("ANTHROPIC_API_KEY", None)
         env.pop("ANTHROPIC_OAUTH_TOKEN", None)
 
     return env

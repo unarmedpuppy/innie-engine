@@ -8,8 +8,8 @@ Behavior:
 Modes:
   default   — route through LLM router (LLM_ROUTER_URL + LLM_ROUTER_API_KEY/LLM_ROUTER_KEY)
               falls back to localhost:9292 if LLM router not configured
-  claude    — inject ANTHROPIC_BASE_URL + ANTHROPIC_OAUTH_TOKEN from .env
-              for routing through the Anthropic proxy service (e.g. mac-mini)
+  claude    — use Claude Code native OAuth (clears ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY)
+              requires `claude login` on the host machine
 """
 
 import os
@@ -40,10 +40,7 @@ ENV_SCHEMA: dict[str, list[str]] = {
         "LLM_ROUTER_API_KEY",
         "LLM_ROUTER_URL",
     ],
-    "claude": [
-        "ANTHROPIC_BASE_URL",
-        "CLAUDE_PROXY_TOKEN",
-    ],
+    "claude": [],  # no required keys — uses Claude Code native OAuth
 }
 
 
@@ -69,10 +66,7 @@ def _validate_env(agent: str, merged: dict[str, str], mode: str) -> list[str]:
         if key not in merged:
             warnings.append(f"[{agent}] {key} missing from agent or shared .env")
 
-    if mode == "claude":
-        for key in ENV_SCHEMA["claude"]:
-            if key not in merged:
-                warnings.append(f"[claude mode] {key} missing — needed for local proxy routing")
+    # claude mode uses native OAuth — no additional keys required
 
     return warnings
 
@@ -117,11 +111,10 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
     env.update(merged)
 
     if mode == "claude":
-        # Anthropic proxy — routes through homelab proxy service using oauth token
-        env["ANTHROPIC_BASE_URL"] = merged.get("ANTHROPIC_BASE_URL", "http://localhost:9292")
-        if token := merged.get("CLAUDE_PROXY_TOKEN"):
-            env["ANTHROPIC_OAUTH_TOKEN"] = token
+        # Native OAuth — clear any routing overrides so Claude Code uses its stored login
+        env.pop("ANTHROPIC_BASE_URL", None)
         env.pop("ANTHROPIC_API_KEY", None)
+        env.pop("ANTHROPIC_OAUTH_TOKEN", None)
     else:
         # Default — route through LLM router using agent env credentials.
         # Supports LLM_ROUTER_API_KEY (shared env canonical name) or

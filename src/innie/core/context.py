@@ -27,6 +27,18 @@ def _budget_chars(tokens: int) -> int:
     return tokens * 4  # ~4 chars per token
 
 
+def _detect_project(cwd: str | None) -> str | None:
+    """Detect the active project from the current working directory."""
+    if not cwd:
+        return None
+    workspace = Path.home() / "workspace"
+    try:
+        rel = Path(cwd).relative_to(workspace)
+        return rel.parts[0] if rel.parts else None
+    except ValueError:
+        return None
+
+
 def build_session_context(
     agent_name: str | None = None,
     cwd: str | None = None,
@@ -64,6 +76,22 @@ def build_session_context(
         ctx = profile.context[:ctx_budget]
         parts.append(f'<agent-context agent="{profile.name}">\n{ctx}\n</agent-context>')
         used += len(ctx)
+
+    # 3b. Project walnut — now.md + tasks.md for active project
+    project = _detect_project(cwd)
+    if project:
+        now_content = _read_optional(paths.project_now(project, agent_name))
+        tasks_content = _read_optional(paths.project_tasks(project, agent_name))
+        walnut_parts = []
+        if now_content:
+            walnut_parts.append(f"**now.md**\n{now_content}")
+        if tasks_content:
+            walnut_parts.append(f"**tasks.md**\n{tasks_content}")
+        if walnut_parts:
+            walnut_budget = int(budget * 0.20)
+            walnut_text = "\n\n".join(walnut_parts)[:walnut_budget]
+            parts.append(f'<project-context project="{project}">\n{walnut_text}\n</project-context>')
+            used += len(walnut_text)
 
     # 4. Semantic search results — remaining budget
     # Switch to index-only mode when knowledge base exceeds threshold (saves tokens)

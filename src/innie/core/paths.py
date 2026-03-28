@@ -58,11 +58,53 @@ def heartbeat_instructions(agent: str | None = None) -> Path:
     return agent_dir(agent) / "HEARTBEAT.md"
 
 
+# World directory — synced across machines via Gitea
+
+
+def world_dir() -> Path:
+    """Root of the synced world directory. Configured via defaults.world in config.toml."""
+    from innie.core.config import load_config
+    cfg = load_config()
+    configured = cfg.get("defaults", {}).get("world")
+    if configured:
+        return Path(configured).expanduser()
+    return home() / "world"  # fallback if not configured
+
+
 # data/ — permanent knowledge base (git-trackable)
 
 
 def data_dir(agent: str | None = None) -> Path:
+    """Return the data directory for an agent.
+
+    If defaults.world is configured in config.toml, data lives in the world dir
+    (synced across machines). Otherwise falls back to ~/.innie/agents/<name>/data/.
+    """
+    from innie.core.config import load_config
+    cfg = load_config()
+    if cfg.get("defaults", {}).get("world"):
+        return world_dir() / "agents" / (agent or active_agent()) / "data"
     return agent_dir(agent) / "data"
+
+
+def project_dir(project: str, agent: str | None = None) -> Path:
+    return data_dir(agent) / "projects" / project
+
+
+def project_now(project: str, agent: str | None = None) -> Path:
+    return project_dir(project, agent) / "now.md"
+
+
+def project_log(project: str, agent: str | None = None) -> Path:
+    return project_dir(project, agent) / "log.md"
+
+
+def project_tasks(project: str, agent: str | None = None) -> Path:
+    return project_dir(project, agent) / "tasks.md"
+
+
+def project_key(project: str, agent: str | None = None) -> Path:
+    return project_dir(project, agent) / "key.md"
 
 
 def journal_dir(agent: str | None = None) -> Path:

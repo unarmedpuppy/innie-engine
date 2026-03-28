@@ -172,12 +172,18 @@ def build_session_context(
 
 def build_precompact_warning(agent_name: str | None = None) -> str:
     """Build the pre-compact memory flush warning."""
+    import os
     name = agent_name or paths.active_agent()
     ctx_path = paths.context_file(name)
+    project = _detect_project(os.getcwd())
+    project_step = (
+        f'\n0. `innie project log {project} "<one-line summary of what happened this session>"` — spine entry before compaction\n'
+        if project else ""
+    )
     return f"""<system-reminder priority="critical">
 CONTEXT COMPACTION IMMINENT — Flush your working memory NOW before it is lost.
 
-Run these in order:
+Run these in order:{project_step}
 1. `innie memory store learning "Title" "Content"` — for any non-obvious discoveries made this session
 2. `innie memory store decision "Title" "Content" --project NAME` — for any arch choices made
 3. `innie memory forget PATH "reason"` — for anything you now know is wrong

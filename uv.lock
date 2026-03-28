@@ -373,7 +373,7 @@ wheels = [
 
 [[package]]
 name = "innie-engine"
-version = "0.10.0"
+version = "0.13.11"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

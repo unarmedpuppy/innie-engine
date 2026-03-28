@@ -63,11 +63,13 @@ def _register_commands():
         memory,
         migrate,
         ollama,
+        project,
         search,
         secrets,
         serve,
         session,
         skills,
+        sync,
         trace,
         update,
     )
@@ -225,6 +227,17 @@ def _register_commands():
     ollama_app.command("pull")(ollama.pull)
     ollama_app.command("use")(ollama.use)
     app.add_typer(ollama_app, name="ollama")
+
+    # Project walnut subcommands
+    project_app = typer.Typer(help="Manage per-project 5-file walnut context (now/log/tasks/key/insights).")
+    project_app.command("log")(project.log)
+    project_app.command("now")(project.now)
+    project_app.command("save")(project.save)
+    project_app.command("list")(project.list_projects)
+    app.add_typer(project_app, name="project")
+
+    # Sync command — push/pull world directory
+    app.command("sync")(sync.sync)
 
 
 _register_commands()

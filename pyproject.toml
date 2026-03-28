@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "innie-engine"
-version = "0.14.1"
+version = "0.14.2"
 description = "Persistent memory and identity for AI coding assistants"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -58,6 +58,7 @@ docs = [
 
 [project.scripts]
 innie = "innie.cli:app"
+g = "innie.cli:app"
 
 [project.entry-points."innie.backends"]
 claude-code = "innie.backends.claude_code:ClaudeCodeBackend"

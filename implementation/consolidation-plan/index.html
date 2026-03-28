@@ -1,0 +1,3371 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Persistent memory and identity for AI coding assistants">
+      
+      
+        <meta name="author" content="Joshua Jenquist">
+      
+      
+        <link rel="canonical" href="https://joshuajenquist.github.io/innie-engine/implementation/consolidation-plan/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>innie-engine Consolidation Plan - innie-engine</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#innie-engine-consolidation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="innie-engine" class="md-header__button md-logo" aria-label="innie-engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            innie-engine
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              innie-engine Consolidation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/joshuajenquist/innie-engine" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    joshuajenquist/innie-engine
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diagrams/data-flow/" class="md-tabs__link">
+          
+  
+  
+  Diagrams
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adrs/" class="md-tabs__link">
+          
+  
+  
+  ADRs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../IMPLEMENTATION_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Implementation Plan
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="innie-engine" class="md-nav__button md-logo" aria-label="innie-engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    innie-engine
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/joshuajenquist/innie-engine" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    joshuajenquist/innie-engine
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/storage-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/heartbeat-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Heartbeat Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/search-engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Search Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fleet Coordination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagrams
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Diagrams
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diagrams/data-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diagrams/host-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diagrams/storage-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Built-in Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0001-journal-first-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 – Journal-First Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0002-sqlite-hybrid-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 – SQLite Hybrid Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0003-backend-plugin-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 – Backend Plugin System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0004-three-phase-heartbeat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 – Three-Phase Heartbeat
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0005-hybrid-search-rrf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 – Hybrid Search with RRF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0006-init-wizard-setup-modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 – Init Wizard Setup Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0007-git-auto-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 – Git Auto-Backup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0008-fleet-gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 – Fleet Gateway
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0009-skills-as-slash-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 – Skills as Slash Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0010-memory-decay-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0010 – Memory Decay Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0011-secret-scanning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0011 – Secret Scanning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0012-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0012 – Migration from Existing Setups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0013-distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0013 – Distribution: PyPI + Homebrew
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0014-two-layer-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0014 – Two-Layer Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0015-config-format-split/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0015 – TOML Config, YAML Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0016-thin-bash-shims/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0016 – Thin Bash Shims
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0017-namespace-hook-merge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0017 – Namespace-Based Hook Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0018-dockerized-embedding-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0018 – Dockerized Embedding Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0019-sqlite-tracing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 – SQLite-Backed Tracing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0020-dcg-guard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 – Destructive Command Guard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0021-obsidian-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 – Obsidian Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0022-engine-scope-boundary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 – Engine Scope Boundary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0023-ai-never-writes-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 – AI Never Writes Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0024-context-injection-token-budget/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0024 – Context Injection Token Budget
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0025-uv-primary-distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 – uv as Primary Distribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0026-search-pipeline-improvements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0026 – Search Pipeline Improvements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0027-cli-surface-area-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0027 – CLI Surface Area Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0028-heartbeat-provider-abstraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0028 – Heartbeat Provider Abstraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../IMPLEMENTATION_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#replacing-agent-harness-openclaw-with-innie-serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replacing agent-harness + openclaw with innie serve
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#background-and-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background and Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Background and Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-exists-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What exists today
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-core-problem-two-separate-averys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The core problem: two separate Averys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-discovery-innie-serve-already-has-subprocess-invocation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key discovery: innie serve already has subprocess invocation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-innie-agent-namespaces-not-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two innie agent namespaces, not one
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ralph-is-not-a-persona" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ralph is not a persona
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-router-for-all-claude-code-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM router for all Claude Code traffic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#end-state-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-state architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-innie-serve-already-has-do-not-re-implement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What innie serve already has (do not re-implement)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bugs-in-innieserveclaudepy-that-must-be-fixed-phase-0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bugs in innie/serve/claude.py that must be fixed (Phase 0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bugs in innie/serve/claude.py that must be fixed (Phase 0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-1-invalid-permission-mode-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug 1: Invalid permission mode flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-2-missing-print-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug 2: Missing --print flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-3-wrong-prompt-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug 3: Wrong prompt format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-4-no-macos-claudecodeapp-binary-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug 4: No macOS ClaudeCode.app binary detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-5-no-anthropic_base_url-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug 5: No ANTHROPIC_BASE_URL injection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-router-endpoint-verification-do-this-before-phase-0-smoke-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM router endpoint verification (do this before Phase 0 smoke test)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-0-fix-innieserveclaudepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0: Fix innie/serve/claude.py
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-job-store-persistence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Job Store Persistence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-two-agent-namespaces" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Two Agent Namespaces
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Two Agent Namespaces">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#avery-namespace-family-coordinator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        avery namespace — Family Coordinator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev-namespace-technical-partner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev namespace — Technical Partner
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-move-existing-knowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration: move existing knowledge
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-channel-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Channel Adapters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3: Channel Adapters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-contact-session-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Contact session mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-policy-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Policy layer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-bluebubbles-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 BlueBubbles adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-mattermost-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Mattermost adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-response-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Response filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36-delivery-queue-with-retry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 Delivery queue with retry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-wire-channels-into-innie-serve-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 Wire channels into innie serve startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-apscheduler-ralph-loop-replacement-maintenance-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: APScheduler (Ralph loop replacement + maintenance jobs)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-ralph-container-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Ralph container migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-deprecate-agent-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: Deprecate agent-harness
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-7-deprecate-openclaw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 7: Deprecate openclaw
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-file-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete file manifest
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complete file manifest">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-files-in-srcinnie" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New files in src/innie/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modified-files-in-srcinnie" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modified files in src/innie/
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-config-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New config files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pyprojecttoml-additions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pyproject.toml additions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables required
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#openclaw-gap-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        openclaw gap checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-gaps-not-carried-forward" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known gaps not carried forward
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-execution-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase execution order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="innie-engine-consolidation-plan">innie-engine Consolidation Plan<a class="headerlink" href="#innie-engine-consolidation-plan" title="Permanent link">&para;</a></h1>
+<h2 id="replacing-agent-harness-openclaw-with-innie-serve">Replacing agent-harness + openclaw with innie serve<a class="headerlink" href="#replacing-agent-harness-openclaw-with-innie-serve" title="Permanent link">&para;</a></h2>
+<p><em>Created: 2026-03-09</em>
+<em>Status: Approved, not yet started</em></p>
+<hr />
+<h2 id="background-and-context">Background and Context<a class="headerlink" href="#background-and-context" title="Permanent link">&para;</a></h2>
+<h3 id="what-exists-today">What exists today<a class="headerlink" href="#what-exists-today" title="Permanent link">&para;</a></h3>
+<p>Three separate systems handle agent runtime and messaging:</p>
+<p><strong>agent-harness</strong> (Node.js, Mac Mini port 8013 + server Docker container)
+- Spawns Claude Code subprocesses via <code>core/claude_stream.py</code>
+- Exposes OpenAI-compatible jobs API + chat completions
+- Hosts Ralph Wiggum autonomous task loop
+- Has Avery, Ralph, Gilfoyle, Jobin profiles (SOUL.md, IDENTITY.md, CLAUDE.md per agent)
+- Hooks for memory persistence and trace forwarding</p>
+<p><strong>openclaw</strong> (Node.js npm package, Mac Mini port 8013 — same port, separate process)
+- iMessage bridge via BlueBubbles (localhost:1234, Private API mode required on macOS 26.x)
+- Mattermost WebSocket bot
+- Makes <strong>direct API calls to GLM-5</strong> via homelab LLM router — NOT Claude Code
+- Has its own memory search pointed at Obsidian vault + shua-ledger (NOT innie-engine)
+- Completely separate from innie-engine memory system</p>
+<p><strong>innie-engine</strong> (Python, <code>innie serve</code>)
+- Full knowledge base, heartbeat extraction, semantic search
+- <code>innie/serve/claude.py</code> — already has <code>stream_claude_events</code>, <code>collect_stream</code>, <code>graceful_kill</code>
+- <code>innie/serve/app.py</code> — already has jobs API, chat completions, fleet registration, Mattermost reply_to, traces API, memory CRUD
+- <code>backends/claude_code.py</code> — <code>collect_sessions()</code> fully implemented (reads <code>~/.claude/projects/</code> JSONL)</p>
+<h3 id="the-core-problem-two-separate-averys">The core problem: two separate Averys<a class="headerlink" href="#the-core-problem-two-separate-averys" title="Permanent link">&para;</a></h3>
+<p>When Josh messages via iMessage or Mattermost, openclaw handles it with GLM-5 and its own Obsidian-based memory. When Josh uses Claude Code interactively, agent-harness/innie handles it with Claude Sonnet and innie memory. These are functionally different agents with no shared memory, no shared model, and different tool access. Every channel session is invisible to innie heartbeat.</p>
+<h3 id="key-discovery-innie-serve-already-has-subprocess-invocation">Key discovery: innie serve already has subprocess invocation<a class="headerlink" href="#key-discovery-innie-serve-already-has-subprocess-invocation" title="Permanent link">&para;</a></h3>
+<p><code>innie/serve/claude.py</code> already implements full Claude Code subprocess management. innie serve is already ~80% of agent-harness. The remaining gaps are specific and small.</p>
+<hr />
+<h2 id="architecture-decision">Architecture Decision<a class="headerlink" href="#architecture-decision" title="Permanent link">&para;</a></h2>
+<h3 id="two-innie-agent-namespaces-not-one">Two innie agent namespaces, not one<a class="headerlink" href="#two-innie-agent-namespaces-not-one" title="Permanent link">&para;</a></h3>
+<p>The interactive technical Avery (CLI) and the family Avery (iMessage/Mattermost) are fundamentally different agents that should not share a context:</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Family Avery (<code>avery</code>)</th>
+<th>Dev Avery (<code>dev</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Audience</td>
+<td>Josh + Abby, family</td>
+<td>Josh only</td>
+</tr>
+<tr>
+<td>Mode</td>
+<td>Reactive, message-driven</td>
+<td>Proactive, task-driven</td>
+</tr>
+<tr>
+<td>Tone</td>
+<td>Family coordinator, warm</td>
+<td>Technical execution partner</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>Moderate — calendar, Mealie, reminders, search</td>
+<td>Full Claude Code tool set, all repos</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>Household context, family logistics</td>
+<td>Engineering patterns, codebase knowledge</td>
+</tr>
+<tr>
+<td>Sessions</td>
+<td>Short, conversational</td>
+<td>Long, deeply technical</td>
+</tr>
+<tr>
+<td>SOUL.md</td>
+<td>Avery Iris Jenquist, family coordinator</td>
+<td>Technical identity (TBD name)</td>
+</tr>
+</tbody>
+</table>
+<p>Two separate innie agent namespaces: <code>~/.innie/agents/avery/</code> and <code>~/.innie/agents/dev/</code>. Separate knowledge bases, separate CONTEXT.md, separate SOUL.md, separate heartbeat extraction. A channel session with Family Avery does not pollute the dev knowledge base and vice versa.</p>
+<h3 id="ralph-is-not-a-persona">Ralph is not a persona<a class="headerlink" href="#ralph-is-not-a-persona" title="Permanent link">&para;</a></h3>
+<p>Ralph's unique behavior was: autonomous multi-task loop that polls the Tasks API and works through engineering tasks unattended. This is not a persona — it's a loop behavior. It becomes a scheduled job in innie serve: APScheduler fires on a configurable interval, submits a job to the <code>dev</code> agent with a prompt that reads the Tasks API and works through open tasks. Ralph's behavior survives; Ralph as a named agent does not.</p>
+<h3 id="llm-router-for-all-claude-code-traffic">LLM router for all Claude Code traffic<a class="headerlink" href="#llm-router-for-all-claude-code-traffic" title="Permanent link">&para;</a></h3>
+<p>The homelab LLM router (<code>homelab-ai/llm-router</code>) has a complete Anthropic API compatibility layer (<code>routers/anthropic.py</code>) that translates between Anthropic Messages API format and OpenAI completions. It is production-ready.</p>
+<p>Model aliases:
+- <code>claude-sonnet-4-6</code> → <code>qwen3-32b-awq</code> (gaming PC 3090)
+- <code>claude-opus-4-6</code> → <code>qwen3-32b-awq</code>
+- <code>claude-haiku-4-5</code> → <code>qwen2.5-14b-awq</code></p>
+<p>Fallback chain: gaming-pc-3090 → zai GLM-5 → claude-harness (actual Claude subscription)</p>
+<p>All Claude Code subprocesses route through the LLM router via <code>ANTHROPIC_BASE_URL</code> env var injection at subprocess spawn time. No direct Anthropic API calls from any agent runtime.</p>
+<h3 id="end-state-architecture">End-state architecture<a class="headerlink" href="#end-state-architecture" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>iMessage (BlueBubbles) ──────────┐
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Mattermost (WebSocket bot) ───────┤
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                                  ↓
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                    innie serve (Mac Mini :8013)
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                    agent namespace: avery
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                    ├── channel adapters (new)
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                    ├── APScheduler (new)
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                    │   └── &quot;Ralph loop&quot; → submits to dev agent
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                    ├── jobs API (existing)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                    ├── chat completions (existing)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>                    └── innie memory: ~/.innie/agents/avery/
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>                                  ↓
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>                    Claude Code CLI subprocess
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                                  ↓
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                    LLM Router (:homelab-ai-api)
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                    [Anthropic translation layer]
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                                  ↓
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                    qwen3-32b-awq / glm-5 / fallback
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>Josh (CLI) ─────────────────────→ Claude Code (interactive)
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                                  agent namespace: dev
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                                  innie memory: ~/.innie/agents/dev/
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>                                  hooks → innie heartbeat
+</code></pre></div>
+<hr />
+<h2 id="what-innie-serve-already-has-do-not-re-implement">What innie serve already has (do not re-implement)<a class="headerlink" href="#what-innie-serve-already-has-do-not-re-implement" title="Permanent link">&para;</a></h2>
+<p>Read <code>src/innie/serve/app.py</code> and <code>src/innie/serve/claude.py</code> before starting any phase.</p>
+<ul>
+<li>✅ <code>stream_claude_events()</code> — async JSONL streaming from Claude Code CLI</li>
+<li>✅ <code>collect_stream()</code> — blocking wrapper returning <code>StreamResult</code></li>
+<li>✅ <code>graceful_kill()</code> — SIGTERM → wait → SIGKILL</li>
+<li>✅ <code>POST /v1/jobs</code> — create async job with session_id, working_directory, permission_mode, agent, reply_to</li>
+<li>✅ <code>GET /v1/jobs/{id}</code> — status, cost, tokens, session_id</li>
+<li>✅ <code>GET /v1/jobs/{id}/events</code> — raw JSONL events (not SSE yet)</li>
+<li>✅ <code>POST /v1/jobs/{id}/cancel</code> — graceful kill</li>
+<li>✅ <code>POST /v1/chat/completions</code> — OpenAI-compatible, streaming + non-streaming</li>
+<li>✅ <code>GET /v1/memory/context</code> + <code>PUT</code> — CONTEXT.md CRUD</li>
+<li>✅ <code>GET /v1/memory/search</code> — hybrid semantic search</li>
+<li>✅ <code>POST /v1/traces/events</code> — ingest session/span events</li>
+<li>✅ <code>GET /v1/traces</code> + <code>GET /v1/traces/{id}</code> + <code>GET /v1/traces/stats</code></li>
+<li>✅ Fleet registration on startup</li>
+<li>✅ Mattermost <code>reply_to</code> (posts result to channel)</li>
+<li>✅ <code>agents://</code> reply_to (A2A routing via fleet gateway)</li>
+<li>✅ <code>collect_sessions()</code> in <code>backends/claude_code.py</code> — reads <code>~/.claude/projects/</code> JSONL</li>
+</ul>
+<hr />
+<h2 id="bugs-in-innieserveclaudepy-that-must-be-fixed-phase-0">Bugs in <code>innie/serve/claude.py</code> that must be fixed (Phase 0)<a class="headerlink" href="#bugs-in-innieserveclaudepy-that-must-be-fixed-phase-0" title="Permanent link">&para;</a></h2>
+<p>These are breaking issues in the existing subprocess code. Fix before anything else.</p>
+<h3 id="bug-1-invalid-permission-mode-flag">Bug 1: Invalid permission mode flag<a class="headerlink" href="#bug-1-invalid-permission-mode-flag" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Current (broken — &quot;yolo&quot; is not a valid --permission-mode value):</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--permission-mode&quot;</span><span class="p">,</span> <span class="n">permission_mode</span><span class="p">])</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Fix:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">if</span> <span class="n">permission_mode</span> <span class="o">==</span> <span class="s2">&quot;yolo&quot;</span><span class="p">:</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;--dangerously-skip-permissions&quot;</span><span class="p">)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="k">elif</span> <span class="n">permission_mode</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;plan&quot;</span><span class="p">,</span> <span class="s2">&quot;interactive&quot;</span><span class="p">):</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--permission-mode&quot;</span><span class="p">,</span> <span class="n">permission_mode</span><span class="p">])</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># default (no flag) = Claude&#39;s default permission prompting</span>
+</code></pre></div>
+<h3 id="bug-2-missing-print-flag">Bug 2: Missing <code>--print</code> flag<a class="headerlink" href="#bug-2-missing-print-flag" title="Permanent link">&para;</a></h3>
+<p>Without <code>--print</code>, Claude Code stays in interactive mode rather than exiting after completing the response. All subprocess invocations hang.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Add to cmd construction:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;claude&quot;</span><span class="p">,</span> <span class="s2">&quot;--print&quot;</span><span class="p">,</span> <span class="s2">&quot;--output-format&quot;</span><span class="p">,</span> <span class="s2">&quot;stream-json&quot;</span><span class="p">,</span> <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="bug-3-wrong-prompt-format">Bug 3: Wrong prompt format<a class="headerlink" href="#bug-3-wrong-prompt-format" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Current (--prompt is not a Claude Code flag):</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">cmd</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;--prompt&quot;</span><span class="p">,</span> <span class="n">prompt</span><span class="p">])</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Fix (prompt goes after -- separator):</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">cmd</span> <span class="o">+=</span> <span class="p">[</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">prompt</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="bug-4-no-macos-claudecodeapp-binary-detection">Bug 4: No macOS ClaudeCode.app binary detection<a class="headerlink" href="#bug-4-no-macos-claudecodeapp-binary-detection" title="Permanent link">&para;</a></h3>
+<p>On macOS, FDA (Full Disk Access) permissions are attached to the ClaudeCode.app wrapper, not the raw binary. Using the wrapper is required for full tool access.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">claude_bin</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;Applications/ClaudeCode.app/Contents/MacOS/claude-wrapper&quot;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">claude_bin</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">claude_bin</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;claude&quot;</span><span class="p">)</span>  <span class="c1"># fall back to PATH</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">cmd</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">claude_bin</span><span class="p">),</span> <span class="s2">&quot;--print&quot;</span><span class="p">,</span> <span class="s2">&quot;--output-format&quot;</span><span class="p">,</span> <span class="s2">&quot;stream-json&quot;</span><span class="p">,</span> <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+<h3 id="bug-5-no-anthropic_base_url-injection">Bug 5: No ANTHROPIC_BASE_URL injection<a class="headerlink" href="#bug-5-no-anthropic_base_url-injection" title="Permanent link">&para;</a></h3>
+<p>All subprocesses must route through the LLM router. Inject at spawn time:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">subprocess_env</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="o">**</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="s2">&quot;ANTHROPIC_BASE_URL&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="s2">&quot;INNIE_ANTHROPIC_BASE_URL&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="s2">&quot;https://homelab-ai-api.server.unarmedpuppy.com&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="p">),</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="s2">&quot;ANTHROPIC_API_KEY&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;INNIE_ANTHROPIC_API_KEY&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">}</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="n">process</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_subprocess_exec</span><span class="p">(</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>    <span class="o">*</span><span class="n">cmd</span><span class="p">,</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>    <span class="n">cwd</span><span class="o">=</span><span class="n">working_directory</span><span class="p">,</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="n">stdout</span><span class="o">=</span><span class="n">asyncio</span><span class="o">.</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="n">stderr</span><span class="o">=</span><span class="n">asyncio</span><span class="o">.</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>    <span class="n">env</span><span class="o">=</span><span class="n">subprocess_env</span><span class="p">,</span>    <span class="c1"># ← add this</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="p">)</span>
+</code></pre></div>
+<p>Add to innie serve environment (<code>.env</code> or systemd unit):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>INNIE_ANTHROPIC_BASE_URL=https://homelab-ai-api.server.unarmedpuppy.com
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>INNIE_ANTHROPIC_API_KEY=lai_85590afb609bba2842111176332c4e94
+</code></pre></div></p>
+<h3 id="llm-router-endpoint-verification-do-this-before-phase-0-smoke-test">LLM router endpoint verification (do this before Phase 0 smoke test)<a class="headerlink" href="#llm-router-endpoint-verification-do-this-before-phase-0-smoke-test" title="Permanent link">&para;</a></h3>
+<p>The Anthropic SDK appends <code>/v1/messages</code> to <code>ANTHROPIC_BASE_URL</code>. Verify the router's Anthropic compatibility layer is mounted at root:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;https://homelab-ai-api.server.unarmedpuppy.com/v1/messages&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: lai_85590afb609bba2842111176332c4e94&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;anthropic-version: 2023-06-01&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;model&quot;:&quot;claude-sonnet-4-6&quot;,&quot;max_tokens&quot;:20,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;ping&quot;}]}&#39;</span>
+</code></pre></div>
+<p>Expected: valid Anthropic-format JSON response. If 404, check <code>homelab-ai/llm-router/router.py</code> for the Anthropic router mount path.</p>
+<hr />
+<h2 id="phase-0-fix-innieserveclaudepy">Phase 0: Fix <code>innie/serve/claude.py</code><a class="headerlink" href="#phase-0-fix-innieserveclaudepy" title="Permanent link">&para;</a></h2>
+<p><strong>Files:</strong> <code>src/innie/serve/claude.py</code> only.</p>
+<p>Apply all five bug fixes above. Result: subprocess invocation works correctly for all permission modes, prompt is passed correctly, macOS binary is detected, and all traffic routes through the LLM router.</p>
+<p><strong>Smoke test:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8013/v1/jobs<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;prompt&quot;: &quot;What is 2+2? Answer in one sentence.&quot;, &quot;model&quot;: &quot;claude-sonnet-4-6&quot;}&#39;</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Poll GET /v1/jobs/{id} until completed</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Verify LLM router logs show the request</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="c1"># Verify result.text is a real response</span>
+</code></pre></div></p>
+<hr />
+<h2 id="phase-1-job-store-persistence">Phase 1: Job Store Persistence<a class="headerlink" href="#phase-1-job-store-persistence" title="Permanent link">&para;</a></h2>
+<p><strong>Problem:</strong> <code>jobs: dict[str, Job] = {}</code> in <code>app.py</code> is in-memory. Restarts lose all job history and any running jobs become orphaned.</p>
+<p><strong>Solution:</strong> Persist jobs to SQLite. Use the existing <code>state/.index/memory.db</code> or a separate <code>state/jobs.db</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">jobs</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="n">status</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="n">prompt</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="n">model</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="n">agent</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="n">started_at</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="n">completed_at</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="k">result</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">    </span><span class="n">error</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="n">session_id</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="n">cost_usd</span><span class="w"> </span><span class="nb">REAL</span><span class="p">,</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="n">input_tokens</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">,</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="n">output_tokens</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">,</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="n">num_turns</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">,</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="n">working_directory</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">    </span><span class="n">reply_to</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="n">permission_mode</span><span class="w"> </span><span class="nb">TEXT</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="p">);</span>
+</code></pre></div>
+<p>On startup: load all jobs from SQLite into the in-memory dict; set any <code>RUNNING</code> jobs to <code>FAILED</code> (they were orphaned by the restart).</p>
+<p>On job state change: write to SQLite immediately (not batched).</p>
+<p><strong>Files:</strong> <code>src/innie/serve/app.py</code>, new <code>src/innie/serve/job_store.py</code></p>
+<hr />
+<h2 id="phase-2-two-agent-namespaces">Phase 2: Two Agent Namespaces<a class="headerlink" href="#phase-2-two-agent-namespaces" title="Permanent link">&para;</a></h2>
+<p>Create two distinct innie agent profiles. These are separate <code>innie create</code> profiles with different SOUL.md, CONTEXT.md, and knowledge bases.</p>
+<h3 id="avery-namespace-family-coordinator"><code>avery</code> namespace — Family Coordinator<a class="headerlink" href="#avery-namespace-family-coordinator" title="Permanent link">&para;</a></h3>
+<p><code>~/.innie/agents/avery/</code> — already exists. Continues to be the family coordination agent.</p>
+<p>SOUL.md content: Avery Iris Jenquist identity (existing content from agent-harness <code>profiles/avery/SOUL.md</code>). Family coordinator role, calm/neutral/precise tone. Knowledge base focuses on: household logistics, family schedules, Mealie recipes, Imperfect Foods, property management, family contacts, routines.</p>
+<p>Channel access: iMessage (BlueBubbles), Mattermost.</p>
+<p>innie serve for <code>avery</code> runs on Mac Mini, port 8013.</p>
+<h3 id="dev-namespace-technical-partner"><code>dev</code> namespace — Technical Partner<a class="headerlink" href="#dev-namespace-technical-partner" title="Permanent link">&para;</a></h3>
+<p><code>~/.innie/agents/dev/</code> — new. Josh's interactive CLI technical partner.</p>
+<p>SOUL.md content: Technical identity. Engineering-focused. Knowledge base focuses on: codebase patterns, debugging insights, architectural decisions, deployment procedures, tool-specific learnings.</p>
+<p>No channel access (CLI only). Interactive Claude Code sessions with Josh.</p>
+<p>innie serve for <code>dev</code> does NOT need to run as a persistent process — it's used via the Claude Code backend directly (hooks inject context at session start). If job submission to <code>dev</code> is needed (for the Ralph loop replacement), innie serve can be invoked with <code>INNIE_AGENT=dev</code> env var.</p>
+<h3 id="migration-move-existing-knowledge">Migration: move existing knowledge<a class="headerlink" href="#migration-move-existing-knowledge" title="Permanent link">&para;</a></h3>
+<p>Current <code>~/.innie/agents/avery/data/</code> contains mixed content (family + engineering). Triage:
+- <code>learnings/tools/</code> and <code>learnings/infrastructure/</code> → move to <code>dev</code>
+- <code>learnings/patterns/</code> → split by content
+- <code>decisions/</code> → split by content (household decisions → avery, engineering decisions → dev)
+- <code>projects/</code> → split by project (polyjuiced, homelab-ai, etc. → dev; rental-hub → avery)
+- Family-facing content stays in <code>avery</code></p>
+<p><strong>Files:</strong> SOUL.md for <code>dev</code> namespace, triage script for knowledge migration.</p>
+<hr />
+<h2 id="phase-3-channel-adapters">Phase 3: Channel Adapters<a class="headerlink" href="#phase-3-channel-adapters" title="Permanent link">&para;</a></h2>
+<p>All channel code lives in <code>src/innie/channels/</code>. innie serve loads channel adapters at startup based on agent profile config.</p>
+<h3 id="31-contact-session-mapping">3.1 Contact session mapping<a class="headerlink" href="#31-contact-session-mapping" title="Permanent link">&para;</a></h3>
+<p>SQLite table for maintaining conversation continuity (Claude Code session resumption per contact):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">contact_sessions</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="n">channel</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">           </span><span class="c1">-- &#39;bluebubbles&#39; | &#39;mattermost&#39;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="n">contact_id</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">        </span><span class="c1">-- phone/email for BB; user_id for MM</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="n">chat_guid</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w">                  </span><span class="c1">-- BlueBubbles chatGuid (for group sends)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="n">claude_session_id</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w">          </span><span class="c1">-- passed to --resume on next message</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="n">last_active_at</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="k">UNIQUE</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span><span class="w"> </span><span class="n">contact_id</span><span class="p">)</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">);</span>
+</code></pre></div>
+<p>Session idle expiry: 2 hours by default (configurable in <code>channels.yaml</code>). After expiry, <code>claude_session_id</code> is cleared — next message starts a fresh Claude session.</p>
+<p>Module: <code>src/innie/channels/sessions.py</code>
+- <code>get_session(channel, contact_id) -&gt; str | None</code>
+- <code>update_session(channel, contact_id, claude_session_id)</code>
+- <code>expire_stale(idle_hours=2) -&gt; int</code></p>
+<h3 id="32-policy-layer">3.2 Policy layer<a class="headerlink" href="#32-policy-layer" title="Permanent link">&para;</a></h3>
+<p><code>src/innie/channels/policy.py</code> — replicate openclaw's allowlist behavior exactly.</p>
+<p>Config file: <code>~/.innie/agents/avery/channels.yaml</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">bluebubbles</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">server_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://localhost:1234&quot;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Av3ry-1r1s-J3nquist&quot;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nt">send_read_receipts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="nt">idle_session_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="nt">dm_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">allowlist</span><span class="w">          </span><span class="c1"># &#39;allowlist&#39; | &#39;open&#39;</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="nt">allow_from</span><span class="p">:</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;+16512367878&quot;</span><span class="w">            </span><span class="c1"># Josh</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;+16126161280&quot;</span><span class="w">            </span><span class="c1"># Abby</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;joshuajenquist@gmail.com&quot;</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;abigailjenquist@gmail.com&quot;</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;abigail.jenquist@gmail.com&quot;</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">  </span><span class="nt">group_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">allowlist</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">  </span><span class="nt">group_allow_from</span><span class="p">:</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;+16512367878&quot;</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;+16126161280&quot;</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;joshuajenquist@gmail.com&quot;</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;abigailjenquist@gmail.com&quot;</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">  </span><span class="nt">groups</span><span class="p">:</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="w">    </span><span class="c1"># key: chatGuid (partial match)</span>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="w">    </span><span class="s">&quot;d1a2aa3360594ad3a9b1e3dbf7ff9043&quot;</span><span class="p p-Indicator">:</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a><span class="w">      </span><span class="nt">require_mention</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">    </span><span class="c1"># respond to all messages in this group</span>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="nt">mattermost</span><span class="p">:</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://mattermost.server.unarmedpuppy.com&quot;</span>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="w">  </span><span class="nt">bot_token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;i3tucyuiy7nipd7nro3mzmtj7e&quot;</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="w">  </span><span class="nt">dm_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">open</span>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="w">  </span><span class="nt">allow_from</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;*&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="w">  </span><span class="nt">group_policy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">open</span>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a><span class="w">  </span><span class="nt">require_mention</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<p><code>is_allowed(config, contact_id, is_group, text, agent_name) -&gt; bool</code>:
+- DM: check <code>dm_policy</code> + <code>allow_from</code>
+- Group: check <code>group_policy</code> + <code>group_allow_from</code>
+- Mention gating: if <code>require_mention=true</code>, check if agent name appears in text
+- <code>"*"</code> in <code>allow_from</code> means open (any sender allowed)</p>
+<h3 id="33-bluebubbles-adapter">3.3 BlueBubbles adapter<a class="headerlink" href="#33-bluebubbles-adapter" title="Permanent link">&para;</a></h3>
+<p><code>src/innie/channels/bluebubbles.py</code></p>
+<p><strong>Webhook registration</strong> (run on startup):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">register_webhook</span><span class="p">(</span><span class="n">server_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">callback_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="c1"># GET existing webhooks, check if ours is already registered</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="c1"># POST /api/v1/webhook?password=... if not found</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="c1"># callback_url = &quot;http://&lt;mac-mini-ip&gt;:8013/channels/bluebubbles/webhook&quot;</span>
+</code></pre></div></p>
+<p><strong>Incoming webhook endpoint</strong> (registered in <code>app.py</code>):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>POST /channels/bluebubbles/webhook
+</code></pre></div></p>
+<p>Payload parsing:
+- <code>data.isFromMe</code> → skip if True (our own sent messages come back as webhooks)
+- <code>data.chats[0].guid</code> → <code>chat_guid</code> (used for replies)
+- Extract <code>contact_id</code>: for DM, the sender handle (phone or email); for group, the group GUID
+- <code>data.text</code> → message text
+- <code>data.attachments</code> → list of attachment objects (see attachment handling below)</p>
+<p>Claude invocation:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">collect_stream</span><span class="p">(</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-4-6&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">system_prompt</span><span class="o">=</span><span class="n">build_session_context</span><span class="p">(</span><span class="n">agent_name</span><span class="o">=</span><span class="s2">&quot;avery&quot;</span><span class="p">),</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">permission_mode</span><span class="o">=</span><span class="s2">&quot;yolo&quot;</span><span class="p">,</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="n">session_id</span><span class="o">=</span><span class="n">session_id</span><span class="p">,</span>          <span class="c1"># from contact_sessions</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    <span class="n">working_directory</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()),</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Send reply</strong> (always Private API — AppleScript is broken on macOS 26.x):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">send_reply</span><span class="p">(</span><span class="n">chat_guid</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>        <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>            <span class="s2">&quot;http://localhost:1234/api/v1/message/text&quot;</span><span class="p">,</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">password</span><span class="p">},</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>            <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>                <span class="s2">&quot;chatGuid&quot;</span><span class="p">:</span> <span class="n">chat_guid</span><span class="p">,</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>                <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">text</span><span class="p">,</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>                <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;private-api&quot;</span><span class="p">,</span>    <span class="c1"># ALWAYS explicit — default is AppleScript (broken)</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>            <span class="p">},</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>            <span class="n">timeout</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>        <span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Attachment handling:</strong>
+- Images: <code>GET /api/v1/attachment/{guid}/download?password=...</code> → write to temp file → include path in prompt so Claude can Read it
+- Text/URL attachments: append to prompt text directly
+- Other types: note in prompt as "[attachment: {filename}]"</p>
+<h3 id="34-mattermost-adapter">3.4 Mattermost adapter<a class="headerlink" href="#34-mattermost-adapter" title="Permanent link">&para;</a></h3>
+<p><code>src/innie/channels/mattermost.py</code></p>
+<p>Uses <code>mattermostdriver</code> Python package (add to <code>pyproject.toml</code>).</p>
+<p>WebSocket bot started as an asyncio background task on innie serve startup:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">MattermostAdapter</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span> <span class="o">=</span> <span class="n">Driver</span><span class="p">({</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>            <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">base_url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;https://&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>            <span class="s2">&quot;token&quot;</span><span class="p">:</span> <span class="n">config</span><span class="o">.</span><span class="n">bot_token</span><span class="p">,</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>            <span class="s2">&quot;scheme&quot;</span><span class="p">:</span> <span class="s2">&quot;https&quot;</span><span class="p">,</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>            <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="mi">443</span><span class="p">,</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>        <span class="p">})</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>        <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">init_driver</span><span class="p">()</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">bot_user_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">userid</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>        <span class="c1"># Reconnect loop — WebSocket connections drop</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>            <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">websocket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_event</span><span class="p">)</span>
+<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>                <span class="k">continue</span>
+<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>
+<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a>        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;event&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;posted&quot;</span><span class="p">:</span>
+<a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a>            <span class="k">return</span>
+<a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a>        <span class="n">post</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">event</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;post&quot;</span><span class="p">])</span>
+<a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a>        <span class="k">if</span> <span class="n">post</span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">bot_user_id</span><span class="p">:</span>
+<a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a>            <span class="k">return</span>
+<a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a>        <span class="c1"># policy check, session lookup, Claude invocation, reply</span>
+<a id="__codelineno-16-26" name="__codelineno-16-26" href="#__codelineno-16-26"></a>        <span class="o">...</span>
+<a id="__codelineno-16-27" name="__codelineno-16-27" href="#__codelineno-16-27"></a>        <span class="c1"># Reply as thread</span>
+<a id="__codelineno-16-28" name="__codelineno-16-28" href="#__codelineno-16-28"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">posts</span><span class="o">.</span><span class="n">create_post</span><span class="p">({</span>
+<a id="__codelineno-16-29" name="__codelineno-16-29" href="#__codelineno-16-29"></a>            <span class="s2">&quot;channel_id&quot;</span><span class="p">:</span> <span class="n">post</span><span class="p">[</span><span class="s2">&quot;channel_id&quot;</span><span class="p">],</span>
+<a id="__codelineno-16-30" name="__codelineno-16-30" href="#__codelineno-16-30"></a>            <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">filtered_reply</span><span class="p">,</span>
+<a id="__codelineno-16-31" name="__codelineno-16-31" href="#__codelineno-16-31"></a>            <span class="s2">&quot;root_id&quot;</span><span class="p">:</span> <span class="n">post</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+<a id="__codelineno-16-32" name="__codelineno-16-32" href="#__codelineno-16-32"></a>        <span class="p">})</span>
+</code></pre></div>
+<h3 id="35-response-filter">3.5 Response filter<a class="headerlink" href="#35-response-filter" title="Permanent link">&para;</a></h3>
+<p><code>src/innie/channels/filter.py</code> — strip Claude Code internals before sending to family channels.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">filter_for_channel</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove Claude Code artifacts before sending to iMessage/Mattermost.&quot;&quot;&quot;</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="c1"># Tool error blocks</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;tool_error&gt;.*?&lt;/tool_error&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    <span class="c1"># XML-style system blocks</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;(?:agent-identity|agent-context|session-status|memory-context|memory-tools)&gt;.*?&lt;/\1&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>    <span class="c1"># Collapse excess whitespace</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>    <span class="n">text</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\n{3,}&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>    <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="36-delivery-queue-with-retry">3.6 Delivery queue with retry<a class="headerlink" href="#36-delivery-queue-with-retry" title="Permanent link">&para;</a></h3>
+<p><code>src/innie/channels/delivery.py</code> — wrap send functions with retry logic.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">deliver</span><span class="p">(</span><span class="n">send_fn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">max_attempts</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">base_backoff</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">max_attempts</span><span class="p">):</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>        <span class="k">try</span><span class="p">:</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>            <span class="k">await</span> <span class="n">send_fn</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>            <span class="k">return</span> <span class="kc">True</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>            <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="n">max_attempts</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>                <span class="n">_log_dead_letter</span><span class="p">(</span><span class="n">send_fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>                <span class="k">return</span> <span class="kc">False</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">base_backoff</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="n">attempt</span><span class="p">))</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>    <span class="k">return</span> <span class="kc">False</span>
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="k">def</span><span class="w"> </span><span class="nf">_log_dead_letter</span><span class="p">(</span><span class="n">fn_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>    <span class="c1"># Append to ~/.innie/agents/avery/data/dead-letters.jsonl</span>
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>    <span class="o">...</span>
+</code></pre></div>
+<h3 id="37-wire-channels-into-innie-serve-startup">3.7 Wire channels into innie serve startup<a class="headerlink" href="#37-wire-channels-into-innie-serve-startup" title="Permanent link">&para;</a></h3>
+<p>In <code>src/innie/serve/app.py</code>, extend the <code>lifespan</code> context manager:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nd">@asynccontextmanager</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="k">await</span> <span class="n">_register_with_fleet</span><span class="p">()</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">_start_channels</span><span class="p">()</span>           <span class="c1"># new</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="k">yield</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">_stop_channels</span><span class="p">()</span>            <span class="c1"># new</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="k">def</span><span class="w"> </span><span class="nf">_start_channels</span><span class="p">():</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>    <span class="n">channels_config</span> <span class="o">=</span> <span class="n">_load_channels_config</span><span class="p">()</span>   <span class="c1"># reads ~/.innie/agents/{agent}/channels.yaml</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>    <span class="k">if</span> <span class="n">channels_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>        <span class="k">return</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>    <span class="k">if</span> <span class="n">channels_config</span><span class="o">.</span><span class="n">bluebubbles</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+<a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">bluebubbles_adapter</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">channels_config</span><span class="o">.</span><span class="n">bluebubbles</span><span class="p">))</span>
+<a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>    <span class="k">if</span> <span class="n">channels_config</span><span class="o">.</span><span class="n">mattermost</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+<a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">mattermost_adapter</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">channels_config</span><span class="o">.</span><span class="n">mattermost</span><span class="p">))</span>
+</code></pre></div>
+<p>Channels only start when the active agent has a <code>channels.yaml</code>. The <code>dev</code> agent has no <code>channels.yaml</code> — its innie serve instance never starts channel adapters.</p>
+<p><strong>New routes registered in <code>app.py</code>:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">app</span><span class="o">.</span><span class="n">include_router</span><span class="p">(</span><span class="n">bluebubbles_router</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;/channels/bluebubbles&quot;</span><span class="p">)</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="n">app</span><span class="o">.</span><span class="n">include_router</span><span class="p">(</span><span class="n">mattermost_router</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;/channels/mattermost&quot;</span><span class="p">)</span>  <span class="c1"># health/status only</span>
+</code></pre></div></p>
+<hr />
+<h2 id="phase-4-apscheduler-ralph-loop-replacement-maintenance-jobs">Phase 4: APScheduler (Ralph loop replacement + maintenance jobs)<a class="headerlink" href="#phase-4-apscheduler-ralph-loop-replacement-maintenance-jobs" title="Permanent link">&para;</a></h2>
+<p><code>src/innie/serve/scheduler.py</code></p>
+<p>Embedded in innie serve's lifespan. Jobs defined in <code>~/.innie/agents/{agent}/schedule.yaml</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># ~/.innie/agents/avery/schedule.yaml</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">jobs</span><span class="p">:</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">morning_briefing</span><span class="p">:</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;30</span><span class="nv"> </span><span class="s">7</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">          </span><span class="c1"># 7:30am daily</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Generate</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">morning</span><span class="nv"> </span><span class="s">briefing</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Josh</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">Abby.</span><span class="nv"> </span><span class="s">Include</span><span class="nv"> </span><span class="s">weather,</span><span class="nv"> </span><span class="s">calendar</span><span class="nv"> </span><span class="s">events</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">today,</span><span class="nv"> </span><span class="s">any</span><span class="nv"> </span><span class="s">pending</span><span class="nv"> </span><span class="s">household</span><span class="nv"> </span><span class="s">tasks,</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">Imperfect</span><span class="nv"> </span><span class="s">Foods</span><span class="nv"> </span><span class="s">order</span><span class="nv"> </span><span class="s">status</span><span class="nv"> </span><span class="s">if</span><span class="nv"> </span><span class="s">window</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">open.&quot;</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="nt">deliver_to</span><span class="p">:</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">      </span><span class="nt">channel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bluebubbles</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">      </span><span class="nt">contact</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;+16512367878&quot;</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">  </span><span class="nt">session_cleanup</span><span class="p">:</span>
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="w">    </span><span class="nt">interval_hours</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a><span class="w">    </span><span class="nt">action</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">expire_stale_sessions</span>
+<a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>
+<a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="c1"># ~/.innie/agents/dev/schedule.yaml</span>
+<a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a><span class="nt">jobs</span><span class="p">:</span>
+<a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a><span class="w">  </span><span class="nt">task_loop</span><span class="p">:</span>
+<a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a><span class="w">    </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">*/4</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">         </span><span class="c1"># every 4 hours</span>
+<a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a><span class="w">    </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a><span class="w">      </span><span class="no">Check the Tasks API at https://tasks-api.server.unarmedpuppy.com for open engineering tasks</span>
+<a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a><span class="w">      </span><span class="no">assigned to you. Work through any P0 or P1 tasks. Report completion status.</span>
+<a id="__codelineno-21-24" name="__codelineno-21-24" href="#__codelineno-21-24"></a><span class="w">    </span><span class="nt">agent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dev</span>
+<a id="__codelineno-21-25" name="__codelineno-21-25" href="#__codelineno-21-25"></a><span class="w">    </span><span class="nt">permission_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">yolo</span>
+<a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a><span class="w">    </span><span class="nt">working_directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/Users/aijenquist/workspace&quot;</span>
+<a id="__codelineno-21-27" name="__codelineno-21-27" href="#__codelineno-21-27"></a><span class="w">    </span><span class="nt">reply_to</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mattermost://nytinkdkttfo8rcxm8i4gg7uwr&quot;</span>
+</code></pre></div>
+<p>This replaces ralph.sh. The <code>task_loop</code> job submitted to the <code>dev</code> agent IS Ralph — same behavior, no separate persona.</p>
+<p><strong>Scheduler setup in <code>app.py</code>:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">apscheduler.schedulers.asyncio</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncIOScheduler</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="n">scheduler</span> <span class="o">=</span> <span class="n">AsyncIOScheduler</span><span class="p">()</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="nd">@asynccontextmanager</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>    <span class="k">await</span> <span class="n">_register_with_fleet</span><span class="p">()</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>    <span class="n">_start_channels</span><span class="p">()</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>    <span class="n">_start_scheduler</span><span class="p">()</span>          <span class="c1"># new</span>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>    <span class="k">yield</span>
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>    <span class="n">scheduler</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>    <span class="n">_stop_channels</span><span class="p">()</span>
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>
+<a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a><span class="k">def</span><span class="w"> </span><span class="nf">_start_scheduler</span><span class="p">():</span>
+<a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>    <span class="n">schedule</span> <span class="o">=</span> <span class="n">_load_schedule_config</span><span class="p">()</span>
+<a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>    <span class="k">if</span> <span class="n">schedule</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>        <span class="k">return</span>
+<a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a>    <span class="k">for</span> <span class="n">job_name</span><span class="p">,</span> <span class="n">job_config</span> <span class="ow">in</span> <span class="n">schedule</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-22-19" name="__codelineno-22-19" href="#__codelineno-22-19"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">job_config</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+<a id="__codelineno-22-20" name="__codelineno-22-20" href="#__codelineno-22-20"></a>            <span class="k">continue</span>
+<a id="__codelineno-22-21" name="__codelineno-22-21" href="#__codelineno-22-21"></a>        <span class="k">if</span> <span class="n">job_config</span><span class="o">.</span><span class="n">interval_hours</span><span class="p">:</span>
+<a id="__codelineno-22-22" name="__codelineno-22-22" href="#__codelineno-22-22"></a>            <span class="n">scheduler</span><span class="o">.</span><span class="n">add_job</span><span class="p">(</span><span class="n">_run_scheduled_job</span><span class="p">,</span> <span class="s2">&quot;interval&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-23" name="__codelineno-22-23" href="#__codelineno-22-23"></a>                              <span class="n">hours</span><span class="o">=</span><span class="n">job_config</span><span class="o">.</span><span class="n">interval_hours</span><span class="p">,</span>
+<a id="__codelineno-22-24" name="__codelineno-22-24" href="#__codelineno-22-24"></a>                              <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">job_config</span><span class="p">],</span> <span class="nb">id</span><span class="o">=</span><span class="n">job_name</span><span class="p">)</span>
+<a id="__codelineno-22-25" name="__codelineno-22-25" href="#__codelineno-22-25"></a>        <span class="k">elif</span> <span class="n">job_config</span><span class="o">.</span><span class="n">cron</span><span class="p">:</span>
+<a id="__codelineno-22-26" name="__codelineno-22-26" href="#__codelineno-22-26"></a>            <span class="n">scheduler</span><span class="o">.</span><span class="n">add_job</span><span class="p">(</span><span class="n">_run_scheduled_job</span><span class="p">,</span> <span class="s2">&quot;cron&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-27" name="__codelineno-22-27" href="#__codelineno-22-27"></a>                              <span class="o">**</span><span class="n">_parse_cron</span><span class="p">(</span><span class="n">job_config</span><span class="o">.</span><span class="n">cron</span><span class="p">),</span>
+<a id="__codelineno-22-28" name="__codelineno-22-28" href="#__codelineno-22-28"></a>                              <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">job_config</span><span class="p">],</span> <span class="nb">id</span><span class="o">=</span><span class="n">job_name</span><span class="p">)</span>
+<a id="__codelineno-22-29" name="__codelineno-22-29" href="#__codelineno-22-29"></a>        <span class="k">elif</span> <span class="n">job_config</span><span class="o">.</span><span class="n">action</span><span class="p">:</span>
+<a id="__codelineno-22-30" name="__codelineno-22-30" href="#__codelineno-22-30"></a>            <span class="n">_register_action_job</span><span class="p">(</span><span class="n">scheduler</span><span class="p">,</span> <span class="n">job_name</span><span class="p">,</span> <span class="n">job_config</span><span class="p">)</span>
+<a id="__codelineno-22-31" name="__codelineno-22-31" href="#__codelineno-22-31"></a>    <span class="n">scheduler</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</code></pre></div></p>
+<p>Add <code>apscheduler</code> to <code>pyproject.toml</code> dependencies.</p>
+<hr />
+<h2 id="phase-5-ralph-container-migration">Phase 5: Ralph container migration<a class="headerlink" href="#phase-5-ralph-container-migration" title="Permanent link">&para;</a></h2>
+<p>Ralph runs in a Docker container on the home server. Its <code>docker-compose.yml</code> currently uses the agent-harness image.</p>
+<p><strong>Changes:</strong>
+1. Update <code>home-server/apps/agent-harness/docker-compose.yml</code>:
+   - Change image from <code>harbor.../agent-harness:latest</code> to <code>harbor.../innie-engine:latest</code>
+   - Mount Ralph's profile files into the container: <code>SOUL.md</code>, <code>CLAUDE.md</code>, <code>IDENTITY.md</code>
+   - Set env vars: <code>INNIE_AGENT=dev</code>, <code>INNIE_ANTHROPIC_BASE_URL=...</code>, <code>INNIE_ANTHROPIC_API_KEY=...</code>
+   - Remove ralph.sh — it's replaced by the scheduler
+2. The Ralph persona's SOUL.md and CLAUDE.md content moves into <code>~/.innie/agents/dev/</code> on the server
+3. The task loop schedule runs in the <code>dev</code> agent's schedule.yaml</p>
+<p><strong>Container name stays the same.</strong> Port stays the same (8013). Fleet gateway registration stays the same. A2A callers don't change.</p>
+<hr />
+<h2 id="phase-6-deprecate-agent-harness">Phase 6: Deprecate agent-harness<a class="headerlink" href="#phase-6-deprecate-agent-harness" title="Permanent link">&para;</a></h2>
+<p>Only after Phase 5 is validated (both Mac Mini innie serve and server container running correctly):</p>
+<ol>
+<li><strong>Parallel run for 1 week</strong>: both agent-harness and innie serve handle traffic. Validate all job submissions, Ralph loops, and A2A routing work correctly through innie.</li>
+<li><strong>Update A2A callers</strong>: Gilfoyle and any other agents pointing at agent-harness endpoints — update to innie serve URLs (same port, same paths, no change needed if port stays 8013).</li>
+<li><strong>Stop agent-harness</strong> on Mac Mini: <code>launchctl unload</code> or equivalent.</li>
+<li><strong>Stop agent-harness container</strong> on server: update docker-compose.</li>
+<li><strong>Archive agent-harness repo</strong>: don't delete — it's the reference implementation. Tag <code>v-final</code> before archiving.</li>
+<li>Update <code>home-server/agents/reference/</code> docs that reference agent-harness.</li>
+</ol>
+<p><strong>Do not rush this phase.</strong> The parallel run week is non-negotiable.</p>
+<hr />
+<h2 id="phase-7-deprecate-openclaw">Phase 7: Deprecate openclaw<a class="headerlink" href="#phase-7-deprecate-openclaw" title="Permanent link">&para;</a></h2>
+<p>Only after Phase 3 (channel adapters) is validated:</p>
+<ol>
+<li><strong>Parallel run</strong>: disable openclaw's channels one at a time. First disable Mattermost (<code>"mattermost": {"enabled": false}</code> in openclaw.json), validate innie serves Mattermost. Then disable BlueBubbles, validate innie serves iMessage.</li>
+<li><strong>Unload openclaw</strong> from Mac Mini startup.</li>
+<li>Update any references to openclaw in docs/configs.</li>
+</ol>
+<p><strong>Do not stop both channels simultaneously</strong> — disable one, validate, then the other.</p>
+<hr />
+<h2 id="complete-file-manifest">Complete file manifest<a class="headerlink" href="#complete-file-manifest" title="Permanent link">&para;</a></h2>
+<h3 id="new-files-in-srcinnie">New files in <code>src/innie/</code><a class="headerlink" href="#new-files-in-srcinnie" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>channels/__init__.py</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>channels/bluebubbles.py</code></td>
+<td>Webhook receiver, Private API sender, attachment handling</td>
+</tr>
+<tr>
+<td><code>channels/mattermost.py</code></td>
+<td>WebSocket bot</td>
+</tr>
+<tr>
+<td><code>channels/policy.py</code></td>
+<td>Allowlist, group policy, mention gating</td>
+</tr>
+<tr>
+<td><code>channels/sessions.py</code></td>
+<td>Contact → claude_session_id SQLite mapping</td>
+</tr>
+<tr>
+<td><code>channels/filter.py</code></td>
+<td>Response filter (strip tool errors, XML blocks)</td>
+</tr>
+<tr>
+<td><code>channels/delivery.py</code></td>
+<td>Retry wrapper + dead-letter log</td>
+</tr>
+<tr>
+<td><code>serve/job_store.py</code></td>
+<td>SQLite-backed job persistence</td>
+</tr>
+<tr>
+<td><code>serve/scheduler.py</code></td>
+<td>APScheduler setup, schedule.yaml loader</td>
+</tr>
+</tbody>
+</table>
+<h3 id="modified-files-in-srcinnie">Modified files in <code>src/innie/</code><a class="headerlink" href="#modified-files-in-srcinnie" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>serve/claude.py</code></td>
+<td>Fix 5 bugs (permission mode, --print, prompt format, macOS binary, ANTHROPIC_BASE_URL)</td>
+</tr>
+<tr>
+<td><code>serve/app.py</code></td>
+<td>Wire channel adapters + scheduler into lifespan; switch jobs dict to SQLite-backed store</td>
+</tr>
+</tbody>
+</table>
+<h3 id="new-config-files">New config files<a class="headerlink" href="#new-config-files" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/.innie/agents/avery/channels.yaml</code></td>
+<td>BlueBubbles + Mattermost config, allowlists</td>
+</tr>
+<tr>
+<td><code>~/.innie/agents/avery/schedule.yaml</code></td>
+<td>Morning briefing, session cleanup</td>
+</tr>
+<tr>
+<td><code>~/.innie/agents/dev/SOUL.md</code></td>
+<td>Technical partner identity</td>
+</tr>
+<tr>
+<td><code>~/.innie/agents/dev/CONTEXT.md</code></td>
+<td>Engineering open items</td>
+</tr>
+<tr>
+<td><code>~/.innie/agents/dev/schedule.yaml</code></td>
+<td>Task loop (Ralph replacement)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pyprojecttoml-additions"><code>pyproject.toml</code> additions<a class="headerlink" href="#pyprojecttoml-additions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="k">[project.dependencies]</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># Add:</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="n">apscheduler</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&gt;=3.10&quot;</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="n">mattermostdriver</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&gt;=7.3&quot;</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="n">httpx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&gt;=0.27&quot;</span><span class="w">     </span><span class="c1"># already present, verify</span>
+</code></pre></div>
+<h3 id="environment-variables-required">Environment variables required<a class="headerlink" href="#environment-variables-required" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># innie serve runtime</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nv">INNIE_ANTHROPIC_BASE_URL</span><span class="o">=</span>https://homelab-ai-api.server.unarmedpuppy.com
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="nv">INNIE_ANTHROPIC_API_KEY</span><span class="o">=</span>lai_85590afb609bba2842111176332c4e94
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="nv">INNIE_API_TOKEN</span><span class="o">=</span>&lt;auth<span class="w"> </span>token<span class="w"> </span><span class="k">for</span><span class="w"> </span>job<span class="w"> </span>submission&gt;
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="nv">INNIE_FLEET_URL</span><span class="o">=</span>https://fleet-gateway.server.unarmedpuppy.com
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="nv">MATTERMOST_BASE_URL</span><span class="o">=</span>https://mattermost.server.unarmedpuppy.com
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="nv">MATTERMOST_BOT_TOKEN</span><span class="o">=</span>i3tucyuiy7nipd7nro3mzmtj7e
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="c1"># Agent selection (set per deployment)</span>
+<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="nv">INNIE_AGENT</span><span class="o">=</span>avery<span class="w">   </span><span class="c1"># Mac Mini channel-facing instance</span>
+<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="nv">INNIE_AGENT</span><span class="o">=</span>dev<span class="w">     </span><span class="c1"># Server container (Ralph replacement)</span>
+</code></pre></div>
+<hr />
+<h2 id="openclaw-gap-checklist">openclaw gap checklist<a class="headerlink" href="#openclaw-gap-checklist" title="Permanent link">&para;</a></h2>
+<p>Every openclaw capability currently in use must be replicated before openclaw is shut down:</p>
+<ul>
+<li>[ ] BlueBubbles webhook listener → <code>channels/bluebubbles.py</code></li>
+<li>[ ] BlueBubbles Private API sender (not AppleScript) → <code>send_reply()</code> always passes <code>method: private-api</code></li>
+<li>[ ] Mattermost WebSocket bot → <code>channels/mattermost.py</code></li>
+<li>[ ] DM allowlist (Josh + Abby only) → <code>channels/policy.py</code> + <code>channels.yaml</code></li>
+<li>[ ] Group allowlist + mention gating → <code>channels/policy.py</code></li>
+<li>[ ] Sender allowFrom list (exact phone/email match) → policy layer</li>
+<li>[ ] Per-contact conversation continuity → <code>channels/sessions.py</code> + <code>--resume</code></li>
+<li>[ ] Session idle expiry (2hr → fresh start) → <code>sessions.expire_stale()</code></li>
+<li>[ ] Read receipt suppression → <code>send_read_receipts: false</code> in channels.yaml (BlueBubbles API param)</li>
+<li>[ ] Ignore own outbound messages in webhook → <code>isFromMe</code> check</li>
+<li>[ ] Image attachment handling → fetch from BlueBubbles + pass to Claude</li>
+<li>[ ] Tool error suppression in replies → <code>channels/filter.py</code></li>
+<li>[ ] Delivery retry on transient failure → <code>channels/delivery.py</code></li>
+<li>[ ] Dead-letter log for permanent failures → <code>_log_dead_letter()</code></li>
+</ul>
+<hr />
+<h2 id="known-gaps-not-carried-forward">Known gaps not carried forward<a class="headerlink" href="#known-gaps-not-carried-forward" title="Permanent link">&para;</a></h2>
+<p>Features openclaw has that are intentionally NOT replicated:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GLM-5 as model backend</td>
+<td>Replaced by LLM router with Claude Code</td>
+</tr>
+<tr>
+<td>openclaw memory search (Obsidian/shua-ledger)</td>
+<td>Replaced by innie-engine</td>
+</tr>
+<tr>
+<td>Multi-agent pairing (openclaw ↔ openclaw)</td>
+<td>Not in use</td>
+</tr>
+<tr>
+<td>Audio transcription</td>
+<td>Not in use</td>
+</tr>
+<tr>
+<td>Bonjour/local network discovery</td>
+<td>Not in use</td>
+</tr>
+<tr>
+<td>Browser automation (openclaw chrome tools)</td>
+<td>Handled by Claude Code's native tools</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="phase-execution-order">Phase execution order<a class="headerlink" href="#phase-execution-order" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>Phase 0  Fix innie/serve/claude.py bugs + LLM router wiring + smoke test
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>Phase 1  Job store persistence (SQLite)
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>Phase 2  Two agent namespaces (avery + dev) + knowledge triage
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>Phase 3  Channel adapters (policy → sessions → BB → MM → filter → delivery → wire)
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>Phase 4  APScheduler (Ralph replacement + morning briefing + session cleanup)
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>Phase 5  Ralph container migration (server Docker → innie image)
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>Phase 6  Deprecate agent-harness (1 week parallel run → stop)
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>Phase 7  Deprecate openclaw (per-channel parallel run → stop)
+</code></pre></div>
+<p>Phases 0–2 are prerequisites for everything. Phase 3 and 4 can run in parallel once Phase 2 is done. Phases 6 and 7 are strictly last and require validation periods.</p>
+<hr />
+<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>home-server/docs/adrs/2026-03-09-openclaw-replacement-native-channel-adapters.md</code></li>
+<li><code>agent-harness/docs/adrs/2026-03-09-agent-harness-scope-vs-innie-engine.md</code></li>
+<li><code>agent-harness/docs/CHANNEL-ADAPTERS-PLAN.md</code> (superseded by this document)</li>
+<li><code>agent-harness/docs/adrs/2026-02-22-bluebubbles-imessage-integration.md</code> (BlueBubbles API reference)</li>
+<li><code>innie-engine/docs/implementation/agentic-memory-roadmap.md</code></li>
+<li><code>homelab-ai/llm-router/routers/anthropic.py</code> (Anthropic translation layer)</li>
+<li><code>agent-harness/core/claude_stream.py</code> (reference implementation — study before modifying innie's claude.py)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/joshuajenquist/innie-engine" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/innie-engine/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "content.code.annotate", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

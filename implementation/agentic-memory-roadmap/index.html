@@ -1,0 +1,3974 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Persistent memory and identity for AI coding assistants">
+      
+      
+        <meta name="author" content="Joshua Jenquist">
+      
+      
+        <link rel="canonical" href="https://joshuajenquist.github.io/innie-engine/implementation/agentic-memory-roadmap/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Agentic Memory Roadmap - innie-engine</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agentic-memory-roadmap" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="innie-engine" class="md-header__button md-logo" aria-label="innie-engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            innie-engine
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agentic Memory Roadmap
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/joshuajenquist/innie-engine" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    joshuajenquist/innie-engine
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/overview/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../diagrams/data-flow/" class="md-tabs__link">
+          
+  
+  
+  Diagrams
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/cli/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adrs/" class="md-tabs__link">
+          
+  
+  
+  ADRs
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../IMPLEMENTATION_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Implementation Plan
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="innie-engine" class="md-nav__button md-logo" aria-label="innie-engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    innie-engine
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/joshuajenquist/innie-engine" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    joshuajenquist/innie-engine
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/storage-layout/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/heartbeat-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Heartbeat Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/search-engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Search Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/backends/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/fleet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fleet Coordination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagrams
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Diagrams
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diagrams/data-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Flow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diagrams/host-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Host Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../diagrams/storage-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Built-in Skills
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api-server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Server
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0001-journal-first-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 – Journal-First Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0002-sqlite-hybrid-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 – SQLite Hybrid Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0003-backend-plugin-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 – Backend Plugin System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0004-three-phase-heartbeat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 – Three-Phase Heartbeat
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0005-hybrid-search-rrf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 – Hybrid Search with RRF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0006-init-wizard-setup-modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 – Init Wizard Setup Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0007-git-auto-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0007 – Git Auto-Backup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0008-fleet-gateway/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0008 – Fleet Gateway
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0009-skills-as-slash-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0009 – Skills as Slash Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0010-memory-decay-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0010 – Memory Decay Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0011-secret-scanning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0011 – Secret Scanning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0012-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0012 – Migration from Existing Setups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0013-distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0013 – Distribution: PyPI + Homebrew
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0014-two-layer-storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0014 – Two-Layer Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0015-config-format-split/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0015 – TOML Config, YAML Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0016-thin-bash-shims/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0016 – Thin Bash Shims
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0017-namespace-hook-merge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0017 – Namespace-Based Hook Merge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0018-dockerized-embedding-service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0018 – Dockerized Embedding Service
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0019-sqlite-tracing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0019 – SQLite-Backed Tracing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0020-dcg-guard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0020 – Destructive Command Guard
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0021-obsidian-compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0021 – Obsidian Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0022-engine-scope-boundary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0022 – Engine Scope Boundary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0023-ai-never-writes-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0023 – AI Never Writes Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0024-context-injection-token-budget/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0024 – Context Injection Token Budget
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0025-uv-primary-distribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0025 – uv as Primary Distribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0026-search-pipeline-improvements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0026 – Search Pipeline Improvements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0027-cli-surface-area-audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0027 – CLI Surface Area Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adrs/0028-heartbeat-provider-abstraction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0028 – Heartbeat Provider Abstraction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../IMPLEMENTATION_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation Plan
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#execution-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dropped-will-not-build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dropped / will not build
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#background" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Background
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Background">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-agemem-did" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What AgeMem did
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whats-directly-applicable-to-innie" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's directly applicable to innie
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#innies-current-gaps-vs-agemem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        innie's current gaps vs. AgeMem
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-foundation-cli-heartbeat-intelligence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Foundation — CLI + Heartbeat Intelligence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1: Foundation — CLI + Heartbeat Intelligence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-new-cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 New CLI commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-memory-opsjsonl-audit-trail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 memory-ops.jsonl audit trail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-heartbeat-collector-pick-up-live-ops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Heartbeat collector: pick up live ops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-heartbeat-extractor-aware-of-live-ops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Heartbeat extractor: aware of live ops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-heartbeat-route-code-level-dedup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 Heartbeat route: code-level dedup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-heartbeat-prompt-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 Heartbeat prompt improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-session-start-injection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 Session-start injection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-enhanced-pre-compact-warning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.8 Enhanced pre-compact warning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-file-manifest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 file manifest
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supporting-infrastructure-llm-inference-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supporting Infrastructure: LLM Inference Layer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supporting Infrastructure: LLM Inference Layer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-tiers-one-resolution-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two tiers, one resolution chain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ollama-as-an-optional-docker-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ollama as an optional Docker service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-resolution-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider resolution implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-additions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config additions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#innie-doctor-additions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        innie doctor additions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#infrastructure-summary-by-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure summary by phase
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-trigger-classifier-option-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Trigger Classifier — Option A
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Trigger Classifier — Option A">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-hook-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Hook infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-v1-heuristics-no-ml-ships-with-phase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 v1 — Heuristics (no ML, ships with Phase 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-v2-ollama-few-shot-classifier-no-training-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 v2 — Ollama few-shot classifier (no training required)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-v3-fine-tuned-binary-classifier-phase-2-capstone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 v3 — Fine-tuned binary classifier (Phase 2 capstone)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-innie-trigger-stats-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 innie trigger stats command
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-fine-tuned-heartbeat-extractor-option-b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Fine-tuned Heartbeat Extractor — Option B
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3: Fine-tuned Heartbeat Extractor — Option B">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-training-data-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Training data export
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-sft-on-llama-32-3b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 SFT on Llama 3.2 3B
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-serving-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Serving + integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-dpo-feedback-loop-phase-3-capstone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 DPO feedback loop (Phase 3 capstone)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-memory-quality-feedback-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: Memory Quality Feedback Loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4: Memory Quality Feedback Loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-retrieval-tracking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Retrieval tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-citation-analysis-in-heartbeat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Citation analysis in heartbeat
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-confidence-decay-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Confidence decay algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-innie-memory-quality-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 innie memory-quality dashboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gap-coverage-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap coverage summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Gap coverage summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#known-remaining-gaps-no-current-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known remaining gaps (no current plan)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rl-requirements-detailed-breakdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RL requirements — detailed breakdown
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hermes-derived-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hermes-Derived Enhancements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hermes-Derived Enhancements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#h1-frozen-snapshot-prefix-cache-coupling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H1: Frozen Snapshot + Prefix Cache Coupling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h2-progressive-disclosure-for-knowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H2: Progressive Disclosure for Knowledge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h3-prompt-injection-scanning-on-innie-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H3: Prompt Injection Scanning on innie store
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h4-agent-created-and-self-improving-skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H4: Agent-Created and Self-Improving Skills
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h5-raw-session-storage-transcript-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H5: Raw Session Storage + Transcript Search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hermes-enhancement-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hermes enhancement summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#openviking-derived-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenViking-Derived Enhancements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpenViking-Derived Enhancements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ov1-write-time-l0l1-abstractions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OV1: Write-Time L0/L1 Abstractions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ov2-retrieval-trajectory-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OV2: Retrieval Trajectory Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ov3-session-to-file-knowledge-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OV3: Session-to-File Knowledge Graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ov4-directory-browsability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OV4: Directory Browsability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#openviking-enhancement-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenViking enhancement summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="agentic-memory-roadmap">Agentic Memory Roadmap<a class="headerlink" href="#agentic-memory-roadmap" title="Permanent link">&para;</a></h1>
+<p><em>Research basis: <a href="https://arxiv.org/html/2601.01885v1">AgeMem — Agentic Memory: Learning Unified Long-Term and Short-Term Memory Management for LLM Agents</a> (Alibaba Group + Wuhan University, 2026)</em></p>
+<p><em>Created: 2026-03-08 | Reviewed: 2026-03-14</em></p>
+<hr />
+<h2 id="execution-plan">Execution Plan<a class="headerlink" href="#execution-plan" title="Permanent link">&para;</a></h2>
+<p><em>Reviewed 2026-03-14 against current codebase. Almost nothing has been built yet. Priority order established based on value vs. complexity.</em></p>
+<h3 id="build-order">Build order<a class="headerlink" href="#build-order" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Phase 1 core — <code>innie store/forget</code>, <code>context add/remove</code>, <code>memory-ops.jsonl</code>, heartbeat dedup, <code>&lt;memory-tools&gt;</code> injection</td>
+<td><strong>Next</strong></td>
+<td>The whole point of the plan</td>
+</tr>
+<tr>
+<td>2</td>
+<td>HEARTBEAT.md.j2 rewrite</td>
+<td><strong>Next</strong></td>
+<td>30 min, immediate quality lift for all agents</td>
+</tr>
+<tr>
+<td>3</td>
+<td>OV4 <code>innie ls</code></td>
+<td><strong>Next</strong></td>
+<td>Standalone, ~40 lines</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Phase 1 compress — <code>innie context compress</code></td>
+<td>Soon</td>
+<td>LLM call, straightforward</td>
+</tr>
+<tr>
+<td>5</td>
+<td>H1 + H3 — cache markers + injection scan</td>
+<td>Soon</td>
+<td>Quick wins attached to Phase 1</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Phase 2 v1 heuristics only</td>
+<td>Later</td>
+<td>Hook exists, just needs rules</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Phase 4 — retrieval tracking + memory-quality</td>
+<td>Later</td>
+<td>Depends on Phase 1</td>
+</tr>
+<tr>
+<td>8</td>
+<td>H2 — progressive disclosure + <code>innie context load</code></td>
+<td>Later</td>
+<td>Grows in importance as data/ scales</td>
+</tr>
+<tr>
+<td>9</td>
+<td>H5 — session storage table + CLI</td>
+<td>Later</td>
+<td><code>collect_sessions()</code> already done</td>
+</tr>
+<tr>
+<td>10</td>
+<td>OV2 — retrieval trajectory logging</td>
+<td>Later</td>
+<td>Goes with Phase 4</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dropped-will-not-build">Dropped / will not build<a class="headerlink" href="#dropped-will-not-build" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Phase 3 entirely</strong> — Ollama sidecar, QLoRA fine-tuning, DPO feedback loop</td>
+<td>Claude Haiku is cheap and works. Building training pipelines for a homelab tool is a research project, not an engineering one. Drop.</td>
+</tr>
+<tr>
+<td><strong>Phase 2 v2</strong> — Ollama few-shot classifier</td>
+<td>Heuristics (v1) are sufficient. Adding a local LLM call in a PostToolUse hook for &lt;200ms budget is fragile. Drop.</td>
+</tr>
+<tr>
+<td><strong>Phase 2 v3</strong> — DistilBERT fine-tuned classifier</td>
+<td>Requires 500+ labeled examples and GPU training. Way too much for the signal gain. Drop.</td>
+</tr>
+<tr>
+<td><strong>OV1</strong> — write-time L0/L1 abstractions</td>
+<td>Adds LLM call on every <code>innie store</code> write. Can revisit if H2 injection quality becomes a real pain point. Defer indefinitely.</td>
+</tr>
+<tr>
+<td><strong>OV3</strong> — session-to-file knowledge graph</td>
+<td>Complex, depends on H5 which isn't built. Not enough pain yet. Defer.</td>
+</tr>
+<tr>
+<td><strong>H4</strong> — agent-created skills</td>
+<td>Interesting but not core memory infrastructure. Out of scope for this plan.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
+<p>This document captures the full implementation plan for evolving innie-engine's memory system from passive post-hoc extraction toward active, agent-driven memory management — informed by a deep read of the AgeMem paper.</p>
+<h3 id="what-agemem-did">What AgeMem did<a class="headerlink" href="#what-agemem-did" title="Permanent link">&para;</a></h3>
+<p>AgeMem trained 4B and 7B models (Qwen2.5-7B, Qwen3-4B) end-to-end using step-wise GRPO reinforcement learning to manage both long-term memory (LTM) and short-term memory (STM) via 6 explicit tool calls:</p>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Tools</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LTM</td>
+<td><code>Add</code>, <code>Update</code>, <code>Delete</code></td>
+</tr>
+<tr>
+<td>STM</td>
+<td><code>Retrieve</code>, <code>Summary</code>, <code>Filter</code></td>
+</tr>
+</tbody>
+</table>
+<p>The model learned <em>when</em> to call them, <em>what</em> to store, and <em>when</em> to prune — all from task outcome signals broadcast across the trajectory.</p>
+<h3 id="whats-directly-applicable-to-innie">What's directly applicable to innie<a class="headerlink" href="#whats-directly-applicable-to-innie" title="Permanent link">&para;</a></h3>
+<p>The RL training over full model weights is not portable — innie uses Claude via API (frozen weights, no gradients). But the <strong>architectural insight</strong> is: treating memory as explicit tool calls the agent controls, rather than passive post-hoc extraction, is the right model.</p>
+<p>Their "non-trained variant" (tools available but no RL) still showed significant gains. With a well-prompted frontier model, tool availability often captures most of the behavioral gain.</p>
+<h3 id="innies-current-gaps-vs-agemem">innie's current gaps vs. AgeMem<a class="headerlink" href="#innies-current-gaps-vs-agemem" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agent can't write to memory mid-session — must wait for heartbeat (30 min)</td>
+<td>High</td>
+</tr>
+<tr>
+<td>No STM control — agent can't prune/update CONTEXT.md during a session</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Heartbeat creates duplicate learnings (no update-bias)</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Heartbeat doesn't know what agent already stored this session</td>
+<td>High</td>
+</tr>
+<tr>
+<td>No nudge for when to use memory tools (no RL signal)</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>No feedback loop on whether retrieved memories were useful</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>API dependency for heartbeat extraction</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>CONTEXT.md bloat — no compression operation</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Default HEARTBEAT.md.j2 template is nearly empty</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="phase-1-foundation-cli-heartbeat-intelligence">Phase 1: Foundation — CLI + Heartbeat Intelligence<a class="headerlink" href="#phase-1-foundation-cli-heartbeat-intelligence" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Agent can manage memory actively during sessions. Heartbeat stops creating duplicates and knows what the agent already did.</p>
+<h3 id="11-new-cli-commands">1.1 New CLI commands<a class="headerlink" href="#11-new-cli-commands" title="Permanent link">&para;</a></h3>
+<p><strong><code>innie store &lt;type&gt; &lt;title&gt; &lt;content&gt; [flags]</code></strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>innie<span class="w"> </span>store<span class="w"> </span>learning<span class="w"> </span><span class="s2">&quot;Title&quot;</span><span class="w"> </span><span class="s2">&quot;Content...&quot;</span><span class="w"> </span>--category<span class="w"> </span>tools<span class="w"> </span>--confidence<span class="w"> </span>high
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>innie<span class="w"> </span>store<span class="w"> </span>decision<span class="w"> </span><span class="s2">&quot;Title&quot;</span><span class="w"> </span><span class="s2">&quot;Content...&quot;</span><span class="w"> </span>--project<span class="w"> </span>innie-engine
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>innie<span class="w"> </span>store<span class="w"> </span>project<span class="w"> </span>PROJECT_NAME<span class="w"> </span><span class="s2">&quot;Progress summary&quot;</span>
+</code></pre></div>
+<ul>
+<li>Writes to <code>data/learnings/</code>, <code>data/decisions/</code>, <code>data/projects/</code> with <code>source: live</code> frontmatter field</li>
+<li>Immediately calls <code>index_files</code> on the new file (FTS-only fallback if embedding service is down)</li>
+<li>Appends to <code>data/memory-ops.jsonl</code> audit trail</li>
+<li>Prints the file path written so agent can reference it in <code>innie forget</code></li>
+</ul>
+<p><strong><code>innie forget &lt;file_path&gt; &lt;reason&gt;</code></strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>innie<span class="w"> </span>forget<span class="w"> </span>learnings/tools/2026-03-01-foo.md<span class="w"> </span><span class="s2">&quot;API changed in v0.6&quot;</span>
+</code></pre></div>
+<ul>
+<li><code>file_path</code> is relative to <code>data/</code></li>
+<li>Adds <code>superseded: true</code>, <code>superseded_on</code>, <code>superseded_reason</code> frontmatter — same as <code>route_superseded</code> but exposed directly without a heartbeat cycle</li>
+<li>Appends to <code>data/memory-ops.jsonl</code></li>
+</ul>
+<p><strong>Extend <code>innie context</code> subcommands</strong> (currently only prints CONTEXT.md):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>innie<span class="w"> </span>context<span class="w"> </span>add<span class="w"> </span><span class="s2">&quot;- [2026-03-08] Blocked on X until arch decision&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>innie<span class="w"> </span>context<span class="w"> </span>remove<span class="w"> </span><span class="s2">&quot;Fix parse-finite-number.js&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>innie<span class="w"> </span>context<span class="w"> </span>compress
+</code></pre></div>
+<ul>
+<li><code>add</code>: appends bullet to Open Items section, updates Last Updated timestamp</li>
+<li><code>remove</code>: substring match on existing bullets, removes matching line</li>
+<li><code>compress</code>: calls configured LLM to deduplicate, remove obviously resolved items, group related ones. Shows diff. <code>--apply</code> writes directly.</li>
+<li>All three print <code>✓ updated (takes effect next session)</code> — agent must understand current context isn't live-patched</li>
+</ul>
+<p><strong><code>innie memory-ops [--since HOURS]</code></strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>innie<span class="w"> </span>memory-ops<span class="w"> </span>--since<span class="w"> </span><span class="m">8</span>
+</code></pre></div>
+<p>Shows recent entries from <code>data/memory-ops.jsonl</code>. Useful for reviewing what was stored this session and for the heartbeat collector to pick up.</p>
+<h3 id="12-memory-opsjsonl-audit-trail">1.2 <code>memory-ops.jsonl</code> audit trail<a class="headerlink" href="#12-memory-opsjsonl-audit-trail" title="Permanent link">&para;</a></h3>
+<p>Every write from the above commands appends to <code>data/memory-ops.jsonl</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>{&quot;ts&quot;: 1741440854, &quot;op&quot;: &quot;store&quot;, &quot;type&quot;: &quot;learning&quot;, &quot;file&quot;: &quot;learnings/tools/...&quot;, &quot;title&quot;: &quot;...&quot;}
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>{&quot;ts&quot;: 1741440901, &quot;op&quot;: &quot;forget&quot;, &quot;file&quot;: &quot;learnings/tools/...&quot;, &quot;reason&quot;: &quot;...&quot;}
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>{&quot;ts&quot;: 1741440935, &quot;op&quot;: &quot;context_add&quot;, &quot;text&quot;: &quot;- Blocked on X&quot;}
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>{&quot;ts&quot;: 1741441002, &quot;op&quot;: &quot;context_remove&quot;, &quot;text&quot;: &quot;Fix parse-finite-number.js&quot;}
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>{&quot;ts&quot;: 1741441060, &quot;op&quot;: &quot;context_compress&quot;, &quot;removed&quot;: 3, &quot;deduped&quot;: 2}
+</code></pre></div>
+<p>This log is the primary coordination mechanism between the agent's in-session memory ops and the heartbeat pipeline.</p>
+<h3 id="13-heartbeat-collector-pick-up-live-ops">1.3 Heartbeat collector: pick up live ops<a class="headerlink" href="#13-heartbeat-collector-pick-up-live-ops" title="Permanent link">&para;</a></h3>
+<p>Add <code>collect_live_memory_ops()</code> to <code>core/collector.py</code> — same pattern as <code>collect_existing_knowledge()</code>. Reads <code>memory-ops.jsonl</code> for entries since last heartbeat run. Returns them in the <code>collected</code> dict passed to the extractor.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">collect_live_memory_ops</span><span class="p">(</span><span class="n">agent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">since</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read memory-ops.jsonl entries since last heartbeat run.&quot;&quot;&quot;</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="o">...</span>
+</code></pre></div>
+<p>Include in <code>collect_all()</code>.</p>
+<h3 id="14-heartbeat-extractor-aware-of-live-ops">1.4 Heartbeat extractor: aware of live ops<a class="headerlink" href="#14-heartbeat-extractor-aware-of-live-ops" title="Permanent link">&para;</a></h3>
+<p>In <code>heartbeat/extract.py:_build_extraction_prompt()</code>, add a new block derived from the live ops log:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>--- Live Memory Operations (agent already handled these this session) ---
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>[2026-03-08 10:14] stored: learnings/tools/2026-03-08-sqlite-vec.md (&quot;sqlite-vec chunk_id requirement&quot;)
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>[2026-03-08 10:44] forgot: learnings/tools/2026-03-06-old-note.md (&quot;API changed in v0.6&quot;)
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>[2026-03-08 10:31] context_add: &quot;- Blocked on arch decision&quot;
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>Do not create duplicate entries for anything listed above.
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>Do not re-add open items already present in the Current CONTEXT.md section.
+</code></pre></div>
+<h3 id="15-heartbeat-route-code-level-dedup">1.5 Heartbeat route: code-level dedup<a class="headerlink" href="#15-heartbeat-route-code-level-dedup" title="Permanent link">&para;</a></h3>
+<p>Two fixes in <code>heartbeat/route.py</code>:</p>
+<ul>
+<li><strong><code>route_learnings()</code></strong>: before writing, check if a slug-similar file already exists in the target category directory. If a <code>source: live</code> match is found, skip.</li>
+<li><strong><code>route_open_items()</code></strong>: before <code>action: add</code>, check if the text is already present in CONTEXT.md as a substring. Skip if found.</li>
+</ul>
+<h3 id="16-heartbeat-prompt-improvements">1.6 Heartbeat prompt improvements<a class="headerlink" href="#16-heartbeat-prompt-improvements" title="Permanent link">&para;</a></h3>
+<p><strong><code>templates/HEARTBEAT.md.j2</code></strong> — currently 24 lines with almost no guidance. The template installs when a new agent is created and determines extraction quality for all agents who don't customize their HEARTBEAT.md. Needs a full methodology rewrite: categories, confidence levels, what to extract vs. skip, update-bias, open items dedup rules, schema.</p>
+<p><strong><code>~/.innie/agents/avery/HEARTBEAT.md</code></strong> — add three sections to Avery's existing (already good) instructions:</p>
+<p><em>Update-bias:</em>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>### Prefer updating over creating
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>If a session extends or corrects an existing learning in Existing Knowledge,
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>supersede the old one + create an improved version. Do not create a standalone
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>new file if 60%+ of content overlaps with an existing entry. One strong
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>learning beats two partial duplicates.
+</code></pre></div></p>
+<p><em>Open items dedup:</em>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>### Open items dedup
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>Before adding any open item via action: add, verify it (or a close paraphrase)
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>is not already present in the Current CONTEXT.md section above. If yes, skip.
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Err on the side of skipping duplicates.
+</code></pre></div></p>
+<p><em>Confidence calibration:</em>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>### Confidence levels
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>- high: confirmed by explicit success, tested behavior, or repeated observation
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>- medium: observed once, inferred, or environment-specific
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>- low: uncertain, possibly wrong, needs verification
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>Default to medium unless you have strong evidence. Most learnings are medium.
+</code></pre></div></p>
+<h3 id="17-session-start-injection">1.7 Session-start injection<a class="headerlink" href="#17-session-start-injection" title="Permanent link">&para;</a></h3>
+<p><code>build_session_context()</code> in <code>core/context.py</code> — add a <code>&lt;memory-tools&gt;</code> block after <code>&lt;session-status&gt;</code>. Fixed budget ~120 tokens, excluded from context squeeze:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">&lt;memory-tools&gt;</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>Live<span class="w"> </span>knowledge<span class="w"> </span>base<span class="w"> </span>ops<span class="w"> </span>(call<span class="w"> </span>anytime<span class="w"> </span>—<span class="w"> </span>no<span class="w"> </span>need<span class="w"> </span>to<span class="w"> </span>wait<span class="w"> </span>for<span class="w"> </span>heartbeat):
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>innie<span class="w"> </span>store<span class="w"> </span>learning<span class="w"> </span>&quot;Title&quot;<span class="w"> </span>&quot;Content&quot;<span class="w"> </span>--category<span class="w"> </span>CATEGORY
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span>categories:<span class="w"> </span>debugging<span class="w"> </span>|<span class="w"> </span>patterns<span class="w"> </span>|<span class="w"> </span>tools<span class="w"> </span>|<span class="w"> </span>infrastructure<span class="w"> </span>|<span class="w"> </span>processes
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>innie<span class="w"> </span>store<span class="w"> </span>decision<span class="w"> </span>&quot;Title&quot;<span class="w"> </span>&quot;Content&quot;<span class="w"> </span>--project<span class="w"> </span>PROJECT
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>innie<span class="w"> </span>forget<span class="w"> </span>PATH<span class="w"> </span>&quot;Why<span class="w"> </span>it&#39;s<span class="w"> </span>wrong&quot;<span class="w">        </span>#<span class="w"> </span>PATH<span class="w"> </span>relative<span class="w"> </span>to<span class="w"> </span>data/
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span>innie<span class="w"> </span>context<span class="w"> </span>add<span class="w"> </span>&quot;-<span class="w"> </span>Open<span class="w"> </span>item<span class="w"> </span>text&quot;<span class="w">       </span>#<span class="w"> </span>next<span class="w"> </span>session
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span>innie<span class="w"> </span>context<span class="w"> </span>remove<span class="w"> </span>&quot;Open<span class="w"> </span>item<span class="w"> </span>text&quot;<span class="w">      </span>#<span class="w"> </span>next<span class="w"> </span>session
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span>innie<span class="w"> </span>context<span class="w"> </span>compress<span class="w">                     </span>#<span class="w"> </span>dedup<span class="w"> </span>+<span class="w"> </span>trim<span class="w"> </span>open<span class="w"> </span>items
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span>innie<span class="w"> </span>search<span class="w"> </span>&quot;query&quot;<span class="w">                       </span>#<span class="w"> </span>search<span class="w"> </span>knowledge<span class="w"> </span>base<span class="w"> </span>now
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="nt">&lt;/memory-tools&gt;</span>
+</code></pre></div>
+<h3 id="18-enhanced-pre-compact-warning">1.8 Enhanced pre-compact warning<a class="headerlink" href="#18-enhanced-pre-compact-warning" title="Permanent link">&para;</a></h3>
+<p><code>build_precompact_warning()</code> in <code>core/context.py</code> — extend beyond generic "update CONTEXT.md":</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>Before this context is compressed:
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>1. `innie store` any new learnings or decisions from this session
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>2. `innie forget PATH &quot;reason&quot;` for anything you now know is wrong
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>3. `innie context add/remove` to sync open items
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>4. `innie context compress` if Open Items section is getting long
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>5. Update CONTEXT.md directly for any current focus shift
+</code></pre></div>
+<h3 id="phase-1-file-manifest">Phase 1 file manifest<a class="headerlink" href="#phase-1-file-manifest" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/innie/commands/memory.py</code></td>
+<td>New — <code>store</code>, <code>forget</code>, <code>ops</code> subcommands</td>
+</tr>
+<tr>
+<td><code>src/innie/commands/search.py</code></td>
+<td>Extend <code>context</code> — <code>add</code>, <code>remove</code>, <code>compress</code></td>
+</tr>
+<tr>
+<td><code>src/innie/cli.py</code></td>
+<td>Register <code>memory</code> sub-app</td>
+</tr>
+<tr>
+<td><code>src/innie/core/context.py</code></td>
+<td><code>&lt;memory-tools&gt;</code> block + pre-compact enhancement</td>
+</tr>
+<tr>
+<td><code>src/innie/core/collector.py</code></td>
+<td><code>collect_live_memory_ops()</code> + include in <code>collect_all()</code></td>
+</tr>
+<tr>
+<td><code>src/innie/heartbeat/extract.py</code></td>
+<td>Live ops block in extraction prompt</td>
+</tr>
+<tr>
+<td><code>src/innie/heartbeat/route.py</code></td>
+<td>Dedup in <code>route_open_items</code> + slug check in <code>route_learnings</code></td>
+</tr>
+<tr>
+<td><code>src/innie/templates/HEARTBEAT.md.j2</code></td>
+<td>Full methodology (not just schema skeleton)</td>
+</tr>
+<tr>
+<td><code>~/.innie/agents/avery/HEARTBEAT.md</code></td>
+<td>Update-bias + dedup + confidence sections</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="supporting-infrastructure-llm-inference-layer">Supporting Infrastructure: LLM Inference Layer<a class="headerlink" href="#supporting-infrastructure-llm-inference-layer" title="Permanent link">&para;</a></h2>
+<p>Phases 2 and 3 both require LLM inference beyond what Claude API provides. This section defines the infrastructure once so both phases can reference it cleanly.</p>
+<h3 id="two-tiers-one-resolution-chain">Two tiers, one resolution chain<a class="headerlink" href="#two-tiers-one-resolution-chain" title="Permanent link">&para;</a></h3>
+<p>Not every innie installation has a homelab LLM router. The system resolves in priority order and falls back gracefully:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>1. Explicit config (trigger.url / heartbeat.external_url)  ← always wins if set
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>2. Homelab LLM router reachable (OpenAI-compatible endpoint)
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>3. Local Ollama running (localhost:11434)
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>4. Heuristics only (trigger classifier) / Claude API (heartbeat)
+</code></pre></div>
+<p>This means a user with a full homelab gets GPU-backed inference automatically. A user on a laptop with no homelab and no Ollama configured degrades to heuristics for the trigger and Claude API for heartbeat — exactly the current behavior. Nothing breaks.</p>
+<h3 id="ollama-as-an-optional-docker-service">Ollama as an optional Docker service<a class="headerlink" href="#ollama-as-an-optional-docker-service" title="Permanent link">&para;</a></h3>
+<p>Ollama is added to <code>docker-compose.yml</code> as an opt-in profile so it doesn't run for users who don't need it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">services</span><span class="p">:</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">ollama</span><span class="p">:</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nt">profiles</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;ollama&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;full&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">harbor.server.unarmedpuppy.com/docker-hub/ollama/ollama:latest</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;11434:11434&quot;</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ollama-models:/root/.ollama</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;CMD&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;curl&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;-f&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;http://localhost:11434/api/tags&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="w">  </span><span class="c1"># Phase 2 v3 only — tiny classifier sidecar</span>
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="w">  </span><span class="nt">classifier</span><span class="p">:</span>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="w">    </span><span class="nt">profiles</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;classifier&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;full&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a><span class="w">    </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./services/classifier</span>
+<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;8767:8767&quot;</span>
+<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">classifier-cache:/app/cache</span>
+<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+<a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a><span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<a id="__codelineno-13-26" name="__codelineno-13-26" href="#__codelineno-13-26"></a><span class="w">      </span><span class="nt">ollama</span><span class="p">:</span>
+<a id="__codelineno-13-27" name="__codelineno-13-27" href="#__codelineno-13-27"></a><span class="w">        </span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service_healthy</span>
+<a id="__codelineno-13-28" name="__codelineno-13-28" href="#__codelineno-13-28"></a>
+<a id="__codelineno-13-29" name="__codelineno-13-29" href="#__codelineno-13-29"></a><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-13-30" name="__codelineno-13-30" href="#__codelineno-13-30"></a><span class="w">  </span><span class="nt">ollama-models</span><span class="p">:</span>
+<a id="__codelineno-13-31" name="__codelineno-13-31" href="#__codelineno-13-31"></a><span class="w">  </span><span class="nt">classifier-cache</span><span class="p">:</span>
+</code></pre></div>
+<p><strong>GPU passthrough (optional):</strong> Add to the <code>ollama</code> service when NVIDIA hardware is available:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">      </span><span class="nt">resources</span><span class="p">:</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">        </span><span class="nt">reservations</span><span class="p">:</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">          </span><span class="nt">devices</span><span class="p">:</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nvidia</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">              </span><span class="nt">count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">all</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">              </span><span class="nt">capabilities</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">gpu</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>GPU is never required — all models used in this plan run acceptably on CPU for their respective latency envelopes:
+- Llama 3.2 1B (trigger, Phase 2 v2): ~100-150ms CPU, ~30ms GPU
+- Llama 3.2 3B (heartbeat extractor, Phase 3): ~10-20s CPU, ~2-3s GPU. Fine for a 30-min batch job either way.</p>
+<h3 id="model-management">Model management<a class="headerlink" href="#model-management" title="Permanent link">&para;</a></h3>
+<p>Two commands handle the model lifecycle:</p>
+<p><strong><code>innie docker pull-models [--phase PHASE]</code></strong></p>
+<p>Pulls the models required for the specified phase(s). Wraps <code>ollama pull</code> and reports status:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>innie<span class="w"> </span>docker<span class="w"> </span>pull-models<span class="w"> </span>--phase<span class="w"> </span><span class="m">2</span><span class="w">    </span><span class="c1"># pulls llama3.2:1b</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>innie<span class="w"> </span>docker<span class="w"> </span>pull-models<span class="w"> </span>--phase<span class="w"> </span><span class="m">3</span><span class="w">    </span><span class="c1"># pulls llama3.2:3b</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>innie<span class="w"> </span>docker<span class="w"> </span>pull-models<span class="w">              </span><span class="c1"># pulls all required models</span>
+</code></pre></div>
+<p>Pulls are idempotent — safe to re-run. If Ollama isn't running locally, prompts to start it or points at config.</p>
+<p><strong><code>innie docker load-model --modelfile PATH</code></strong></p>
+<p>Used after Phase 3 training to load the fine-tuned extractor:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>innie<span class="w"> </span>docker<span class="w"> </span>load-model<span class="w"> </span>--modelfile<span class="w"> </span>./trained/innie-extractor.Modelfile
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># Wraps: ollama create innie-extractor -f ./trained/innie-extractor.Modelfile</span>
+</code></pre></div>
+<p><strong>Example Phase 3 Modelfile:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>FROM llama3.2:3b
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>SYSTEM &quot;You are a structured memory extractor for the innie-engine knowledge base. Output only valid JSON matching the HeartbeatExtraction schema.&quot;
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>PARAMETER temperature 0.1
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>PARAMETER top_p 0.9
+</code></pre></div></p>
+<h3 id="provider-resolution-implementation">Provider resolution implementation<a class="headerlink" href="#provider-resolution-implementation" title="Permanent link">&para;</a></h3>
+<p>The resolution logic lives in a new <code>core/llm.py</code> module shared by both the trigger classifier hook and the heartbeat extractor:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_llm_url</span><span class="p">(</span><span class="n">purpose</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;trigger&quot;</span><span class="p">,</span> <span class="s2">&quot;heartbeat&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="sd">    Returns (base_url, model) or None if no LLM is available.</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="sd">    Resolution order:</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="sd">      1. Explicit config key for this purpose</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="sd">      2. Homelab LLM router probe</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="sd">      3. Local Ollama probe</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="sd">      4. None → caller falls back to heuristics or Claude API</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="sd">    &quot;&quot;&quot;</span>
+</code></pre></div>
+<p>The probe is a lightweight <code>GET /api/tags</code> (Ollama) or <code>GET /v1/models</code> (OpenAI-compatible) with a 500ms timeout. Result is cached for the process lifetime — no repeated probes on every tool call.</p>
+<h3 id="config-additions">Config additions<a class="headerlink" href="#config-additions" title="Permanent link">&para;</a></h3>
+<p>New keys in <code>config.toml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="k">[ollama]</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://localhost:11434&quot;</span><span class="w">   </span><span class="c1"># override auto-detection</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="n">models</span><span class="p">.</span><span class="n">trigger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;llama3.2:1b&quot;</span><span class="w">  </span><span class="c1"># model used by trigger classifier v2</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="n">models</span><span class="p">.</span><span class="n">heartbeat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;llama3.2:3b&quot;</span><span class="w"> </span><span class="c1"># model used by heartbeat extractor (Phase 3)</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">                                  </span><span class="c1"># or &quot;innie-extractor&quot; after fine-tuning</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="k">[trigger]</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w">                   </span><span class="c1"># LLM endpoint override (blank = auto-detect)</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="n">cooldown_tool_calls</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">    </span><span class="c1"># min tool calls between nudges</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="n">cooldown_minutes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">      </span><span class="c1"># min wall-clock minutes between nudges</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w">             </span><span class="c1"># set false to disable trigger entirely</span>
+</code></pre></div>
+<h3 id="innie-doctor-additions"><code>innie doctor</code> additions<a class="headerlink" href="#innie-doctor-additions" title="Permanent link">&para;</a></h3>
+<p>New checks in <code>innie doctor</code> / <code>innie status</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>LLM inference:
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  ✓ Homelab LLM router: http://llm-router.server.unarmedpuppy.com  [reachable]
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>  ✓ Local Ollama: http://localhost:11434  [running]
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    Models: llama3.2:1b (695MB) ✓ | llama3.2:3b (2.0GB) ✗ not pulled
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>  Resolved provider:
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    trigger classifier → localhost:11434 / llama3.2:1b
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    heartbeat extractor → homelab LLM router (GPU)
+</code></pre></div>
+<p>If nothing is reachable:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>  ✗ Homelab LLM router: not reachable
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>  ✗ Local Ollama: not running
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>  → trigger classifier: heuristics only (Phase 2 v1)
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>  → heartbeat extractor: Claude API (current behavior)
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>  To enable local inference: innie docker up --profile ollama
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>                             innie docker pull-models
+</code></pre></div></p>
+<h3 id="infrastructure-summary-by-phase">Infrastructure summary by phase<a class="headerlink" href="#infrastructure-summary-by-phase" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>What needs LLM</th>
+<th>Latency requirement</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2 v1</td>
+<td>Nothing (heuristics)</td>
+<td>&lt;50ms</td>
+<td>No LLM needed</td>
+</tr>
+<tr>
+<td>2 v2</td>
+<td>Llama 3.2 1B</td>
+<td>&lt;200ms (must be local)</td>
+<td>Local Ollama only</td>
+</tr>
+<tr>
+<td>2 v3</td>
+<td>Fine-tuned classifier</td>
+<td>&lt;30ms</td>
+<td>In-process (no network)</td>
+</tr>
+<tr>
+<td>3 SFT/serve</td>
+<td>Llama 3.2 3B</td>
+<td>5-20s acceptable</td>
+<td>Local Ollama or homelab router</td>
+</tr>
+<tr>
+<td>Heartbeat (current)</td>
+<td>Claude Haiku</td>
+<td>5-30s acceptable</td>
+<td>Claude API / any provider</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical constraint for Phase 2 v2:</strong> The trigger classifier runs as a PostToolUse hook — it must complete in &lt;200ms total. Any LLM call must be to a local endpoint. Routing to the homelab server over Tailscale adds 20-100ms network + inference time and may exceed the budget. If Ollama is not running locally, the hook silently falls back to heuristics.</p>
+<hr />
+<h2 id="phase-2-trigger-classifier-option-a">Phase 2: Trigger Classifier — Option A<a class="headerlink" href="#phase-2-trigger-classifier-option-a" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Status: Build v1 heuristics only. v2 and v3 are dropped.</strong> The PostToolUse hook infrastructure already exists. v1 (pure heuristics, no ML) ships with Phase 2. v2 (Ollama few-shot) and v3 (DistilBERT fine-tune) are cut — too complex, too fragile for a &lt;200ms hook budget, insufficient signal gain over good heuristics.</p>
+</blockquote>
+<p><strong>Goal:</strong> Agent gets nudged at the right moment <em>during</em> a session rather than only at start and pre-compact. Addresses the mid-session retrieval trigger gap without requiring RL on the main model.</p>
+<p><strong>Core insight from AgeMem:</strong> Their RL taught the model <em>when</em> to invoke memory tools. Without RL on Claude, we approximate this with a lightweight sidecar that watches the conversation and injects hints at high-signal moments.</p>
+<h3 id="21-hook-infrastructure">2.1 Hook infrastructure<a class="headerlink" href="#21-hook-infrastructure" title="Permanent link">&para;</a></h3>
+<p>A PostToolUse hook script registered in the Claude Code hooks config. Runs after every tool call. Receives tool name + output, can read the running session log.</p>
+<p>Constraints:
+- Must complete in &lt;200ms or Claude Code lags
+- Cooldown: fires at most once per 5 tool calls, or once per 10 minutes (whichever is longer)
+- Outputs to stdout → appears as a system message the agent sees</p>
+<h3 id="22-v1-heuristics-no-ml-ships-with-phase-2">2.2 v1 — Heuristics (no ML, ships with Phase 2)<a class="headerlink" href="#22-v1-heuristics-no-ml-ships-with-phase-2" title="Permanent link">&para;</a></h3>
+<p>Rules applied to recent tool call patterns:</p>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Detection Signal</th>
+<th>Nudge Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>should_store</code></td>
+<td>3+ Bash calls, earlier ones failed, last succeeded</td>
+<td>"Debugging breakthrough detected — consider <code>innie store learning</code>"</td>
+</tr>
+<tr>
+<td><code>should_store</code></td>
+<td>Write/Edit to a new non-data file</td>
+<td>"New implementation — consider <code>innie store decision</code> if an arch choice was made"</td>
+</tr>
+<tr>
+<td><code>should_search</code></td>
+<td>Tool call references a project not seen at session start</td>
+<td>"Shifted to [project] — consider <code>innie search</code> for stored context"</td>
+</tr>
+<tr>
+<td><code>should_remind</code></td>
+<td>20+ tool calls, no <code>innie</code> commands in session log</td>
+<td>"No memory ops yet this session — anything worth storing?"</td>
+</tr>
+<tr>
+<td><code>should_prune</code></td>
+<td>CONTEXT.md &gt; 180 lines</td>
+<td>"CONTEXT.md is getting long — consider <code>innie context compress</code>"</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-v2-ollama-few-shot-classifier-no-training-required">2.3 v2 — Ollama few-shot classifier (no training required)<a class="headerlink" href="#23-v2-ollama-few-shot-classifier-no-training-required" title="Permanent link">&para;</a></h3>
+<p>Same hook script as v1, but the <code>should_store</code> check calls Llama 3.2 1B via Ollama instead of rules. Uses the provider resolution chain from the <strong>Supporting Infrastructure</strong> section — if no local Ollama is available the hook transparently falls back to v1 heuristics. The LLM call must hit a local endpoint; remote routing is not acceptable here due to the &lt;200ms budget.</p>
+<p><strong>Few-shot prompt:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>You are a memory quality detector for an AI coding assistant.
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>Decide if the last 3 conversation turns contain a discovery worth
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>storing as a long-term memory.
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>EXAMPLES THAT WARRANT STORAGE:
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>- Agent found the root cause of a recurring bug
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>- Agent discovered non-obvious API behavior
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>- Agent made an architectural tradeoff with stated rationale
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>EXAMPLES THAT DON&#39;T:
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>- Agent listed directory contents
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>- Agent ran tests and they passed
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>- Agent formatted a file
+<a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>
+<a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a>TURNS:
+<a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>{last_3_turns}
+<a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>
+<a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a>Answer: yes/no. If yes, one sentence on why.
+</code></pre></div>
+<p><strong>Setup path for a user without a homelab router:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># 1. Start Ollama via the compose profile</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>innie<span class="w"> </span>docker<span class="w"> </span>up<span class="w"> </span>--profile<span class="w"> </span>ollama
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="c1"># 2. Pull the trigger model (~700MB)</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>innie<span class="w"> </span>docker<span class="w"> </span>pull-models<span class="w"> </span>--phase<span class="w"> </span><span class="m">2</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="c1"># 3. Verify</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>innie<span class="w"> </span>doctor
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="c1">#   ✓ Local Ollama: running | llama3.2:1b ✓</span>
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="c1">#   → trigger classifier: localhost:11434 / llama3.2:1b</span>
+</code></pre></div>
+<p>No config changes required — auto-detection picks up local Ollama on <code>localhost:11434</code>. To override (e.g. a remote Ollama on a different machine), set <code>trigger.url</code> in <code>config.toml</code>.</p>
+<h3 id="24-v3-fine-tuned-binary-classifier-phase-2-capstone">2.4 v3 — Fine-tuned binary classifier (Phase 2 capstone)<a class="headerlink" href="#24-v3-fine-tuned-binary-classifier-phase-2-capstone" title="Permanent link">&para;</a></h3>
+<p>Once enough labeled data accumulates from v1/v2 operation:</p>
+<p><strong>Training data format:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>{&quot;window&quot;: [&quot;turn1...&quot;, &quot;turn2...&quot;, &quot;turn3...&quot;],
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a> &quot;label&quot;: {&quot;should_store&quot;: true, &quot;should_search&quot;: false, &quot;should_prune&quot;: false},
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a> &quot;source&quot;: &quot;heartbeat_derived&quot;,
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a> &quot;session_id&quot;: &quot;ses-abc123&quot;}
+</code></pre></div></p>
+<p><strong>Label derivation:</strong> If heartbeat extraction following a session produced a learning, the conversation window ~60 turns before discovery is a positive <code>should_store</code> example. Windows without extractions are negatives.</p>
+<p><strong>Model:</strong> DistilBERT (~65M params) or Llama 3.2 1B with LoRA binary classification head.
+- Training time: 1-2 hours on gaming PC GPU
+- Inference: &lt;30ms
+- Training trigger: 500+ labeled examples (~2-3 months of sessions)
+- Re-train monthly as data accumulates</p>
+<h3 id="25-innie-trigger-stats-command">2.5 <code>innie trigger stats</code> command<a class="headerlink" href="#25-innie-trigger-stats-command" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>innie<span class="w"> </span>trigger<span class="w"> </span>stats<span class="w"> </span><span class="o">[</span>--since<span class="w"> </span>DAYS<span class="o">]</span>
+</code></pre></div>
+<p>Shows:
+- How often classifier fired per session
+- Which trigger categories fired most
+- Whether agent acted on nudge (did <code>innie store</code> appear within 5 tool calls of nudge?)
+- Estimated precision over time</p>
+<p>This data also feeds v3 fine-tuning as a quality signal on the nudges themselves.</p>
+<hr />
+<h2 id="phase-3-fine-tuned-heartbeat-extractor-option-b">Phase 3: Fine-tuned Heartbeat Extractor — Option B<a class="headerlink" href="#phase-3-fine-tuned-heartbeat-extractor-option-b" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>Status: DROPPED.</strong> Claude Haiku is cheap, fast, and already works. Building Ollama infrastructure, QLoRA training pipelines, and DPO feedback loops for a homelab tool is a research project disguised as an engineering task. The cost savings don't justify the complexity. If local inference becomes a priority for other reasons (e.g. homelab GPU is idle and cost is a real concern), revisit. For now, skip this entire phase.</p>
+</blockquote>
+<p><strong>Goal:</strong> Replace Claude Haiku / API dependency for heartbeat extraction with a locally-served specialized model. Cheaper, faster, offline-capable, and perfectly calibrated to innie's schema. Also unlocks a feedback loop that frozen API models can't provide.</p>
+<p><strong>Why this matters:</strong> AgeMem's core insight was that a small specialized model outperforms generic prompting for memory management tasks. The heartbeat extractor is a bounded, well-defined task (session transcript → structured JSON) — exactly the profile where fine-tuning a small model pays off.</p>
+<h3 id="31-training-data-export">3.1 Training data export<a class="headerlink" href="#31-training-data-export" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>innie<span class="w"> </span>heartbeat<span class="w"> </span>export-training<span class="w"> </span><span class="o">[</span>--output<span class="w"> </span>PATH<span class="o">]</span>
+</code></pre></div>
+<p>Exports <code>(prompt, completion)</code> pairs from heartbeat history:
+- <code>prompt</code> = the full <code>_build_extraction_prompt(collected)</code> string used for that run
+- <code>completion</code> = the validated <code>HeartbeatExtraction</code> JSON that was produced</p>
+<p>Every heartbeat run implicitly generates these. Export is retrospective. Target: 200-500 pairs minimum before first training run.</p>
+<h3 id="32-sft-on-llama-32-3b">3.2 SFT on Llama 3.2 3B<a class="headerlink" href="#32-sft-on-llama-32-3b" title="Permanent link">&para;</a></h3>
+<p>Supervised fine-tuning — no RL needed, this is a structured output task:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base model</td>
+<td>Llama 3.2 3B</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>3.2B params, ~2GB in 4-bit</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>QLoRA (4-bit quantization + low-rank adapters)</td>
+</tr>
+<tr>
+<td>GPU requirement</td>
+<td>8GB+ VRAM (gaming PC RTX)</td>
+</tr>
+<tr>
+<td>Training time</td>
+<td>~5-10 hours</td>
+</tr>
+<tr>
+<td>Format</td>
+<td>Chat format: system = extraction instructions, user = raw data, assistant = JSON</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-serving-integration">3.3 Serving + integration<a class="headerlink" href="#33-serving-integration" title="Permanent link">&para;</a></h3>
+<p>The fine-tuned model is served via Ollama and registered using the Modelfile approach described in the <strong>Supporting Infrastructure</strong> section. Heartbeat already supports <code>provider = "external"</code> with any OpenAI-compatible endpoint — zero code change needed once the model is loaded.</p>
+<p><strong>With a homelab LLM router (GPU):</strong></p>
+<p>Point heartbeat at it directly. The router already handles model routing:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="k">[heartbeat]</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="n">provider</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;external&quot;</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="n">external_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http://llm-router.server.unarmedpuppy.com/v1&quot;</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="n">model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;innie-extractor&quot;</span>
+</code></pre></div></p>
+<p><strong>Without a homelab router — local Ollama path:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># 1. Ensure Ollama is running</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>innie<span class="w"> </span>docker<span class="w"> </span>up<span class="w"> </span>--profile<span class="w"> </span>ollama
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1"># 2. Pull the base model (one-time, ~2GB)</span>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>innie<span class="w"> </span>docker<span class="w"> </span>pull-models<span class="w"> </span>--phase<span class="w"> </span><span class="m">3</span>
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="c1"># 3. After Phase 3.2 training completes, load the fine-tuned adapter</span>
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>innie<span class="w"> </span>docker<span class="w"> </span>load-model<span class="w"> </span>--modelfile<span class="w"> </span>./trained/innie-extractor.Modelfile
+<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>
+<a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="c1"># 4. Point heartbeat at local Ollama</span>
+<a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a><span class="c1"># config.toml:</span>
+<a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a><span class="c1"># [heartbeat]</span>
+<a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a><span class="c1"># provider = &quot;external&quot;</span>
+<a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a><span class="c1"># external_url = &quot;http://localhost:11434/v1&quot;</span>
+<a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a><span class="c1"># model = &quot;innie-extractor&quot;</span>
+<a id="__codelineno-28-16" name="__codelineno-28-16" href="#__codelineno-28-16"></a>
+<a id="__codelineno-28-17" name="__codelineno-28-17" href="#__codelineno-28-17"></a><span class="c1"># Or let auto-detection handle it — innie resolves local Ollama automatically</span>
+<a id="__codelineno-28-18" name="__codelineno-28-18" href="#__codelineno-28-18"></a><span class="c1"># when provider = &quot;auto&quot; and Ollama is running with innie-extractor loaded</span>
+</code></pre></div>
+<p><strong>CPU inference note:</strong> Llama 3.2 3B at Q4 quantization generates ~2-3 tokens/sec on a modern CPU. A typical heartbeat extraction (400-800 tokens output) takes 2-5 minutes on CPU. This is acceptable — heartbeat is a background batch job running every 30 minutes, not a real-time operation. GPU is optional, not required.</p>
+<p><strong>Fallback behavior:</strong> If neither <code>external_url</code> nor local Ollama resolves <code>innie-extractor</code>, the <code>resolve_llm_url("heartbeat")</code> function returns <code>None</code> and heartbeat falls back to <code>provider = "anthropic"</code> (Claude Haiku). This is the current behavior — Phase 3 is purely additive and never breaks existing setups.</p>
+<p><strong><code>innie doctor</code> output after Phase 3 setup:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>Heartbeat:
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  ✓ provider: external → http://localhost:11434/v1
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>  ✓ model: innie-extractor [loaded, 2.1GB]
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>  ✓ fallback: anthropic / claude-haiku-4-5 [configured]
+</code></pre></div></p>
+<h3 id="34-dpo-feedback-loop-phase-3-capstone">3.4 DPO feedback loop (Phase 3 capstone)<a class="headerlink" href="#34-dpo-feedback-loop-phase-3-capstone" title="Permanent link">&para;</a></h3>
+<p>Once Phase 4's memory quality signal exists, create preference pairs:
+- <code>(prompt, extraction_A, extraction_B)</code> where A had high-quality memories (retrieved + cited), B had low-quality (never used)
+- Fine-tune with DPO (Direct Preference Optimization) — lighter than GRPO, no separate reward model needed
+- Re-train monthly as quality signal accumulates</p>
+<p>This is the closest analog to AgeMem's RL insight that innie's architecture permits: specialized small model for memory management, trained with preference feedback on outcomes.</p>
+<hr />
+<h2 id="phase-4-memory-quality-feedback-loop">Phase 4: Memory Quality Feedback Loop<a class="headerlink" href="#phase-4-memory-quality-feedback-loop" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Close the "read side" gap. Track whether stored memories were actually useful. Use that signal to decay stale content automatically and improve extraction quality over time.</p>
+<h3 id="41-retrieval-tracking">4.1 Retrieval tracking<a class="headerlink" href="#41-retrieval-tracking" title="Permanent link">&para;</a></h3>
+<p>Extend <code>search_for_context()</code> in <code>core/search.py</code> to append to <code>data/retrieval-log.jsonl</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>{&quot;ts&quot;: 1741440854, &quot;session_id&quot;: &quot;ses-abc&quot;, &quot;files_served&quot;: [&quot;learnings/tools/foo.md&quot;], &quot;query&quot;: &quot;innie-engine&quot;}
+</code></pre></div>
+<p>Cheap — just a file append alongside the existing search call.</p>
+<h3 id="42-citation-analysis-in-heartbeat">4.2 Citation analysis in heartbeat<a class="headerlink" href="#42-citation-analysis-in-heartbeat" title="Permanent link">&para;</a></h3>
+<p>During heartbeat collect phase, parse session transcript for content overlap with files that were served in that session. BM25 or cosine similarity between served chunk content and agent response text.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>{&quot;file&quot;: &quot;learnings/tools/foo.md&quot;, &quot;retrieved_at&quot;: 1741440854, &quot;cited&quot;: true, &quot;session_id&quot;: &quot;ses-abc&quot;}
+</code></pre></div>
+<h3 id="43-confidence-decay-algorithm">4.3 Confidence decay algorithm<a class="headerlink" href="#43-confidence-decay-algorithm" title="Permanent link">&para;</a></h3>
+<p>During heartbeat route phase, after routing new content, run a decay scan:</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Retrieved 3+ times, never cited</td>
+<td>Decay <code>high</code> → <code>medium</code> → <code>low</code></td>
+</tr>
+<tr>
+<td><code>confidence: low</code> for 60+ days, never retrieved</td>
+<td>Auto-supersede + journal entry</td>
+</tr>
+<tr>
+<td>Consistently cited (3+ citations)</td>
+<td>Boost if currently <code>medium</code></td>
+</tr>
+</tbody>
+</table>
+<p>Decay is written back to the file's YAML frontmatter. No deletions — just frontmatter state changes that affect search ranking and the quality dashboard.</p>
+<h3 id="44-innie-memory-quality-dashboard">4.4 <code>innie memory-quality</code> dashboard<a class="headerlink" href="#44-innie-memory-quality-dashboard" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>innie<span class="w"> </span>memory-quality<span class="w"> </span><span class="o">[</span>--agent<span class="w"> </span>NAME<span class="o">]</span>
+</code></pre></div>
+<p>Shows:
+- Top 10 most retrieved memories
+- Top 10 never-retrieved memories (prune candidates)
+- Confidence distribution across knowledge base
+- Retrieval trend over time (improving? degrading?)
+- Files due for decay review</p>
+<hr />
+<h2 id="gap-coverage-summary">Gap coverage summary<a class="headerlink" href="#gap-coverage-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Phase</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Active in-session memory ops</td>
+<td>1</td>
+<td><code>store</code>, <code>forget</code>, <code>context add/remove</code> CLI</td>
+</tr>
+<tr>
+<td>Heartbeat duplicate prevention</td>
+<td>1</td>
+<td><code>memory-ops.jsonl</code> + prompt update + route dedup</td>
+</tr>
+<tr>
+<td>CONTEXT.md bloat / no compression</td>
+<td>1</td>
+<td><code>innie context compress</code></td>
+</tr>
+<tr>
+<td>Default HEARTBEAT.md.j2 template empty</td>
+<td>1</td>
+<td>Full methodology rewrite</td>
+</tr>
+<tr>
+<td>Heartbeat update-bias (creates vs. updates)</td>
+<td>1</td>
+<td>Prompt instruction + slug dedup in <code>route_learnings</code></td>
+</tr>
+<tr>
+<td>Mid-session retrieval trigger</td>
+<td>2</td>
+<td>Trigger classifier <code>should_search</code> output</td>
+</tr>
+<tr>
+<td>Agent needs nudge to store (no RL)</td>
+<td>2</td>
+<td>Trigger classifier PostToolUse hook</td>
+</tr>
+<tr>
+<td>API dependency for heartbeat</td>
+<td>3</td>
+<td>Local fine-tuned extractor via Ollama</td>
+</tr>
+<tr>
+<td>Heartbeat extraction quality ceiling</td>
+<td>3</td>
+<td>DPO feedback loop on local model</td>
+</tr>
+<tr>
+<td>Memory quality read-side signal</td>
+<td>4</td>
+<td>Retrieval tracking + citation analysis</td>
+</tr>
+<tr>
+<td>Confidence decay for stale content</td>
+<td>4</td>
+<td>Decay algorithm in heartbeat route phase</td>
+</tr>
+<tr>
+<td>"Does stored memory actually help?"</td>
+<td>4</td>
+<td>Memory quality dashboard</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-remaining-gaps-no-current-plan">Known remaining gaps (no current plan)<a class="headerlink" href="#known-remaining-gaps-no-current-plan" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>innie context add</code> in current session</strong>: writes take effect next session only. Not fixable without backend-level system prompt patching during a running session.</li>
+<li><strong>Multi-machine conflict resolution</strong>: when two agents (e.g. Avery + Jobin) store contradictory facts about the same topic simultaneously, there's no merge strategy. Long-term distributed systems problem.</li>
+<li><strong>Agent ignores nudges</strong>: the trigger classifier can nudge but not force. Without RL on the main model, consistent nudge-ignoring has no corrective mechanism.</li>
+</ul>
+<hr />
+<h2 id="rl-requirements-detailed-breakdown">RL requirements — detailed breakdown<a class="headerlink" href="#rl-requirements-detailed-breakdown" title="Permanent link">&para;</a></h2>
+<p>A common question: does any of this require training a "huge LLM"?</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What gets trained</th>
+<th>Size</th>
+<th>Compute</th>
+<th>Training data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 1</td>
+<td>Nothing — prompt engineering only</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Phase 2 v1-v2</td>
+<td>Nothing — heuristics + few-shot</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Phase 2 v3</td>
+<td>Binary classifier (DistilBERT/LoRA)</td>
+<td>~65-125M params</td>
+<td>1-2h gaming GPU</td>
+<td>Session + heartbeat pairs</td>
+</tr>
+<tr>
+<td>Phase 3 SFT</td>
+<td>Llama 3.2 3B full fine-tune (QLoRA)</td>
+<td>3.2B params</td>
+<td>5-10h gaming GPU</td>
+<td>Heartbeat extraction pairs</td>
+</tr>
+<tr>
+<td>Phase 3 DPO</td>
+<td>Same model, preference fine-tune</td>
+<td>3.2B params</td>
+<td>2-4h gaming GPU</td>
+<td>Quality signal pairs</td>
+</tr>
+<tr>
+<td>Full AgeMem RL</td>
+<td>Full 4-7B base model (GRPO)</td>
+<td>4-7B params</td>
+<td>40-80h H100-scale</td>
+<td>Task completion labels</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The answer:</strong> No, we never train a huge LLM. The models that get trained are small sidecars (Phase 2) or specialized extractors (Phase 3). The main agent (Claude Sonnet) stays frozen throughout. Phase 4 only requires a small preference dataset fed to the already-fine-tuned Phase 3 model.</p>
+<p>Full AgeMem-style RL on the main model would require switching away from Claude as the agent backbone to an open-weight model with accessible weights — a completely different architecture decision.</p>
+<hr />
+<p><em>Related ADRs: 0004-three-phase-heartbeat.md, 0005-hybrid-search-rrf.md, 0010-memory-decay-strategy.md, 0033-knowledge-contradiction-detection.md</em></p>
+<hr />
+<h2 id="hermes-derived-enhancements">Hermes-Derived Enhancements<a class="headerlink" href="#hermes-derived-enhancements" title="Permanent link">&para;</a></h2>
+<p><em>Research basis: <a href="https://github.com/NousResearch/hermes-agent">NousResearch/hermes-agent</a> — evaluated 2026-03-09 against innie-engine architecture.</em></p>
+<p>These four patterns were identified during a comparative analysis of hermes-agent's memory system. They are additive — none conflict with existing phases.</p>
+<hr />
+<h3 id="h1-frozen-snapshot-prefix-cache-coupling">H1: Frozen Snapshot + Prefix Cache Coupling<a class="headerlink" href="#h1-frozen-snapshot-prefix-cache-coupling" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> innie injects CONTEXT.md and knowledge context fresh each session, but the content can shift mid-session (via <code>innie context add</code>, heartbeat runs, etc.). For Anthropic models, the system prompt is the primary cache prefix. Any change to it between turns busts the cache and incurs full input token costs.</p>
+<p><strong>hermes approach:</strong> MEMORY.md and USER.md are frozen at session start. Mid-session writes persist to disk but do not update the live prompt. The agent is explicitly told: <em>"context changes take effect next session."</em> This stabilizes the prefix and enables ~75% input token cost reduction on multi-turn sessions.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li><code>build_session_context()</code> in <code>core/context.py</code> already assembles context once at session start — the frozen snapshot behavior is implicitly correct today.</li>
+<li>The gap: no explicit documentation of this contract, and Phase 1's <code>&lt;memory-tools&gt;</code> block should be reviewed to ensure the "takes effect next session" language is present for all write operations.</li>
+<li>Add a <code>cache_stable: true</code> frontmatter marker to the <code>&lt;agent-identity&gt;</code> and <code>&lt;agent-context&gt;</code> XML blocks so backends that support explicit cache control (e.g. Anthropic <code>cache_control</code> headers) can mark these blocks as cacheable.</li>
+<li>Document the frozen snapshot contract in <code>core/context.py</code> as a named invariant.</li>
+</ul>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/core/context.py</code> | Document frozen snapshot invariant; add <code>cache_stable</code> marker to XML blocks |
+| Phase 1.7 <code>&lt;memory-tools&gt;</code> block | Verify all write ops include "takes effect next session" note |</p>
+<hr />
+<h3 id="h2-progressive-disclosure-for-knowledge">H2: Progressive Disclosure for Knowledge<a class="headerlink" href="#h2-progressive-disclosure-for-knowledge" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> As <code>data/</code> grows, injecting full file content into the session context bloats the token budget. The current token-budgeted context injection (ADR-0024) handles overflow by truncating — but truncation means useful content is silently dropped rather than being retrievable on demand.</p>
+<p><strong>hermes approach:</strong> Only a lightweight index (name + one-line description) lives in the system prompt. The agent calls a <code>skill_view</code> tool to load a full document only when it's needed. Full content is never injected speculatively.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Extend <code>build_session_context()</code> to support a <code>--index-only</code> mode for the <code>&lt;memory-context&gt;</code> block: emit a compact index (file slug + first sentence of content) rather than full excerpts when the knowledge base exceeds a configurable size threshold (e.g. 50 files or 2,000 tokens of results).</li>
+<li>Add <code>innie context load &lt;file-path&gt;</code> CLI command — agent calls it mid-session to pull a full file into its context on demand. File path is relative to <code>data/</code>.</li>
+<li>Add to the <code>&lt;memory-tools&gt;</code> block (Phase 1.7):
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>innie context load PATH    # load full file content on demand (PATH relative to data/)
+</code></pre></div></li>
+<li>The index-only threshold and the load command together reproduce hermes's progressive disclosure without requiring a new tool type.</li>
+</ul>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/core/context.py</code> | Index-only mode for <code>&lt;memory-context&gt;</code> block; configurable threshold |
+| <code>src/innie/commands/search.py</code> | <code>innie context load &lt;path&gt;</code> subcommand |
+| Phase 1.7 <code>&lt;memory-tools&gt;</code> block | Add <code>innie context load</code> |</p>
+<hr />
+<h3 id="h3-prompt-injection-scanning-on-innie-store">H3: Prompt Injection Scanning on <code>innie store</code><a class="headerlink" href="#h3-prompt-injection-scanning-on-innie-store" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> ADR-0011 (secret scanning) runs at index time, scanning files before they enter the FTS5/vector index. Phase 1 adds <code>innie store</code> as a new write path that bypasses the index pipeline — content is written directly to <code>data/</code> before indexing. This creates a window where injected content could reach the knowledge base and subsequently the system prompt without scanning.</p>
+<p><strong>hermes approach:</strong> hermes scans all memory writes for prompt injection patterns (instruction override attempts, exfiltration patterns, role-switching attempts) before accepting the entry. Writes that fail scanning are rejected with an error message.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Extend <code>core/secrets.py</code> (or add <code>core/injection.py</code>) with a prompt injection pattern list: instruction override phrases (<code>"ignore previous instructions"</code>, <code>"you are now"</code>, <code>"disregard your"</code>, etc.), role-switching patterns, and exfiltration markers.</li>
+<li>Call injection scan in <code>innie store</code> before writing the file. Rejection message should explain which pattern matched.</li>
+<li>The existing index-time secret scan (ADR-0011) remains — this is an additional pre-write gate for the live ops path only.</li>
+<li>Scanning is regex-based (no LLM) — consistent with the zero-dependency baseline constraint.</li>
+</ul>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/core/secrets.py</code> | Add <code>scan_for_injection(text) -&gt; list[str]</code> — returns matched patterns |
+| <code>src/innie/commands/memory.py</code> | Call <code>scan_for_injection</code> before writing in <code>innie store</code> |</p>
+<hr />
+<h3 id="h4-agent-created-and-self-improving-skills">H4: Agent-Created and Self-Improving Skills<a class="headerlink" href="#h4-agent-created-and-self-improving-skills" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> innie's Phase 2 skills system (<code>agents/skills/</code>) is human-authored. The agent can <em>run</em> skills but cannot <em>create</em> or <em>improve</em> them. hermes's skills system is procedural memory that the agent builds and refines over time — the agent writes a SKILL.md after completing a complex or novel task, and patches it when it learns a better approach.</p>
+<p><strong>hermes approach:</strong> Agent-driven skill authorship with a nudge system. After complex tasks, the agent is prompted: "This looks like a reusable workflow — consider creating a skill." The <code>skill_manage</code> tool lets the agent patch skills in place. Skills are versioned and discoverable via an index.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Add <code>innie skill create &lt;name&gt; &lt;description&gt;</code> — scaffolds a SKILL.md in <code>~/.innie/agents/&lt;agent&gt;/skills/</code> with a template. Agent fills in the procedure.</li>
+<li>Add <code>innie skill patch &lt;name&gt; &lt;instruction&gt;</code> — agent provides a natural-language patch instruction; innie calls the configured LLM to apply it to the existing SKILL.md and shows a diff. <code>--apply</code> writes directly.</li>
+<li>Add a <code>should_create_skill</code> trigger in Phase 2's trigger classifier heuristics (section 2.2): fires when a complex multi-step task completes (10+ tool calls in a single goal arc, at least one retry/failure before success). Output: <em>"Complex workflow completed — consider <code>innie skill create</code> to preserve this procedure."</em></li>
+<li>Add to <code>&lt;memory-tools&gt;</code> block (Phase 1.7):
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>innie skill create NAME &quot;Description&quot;   # scaffold a new reusable procedure
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>innie skill patch NAME &quot;What changed&quot;   # update an existing skill
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>innie skill list                         # browse available skills
+</code></pre></div></li>
+<li>This is a Phase 2 extension (depends on the skills module already existing) but can be built independently of the trigger classifier.</li>
+</ul>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/commands/skills.py</code> | <code>create</code> and <code>patch</code> subcommands |
+| <code>src/innie/skills/registry.py</code> | Register agent-local skills from <code>~/.innie/agents/&lt;agent&gt;/skills/</code> |
+| <code>src/innie/core/context.py</code> | Include agent skill index in <code>&lt;memory-tools&gt;</code> block |
+| Phase 2.2 trigger classifier | Add <code>should_create_skill</code> heuristic |</p>
+<hr />
+<h3 id="h5-raw-session-storage-transcript-search">H5: Raw Session Storage + Transcript Search<a class="headerlink" href="#h5-raw-session-storage-transcript-search" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> innie's heartbeat extracts <em>what was learned</em> from sessions but doesn't store the sessions themselves. Once a session is processed, the raw conversation is gone. This creates a permanent gap: "what did we discuss about X three weeks ago" or "show me the conversation where we debugged Y" are unanswerable. hermes stores full session transcripts in SQLite with FTS5 and serves LLM-summarized results when the agent searches them.</p>
+<p><strong>Why this wasn't done originally:</strong> Not a deliberate architectural rejection — sessions were treated as ephemeral inputs to extraction, and <code>collect_sessions()</code> in <code>backends/claude_code.py</code> is listed as unimplemented in IMPLEMENTATION_PLAN.md. The blocker is reading, not storing. ADR-0001 (journal-first) doesn't prohibit raw session storage; it just didn't include it.</p>
+<p><strong>Distinction from extracted knowledge:</strong> These serve different queries.
+- Extracted knowledge (<code>data/</code>) → "what did I learn about sqlite-vec?"
+- Raw sessions → "show me the conversation where we debugged the heartbeat pipeline"</p>
+<p>They don't compete. Raw sessions are a separate table, not part of the markdown knowledge base.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Add a <code>sessions</code> table to <code>state/.index/memory.db</code> (same database as the FTS5 search index):</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w">           </span><span class="c1">-- session_id from Claude Code</span>
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="w">    </span><span class="n">agent</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="w">    </span><span class="n">started_at</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="w">    </span><span class="n">ended_at</span><span class="w"> </span><span class="nb">REAL</span><span class="p">,</span>
+<a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a><span class="w">    </span><span class="n">transcript</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">      </span><span class="c1">-- full conversation JSON or plaintext</span>
+<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a><span class="w">    </span><span class="n">summary</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w">                  </span><span class="c1">-- LLM-generated summary (optional, populated by heartbeat)</span>
+<a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a><span class="w">    </span><span class="n">indexed_at</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+<a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a><span class="p">);</span>
+<a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a>
+<a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a><span class="k">CREATE</span><span class="w"> </span><span class="n">VIRTUAL</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">session_fts</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">fts5</span><span class="p">(</span>
+<a id="__codelineno-35-12" name="__codelineno-35-12" href="#__codelineno-35-12"></a><span class="w">    </span><span class="n">transcript</span><span class="p">,</span>
+<a id="__codelineno-35-13" name="__codelineno-35-13" href="#__codelineno-35-13"></a><span class="w">    </span><span class="n">summary</span><span class="p">,</span>
+<a id="__codelineno-35-14" name="__codelineno-35-14" href="#__codelineno-35-14"></a><span class="w">    </span><span class="n">content_rowid</span><span class="o">=</span><span class="s1">&#39;rowid&#39;</span>
+<a id="__codelineno-35-15" name="__codelineno-35-15" href="#__codelineno-35-15"></a><span class="p">);</span>
+</code></pre></div>
+<ul>
+<li>Implement <code>collect_sessions()</code> in <code>backends/claude_code.py</code> — reads Claude Code's session storage format (JSONL in <code>~/.claude/projects/</code>), returns structured session data. This is the prerequisite for everything else in this item.</li>
+<li>In heartbeat Phase 1 (<code>core/collector.py</code>), after collecting existing knowledge, also collect and upsert new sessions into <code>memory.db</code>. Sessions already present (by <code>id</code>) are skipped — idempotent.</li>
+<li>Add <code>innie session search &lt;query&gt;</code> — FTS5 search over <code>session_fts</code>. Results show session date, agent, and a matched excerpt. <code>--summarize</code> flag calls the configured LLM to generate a brief summary of the matched session (same lazy summarization pattern as hermes).</li>
+<li>Add <code>innie session list [--since DAYS] [--agent NAME]</code> — list sessions with date and (if generated) summary.</li>
+<li>The heartbeat extractor gains awareness of stored sessions: in <code>_build_extraction_prompt()</code>, include a note listing session IDs already stored so it can reference them in <code>source_session</code> fields.</li>
+<li>Secret scanning (ADR-0011) runs on transcript content before storage — same gate as file indexing.</li>
+</ul>
+<p><strong>What stays the same:</strong> The knowledge base (<code>data/</code>) remains markdown. The journal-first architecture (ADR-0001) is unchanged — sessions feed extraction, and extracted knowledge is still the source of truth for <em>what is known</em>. Raw sessions are an additional recall layer, not a replacement.</p>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/backends/claude_code.py</code> | Implement <code>collect_sessions()</code> — reads <code>~/.claude/projects/</code> JSONL |
+| <code>src/innie/core/search.py</code> | Add <code>sessions</code> + <code>session_fts</code> tables; <code>index_session()</code> + <code>search_sessions()</code> |
+| <code>src/innie/core/collector.py</code> | <code>collect_new_sessions()</code> + include in <code>collect_all()</code> |
+| <code>src/innie/heartbeat/extract.py</code> | Reference stored session IDs in extraction prompt |
+| <code>src/innie/commands/search.py</code> | <code>innie session search</code> + <code>innie session list</code> subcommands |</p>
+<p><strong>Prerequisite:</strong> <code>collect_sessions()</code> implementation is the hard dependency. Everything else is straightforward once session data is readable.</p>
+<hr />
+<h3 id="hermes-enhancement-summary">Hermes enhancement summary<a class="headerlink" href="#hermes-enhancement-summary" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Enhancement</th>
+<th>Phase dependency</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1: Frozen snapshot + prefix cache</td>
+<td>Phase 1 (context.py already built)</td>
+<td>Cost reduction — ~75% input tokens on multi-turn</td>
+</tr>
+<tr>
+<td>H2: Progressive disclosure</td>
+<td>Phase 1 (context.py + new CLI command)</td>
+<td>Token budget control as knowledge base grows</td>
+</tr>
+<tr>
+<td>H3: Prompt injection scanning on <code>store</code></td>
+<td>Phase 1 (depends on <code>innie store</code> from 1.1)</td>
+<td>Security — closes write-path gap from ADR-0011</td>
+</tr>
+<tr>
+<td>H4: Agent-created skills</td>
+<td>Phase 2 (depends on skills module)</td>
+<td>Procedural memory — captures <em>how-to</em>, not just <em>what</em></td>
+</tr>
+<tr>
+<td>H5: Raw session storage + transcript search</td>
+<td>Blocked on <code>collect_sessions()</code> in claude_code.py</td>
+<td>Recall — "show me the conversation where we did X"</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="openviking-derived-enhancements">OpenViking-Derived Enhancements<a class="headerlink" href="#openviking-derived-enhancements" title="Permanent link">&para;</a></h2>
+<p><em>Research basis: <a href="https://github.com/volcengine/OpenViking">volcengine/OpenViking</a> — evaluated 2026-03-14 against innie-engine architecture.</em></p>
+<p>OpenViking implements a "filesystem paradigm" for agent context management with tiered abstractions, retrieval observability, and directory-recursive search. Four patterns not already covered by AgeMem/Hermes phases are worth adding.</p>
+<hr />
+<h3 id="ov1-write-time-l0l1-abstractions">OV1: Write-Time L0/L1 Abstractions<a class="headerlink" href="#ov1-write-time-l0l1-abstractions" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> H2 (Progressive Disclosure) approximates a compact index by extracting the first sentence of each file at injection time. This is lossy — the first sentence of a markdown file is often a header or date stamp, not a useful summary. Token budgets get wasted on low-signal content.</p>
+<p><strong>OpenViking approach:</strong> When content is written, auto-generate a one-sentence abstract (L0) and a brief overview (L1) and store them in frontmatter. Retrieval loads L0/L1 first; full content (L2) is fetched on-demand. Pre-computed summaries are more accurate than on-the-fly first-line extraction.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>In <code>innie store</code> (Phase 1.1), after writing the file, call the configured LLM (via <code>resolve_llm_url</code>) to generate:</li>
+<li><code>abstract_l0</code>: one sentence — what is the core takeaway?</li>
+<li><code>abstract_l1</code>: 2-4 sentences — what does this cover?</li>
+<li>Store both as frontmatter fields.</li>
+<li>In <code>build_session_context()</code> (H2 index-only mode), use <code>abstract_l0</code> from frontmatter instead of extracting first sentence from content. Falls back to first-sentence extraction if <code>abstract_l0</code> is absent (backward compatible).</li>
+<li>For heartbeat-routed files, add L0/L1 generation as a post-route step (same LLM call, same graceful skip if no LLM available).</li>
+<li><code>innie search</code> results in index-only mode display <code>abstract_l0</code> instead of raw content excerpt.</li>
+</ul>
+<p><strong>Relationship to H2:</strong> Additive — H2 defines the injection mechanism, OV1 improves the quality of what gets injected. OV1 depends on H2 being built first.</p>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/commands/memory.py</code> | Post-write L0/L1 generation in <code>innie store</code> |
+| <code>src/innie/heartbeat/route.py</code> | Post-route L0/L1 generation pass |
+| <code>src/innie/core/context.py</code> | Use <code>abstract_l0</code> frontmatter in H2 index-only mode |
+| <code>src/innie/core/search.py</code> | Surface <code>abstract_l0</code> in search result formatting |</p>
+<hr />
+<h3 id="ov2-retrieval-trajectory-logging">OV2: Retrieval Trajectory Logging<a class="headerlink" href="#ov2-retrieval-trajectory-logging" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> When memory retrieval goes wrong (wrong files surfaced, useful files missed), there's no way to diagnose it. The search is a black box — you see results but not the path that produced them.</p>
+<p><strong>OpenViking approach:</strong> Preserves the full "browsing path" — which directories were scored, in what order, which files were selected and why. Makes retrieval debuggable.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Extend <code>search_hybrid()</code> in <code>core/search.py</code> to accept an optional <code>trace=True</code> flag. When enabled, collect a structured trace alongside results:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="nd">@dataclass</span>
+<a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">RetrievalTrace</span><span class="p">:</span>
+<a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>    <span class="n">query</span><span class="p">:</span> <span class="nb">str</span>
+<a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a>    <span class="n">expanded_queries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>          <span class="c1"># from query expansion</span>
+<a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a>    <span class="n">keyword_hits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="c1"># file_path, score</span>
+<a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a>    <span class="n">vector_hits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>  <span class="c1"># file_path, score</span>
+<a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a>    <span class="n">rrf_ranking</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span>  <span class="c1"># file_path, fused score</span>
+<a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a>    <span class="n">files_returned</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a>    <span class="n">ts</span><span class="p">:</span> <span class="nb">float</span>
+</code></pre></div>
+<ul>
+<li>When <code>trace=True</code>, append the trace as JSON to <code>state/retrieval-trace.jsonl</code>. This is the same file Phase 4.1 writes to (retrieval tracking for quality feedback). The trace extends Phase 4.1's <code>files_served</code> log with the full scoring breakdown.</li>
+<li>Add <code>innie search --trace</code> flag — enables trace mode for a single search call, prints the trace to stdout in a readable format.</li>
+<li>Add <code>innie search trace [--since HOURS]</code> subcommand — reads <code>state/retrieval-trace.jsonl</code> and shows recent retrieval events in a table (query, files returned, top keyword/vector scores).</li>
+<li><code>build_session_context()</code> runs with <code>trace=True</code> at session start. This means every session's retrieval is automatically logged without any agent interaction.</li>
+</ul>
+<p><strong>Relationship to Phase 4:</strong> OV2 extends Phase 4.1 — Phase 4.1 logs <code>files_served</code>, OV2 adds the full scoring breakdown. Can be built as part of Phase 4 or independently.</p>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/core/search.py</code> | <code>RetrievalTrace</code> dataclass; <code>trace=True</code> mode in <code>search_hybrid()</code> |
+| <code>src/innie/core/context.py</code> | Pass <code>trace=True</code> to <code>search_for_context()</code> |
+| <code>src/innie/commands/search.py</code> | <code>--trace</code> flag + <code>innie search trace</code> subcommand |</p>
+<hr />
+<h3 id="ov3-session-to-file-knowledge-graph">OV3: Session-to-File Knowledge Graph<a class="headerlink" href="#ov3-session-to-file-knowledge-graph" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> H5 stores raw session transcripts but doesn't track which <code>data/</code> files were <em>referenced</em> during a session — via retrieval, via <code>innie store</code>, or via explicit <code>innie context load</code>. This means you can search sessions ("show me the conversation about X") but can't answer "which sessions shaped this learning?" or "what work touched this decision?"</p>
+<p><strong>OpenViking approach:</strong> Session commitment creates explicit relations between sessions and all context/skill URIs that were used. Enables graph traversal: file → sessions that referenced it, session → files that informed it.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Add a <code>relations</code> table to <code>state/.index/memory.db</code> (same database as H5's <code>sessions</code> table):</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">relations</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="w">    </span><span class="n">session_id</span><span class="w">  </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="w">    </span><span class="n">file_path</span><span class="w">   </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">        </span><span class="c1">-- relative to agent data/</span>
+<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a><span class="w">    </span><span class="n">relation</span><span class="w">    </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span><span class="w">        </span><span class="c1">-- &#39;retrieved&#39; | &#39;stored&#39; | &#39;loaded&#39; | &#39;superseded&#39;</span>
+<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a><span class="w">    </span><span class="n">ts</span><span class="w">          </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">session_id</span><span class="p">,</span><span class="w"> </span><span class="n">file_path</span><span class="p">,</span><span class="w"> </span><span class="n">relation</span><span class="p">)</span>
+<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a><span class="p">);</span>
+</code></pre></div>
+<ul>
+<li>Populate from three sources:</li>
+<li><strong>Retrieved</strong> — already logged in Phase 4.1 / OV2's <code>retrieval-trace.jsonl</code>. Heartbeat collector reads this and upserts into <code>relations</code>.</li>
+<li><strong>Stored/superseded</strong> — already logged in Phase 1.2's <code>memory-ops.jsonl</code>. Heartbeat collector reads and upserts.</li>
+<li><strong>Loaded</strong> — <code>innie context load</code> (H2) logs the load to <code>memory-ops.jsonl</code> with <code>op: "context_load"</code>.</li>
+<li>Add <code>innie memory graph &lt;file-path&gt;</code> — shows sessions that referenced a given file:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>learnings/tools/2026-03-08-sqlite-vec.md
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>  retrieved by: ses-abc123 (2026-03-10), ses-def456 (2026-03-12)
+<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>  stored in:    ses-abc123 (2026-03-10)
+</code></pre></div></li>
+<li>Add <code>innie session graph &lt;session-id&gt;</code> — shows all files a given session referenced.</li>
+<li>No new data collection required — <code>memory-ops.jsonl</code> and <code>retrieval-trace.jsonl</code> already contain the raw events. This is a pure aggregation layer.</li>
+</ul>
+<p><strong>Phase dependency:</strong> Requires H5 (<code>sessions</code> table) and Phase 4.1 (retrieval tracking). Can be built in Phase 4 as an extension of the quality feedback work.</p>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/core/search.py</code> | Add <code>relations</code> table schema |
+| <code>src/innie/core/collector.py</code> | <code>collect_relations()</code> from <code>memory-ops.jsonl</code> + <code>retrieval-trace.jsonl</code> |
+| <code>src/innie/heartbeat/route.py</code> | Upsert relations after routing |
+| <code>src/innie/commands/search.py</code> | <code>innie memory graph</code> + <code>innie session graph</code> subcommands |</p>
+<hr />
+<h3 id="ov4-directory-browsability">OV4: Directory Browsability<a class="headerlink" href="#ov4-directory-browsability" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Semantic search is powerful but unpredictable — if you don't know the right query terms, you miss content. An agent working in an unfamiliar domain (or after a long gap) can't inspect what knowledge exists without guessing at search terms. OpenViking addresses this with explicit directory browsing as a first-class operation.</p>
+<p><strong>innie implementation:</strong></p>
+<ul>
+<li>Add <code>innie ls [path]</code> — lists the contents of a <code>data/</code> subdirectory with one-line summaries:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>$<span class="w"> </span>innie<span class="w"> </span>ls<span class="w"> </span>learnings/tools/
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="m">2026</span>-03-13<span class="w">  </span>sqlite-vec<span class="w"> </span>chunk_id<span class="w"> </span>requirement<span class="w">          </span><span class="o">[</span>high<span class="o">]</span>
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a><span class="m">2026</span>-03-10<span class="w">  </span>BGE<span class="w"> </span>embedding<span class="w"> </span>batching<span class="w"> </span>behavior<span class="w">          </span><span class="o">[</span>medium<span class="o">]</span>
+<a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="m">2026</span>-03-08<span class="w">  </span>innie<span class="w"> </span>store<span class="w"> </span>write<span class="w"> </span>path<span class="w"> </span>order<span class="w">             </span><span class="o">[</span>high<span class="o">]</span>
+<a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a>...
+</code></pre></div>
+<ul>
+<li>Format: <code>DATE  TITLE_OR_L0_ABSTRACT  [CONFIDENCE]</code> — uses <code>abstract_l0</code> frontmatter if present (OV1), otherwise derives from filename slug + first non-header line.</li>
+<li>Without a path argument, shows top-level <code>data/</code> subdirectory listing with file counts.</li>
+<li>Add to <code>&lt;memory-tools&gt;</code> block (Phase 1.7):
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>innie ls [path]    # browse knowledge base directory (path relative to data/)
+</code></pre></div></li>
+<li>Implementation is pure filesystem + frontmatter parsing — no SQLite, no embedding service. Always available.</li>
+</ul>
+<p><strong>Files:</strong>
+| File | Change |
+|------|--------|
+| <code>src/innie/commands/search.py</code> | <code>innie ls</code> subcommand |
+| Phase 1.7 <code>&lt;memory-tools&gt;</code> block | Add <code>innie ls</code> |</p>
+<hr />
+<h3 id="openviking-enhancement-summary">OpenViking enhancement summary<a class="headerlink" href="#openviking-enhancement-summary" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Enhancement</th>
+<th>Phase dependency</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OV1: Write-time L0/L1 abstractions</td>
+<td>Phase 1 (depends on H2 and <code>innie store</code>)</td>
+<td>Injection quality — better summaries than first-sentence extraction</td>
+</tr>
+<tr>
+<td>OV2: Retrieval trajectory logging</td>
+<td>Phase 4 (extends Phase 4.1 retrieval tracking)</td>
+<td>Observability — makes retrieval debuggable</td>
+</tr>
+<tr>
+<td>OV3: Session-to-file knowledge graph</td>
+<td>Phase 4 (requires H5 + Phase 4.1)</td>
+<td>Graph traversal — "which sessions shaped this file?"</td>
+</tr>
+<tr>
+<td>OV4: Directory browsability</td>
+<td>Phase 1 (standalone, no dependencies)</td>
+<td>Discoverability — browse knowledge without guessing query terms</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/joshuajenquist/innie-engine" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/innie-engine/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "content.code.annotate", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

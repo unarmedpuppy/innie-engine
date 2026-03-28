@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -1510,10 +1510,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#amendment-2026-03-09-per-agent-env-for-runtime-secrets" class="md-nav__link">
+  <a href="#amendment-2026-03-09-two-tier-env-for-runtime-secrets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Amendment — 2026-03-09: Per-Agent .env for Runtime Secrets
+        Amendment — 2026-03-09: Two-Tier .env for Runtime Secrets
       
     </span>
   </a>
@@ -2110,10 +2110,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#amendment-2026-03-09-per-agent-env-for-runtime-secrets" class="md-nav__link">
+  <a href="#amendment-2026-03-09-two-tier-env-for-runtime-secrets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Amendment — 2026-03-09: Per-Agent .env for Runtime Secrets
+        Amendment — 2026-03-09: Two-Tier .env for Runtime Secrets
       
     </span>
   </a>
@@ -2189,12 +2189,15 @@
 - Scanning runs on every call to <code>collect_files()</code> — once per indexing run. Cost is proportional to file count and content size, but is cheap relative to embedding generation.
 - The skip list covers the most common accidentally-included files (<code>.env</code>). This is not a complete solution — users should not store secrets in markdown files at all.</p>
 <hr />
-<h2 id="amendment-2026-03-09-per-agent-env-for-runtime-secrets">Amendment — 2026-03-09: Per-Agent <code>.env</code> for Runtime Secrets<a class="headerlink" href="#amendment-2026-03-09-per-agent-env-for-runtime-secrets" title="Permanent link">&para;</a></h2>
-<p><strong>Pattern established:</strong> Agent runtime secrets (bot tokens, API keys used by channel adapters and scheduled jobs) are stored in <code>~/.innie/agents/{agent}/.env</code>, one <code>KEY=VALUE</code> per line.</p>
-<p><strong>CLI:</strong> <code>innie env set/get/list/unset</code> manages these files. Source: <code>core/agent_env.py</code>, <code>commands/env.py</code>.</p>
-<p><strong>Git protection:</strong> <code>~/.innie/.gitignore</code> explicitly excludes <code>agents/*/.env</code>. These files never enter the git backup.</p>
-<p><strong>Index protection:</strong> <code>.env</code> files are already in the skip list from this ADR's original decision — they are never indexed regardless of location. This applies to per-agent <code>.env</code> files as well.</p>
-<p><strong>Channels integration:</strong> <code>channels/loader.py</code> reads <code>MATTERMOST_BOT_TOKEN</code> (and other tokens) from the agent <code>.env</code> first, falling back to inline values in <code>channels.yaml</code>. Inline tokens in YAML are deprecated — migrate to <code>.env</code>.</p>
+<h2 id="amendment-2026-03-09-two-tier-env-for-runtime-secrets">Amendment — 2026-03-09: Two-Tier <code>.env</code> for Runtime Secrets<a class="headerlink" href="#amendment-2026-03-09-two-tier-env-for-runtime-secrets" title="Permanent link">&para;</a></h2>
+<p><strong>Pattern established:</strong> Secrets use two gitignored <code>.env</code> files:
+- <code>~/.innie/.env</code> — shared across all agents (GH_TOKEN, GOG_KEYRING_PASSWORD, etc.)
+- <code>~/.innie/agents/{agent}/.env</code> — agent-specific (MATTERMOST_BOT_TOKEN, etc.)</p>
+<p><strong>Amendment (2026-03-11):</strong> Originally per-agent only. Added shared tier after discovering shared skills couldn't reference per-agent paths reliably. See ADR-0035 for full details.</p>
+<p><strong>CLI:</strong> <code>innie env set/get/list/unset [--shared]</code> manages both files. Source: <code>core/agent_env.py</code>, <code>commands/env.py</code>.</p>
+<p><strong>Git protection:</strong> <code>~/.innie/.gitignore</code> explicitly excludes both <code>.env</code> (shared) and <code>agents/*/.env</code> (per-agent). Neither file ever enters the git backup.</p>
+<p><strong>Index protection:</strong> <code>.env</code> files are in the skip list from this ADR's original decision — never indexed regardless of location.</p>
+<p><strong>Channels integration:</strong> <code>channels/loader.py</code> reads <code>MATTERMOST_BOT_TOKEN</code> from the agent-specific <code>.env</code> (injected into <code>os.environ</code> at serve startup), falling back to inline values in <code>channels.yaml</code>. Inline tokens in YAML are deprecated — migrate to <code>.env</code>.</p>
 
 
 

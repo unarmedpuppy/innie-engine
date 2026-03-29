@@ -66,3 +66,6 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0054](0054-grove-migration-and-rename.md) | Grove Migration — Agent Consolidation, World Directory, and Rename | Accepted | 2026-03-28 |
 | [0055](0055-per-agent-llm-router-keys.md) | Per-Agent LLM Router Keys — Single Credential Per Agent | Accepted | 2026-03-29 |
 | [0056](0056-no-tmux-in-launch.md) | Remove tmux from `g launch` | Accepted | 2026-03-29 |
+
+| [0057](0057-fleet-gateway-retirement.md) | Retire fleet-gateway — dashboard-api as Sole Fleet Coordinator | Accepted | 2026-03-29 |
+| [0058](0058-remove-fleet-module.md) | Remove innie fleet Module from grove | Accepted (pending Phase 1 stability) | 2026-03-29 |

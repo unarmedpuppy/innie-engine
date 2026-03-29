@@ -24,7 +24,7 @@ router = APIRouter(prefix="/channels/bluebubbles")
 # Module-level state set by loader.start_bluebubbles()
 _config: "BlueBubblesConfig | None" = None
 _sessions: ContactSessions | None = None
-_agent_name: str = "avery"
+_agent_name: str = ""
 
 
 @dataclass

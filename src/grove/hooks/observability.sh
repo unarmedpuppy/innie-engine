@@ -5,9 +5,9 @@
 
 set -euo pipefail
 
-INNIE_HOME="${INNIE_HOME:-$HOME/.innie}"
+GROVE_HOME="${GROVE_HOME:-${INNIE_HOME:-$HOME/.grove}}"
 INNIE_AGENT="${INNIE_AGENT:-innie}"
-AGENT_DIR="$INNIE_HOME/agents/$INNIE_AGENT"
+AGENT_DIR="$GROVE_HOME/agents/$INNIE_AGENT"
 TRACE_DIR="$AGENT_DIR/state/trace"
 TODAY=$(date +%Y-%m-%d)
 TRACE_FILE="$TRACE_DIR/$TODAY.jsonl"
@@ -22,10 +22,10 @@ TS=$(date +%s)
 echo "{\"ts\":$TS,\"tool\":\"$TOOL\"}" >> "$TRACE_FILE"
 
 # Background: structured SQLite trace (non-blocking)
-if command -v innie &>/dev/null; then
+if command -v g &>/dev/null; then
     TOOL_NAME="$TOOL" CLAUDE_SESSION_ID="${CLAUDE_SESSION_ID:-}" \
         TOOL_INPUT="${TOOL_INPUT:-}" TOOL_OUTPUT="" \
-        innie handle tool-use &>/dev/null &
+        g handle tool-use &>/dev/null &
 fi
 
 # ── Phase 2 v1: Trigger heuristics ────────────────────────────────────────────
@@ -49,15 +49,15 @@ if [ "$ELAPSED" -lt "$COOLDOWN_SECS" ]; then
     exit 0
 fi
 
-# Track consecutive non-innie Bash calls (debugging pattern detector)
+# Track consecutive non-grove Bash calls (debugging pattern detector)
 BASH_COUNT=0
 if [ -f "$BASH_COUNTER_FILE" ]; then
     BASH_COUNT=$(cat "$BASH_COUNTER_FILE" 2>/dev/null || echo 0)
 fi
 
 if [ "$TOOL" = "Bash" ]; then
-    # Check if this bash call was an innie command (reset counter if so)
-    if echo "${TOOL_INPUT:-}" | grep -q '"innie '; then
+    # Check if this bash call was a grove command (reset counter if so)
+    if echo "${TOOL_INPUT:-}" | grep -q '"g '; then
         BASH_COUNT=0
     else
         BASH_COUNT=$((BASH_COUNT + 1))
@@ -74,13 +74,13 @@ CTX_FILE="$AGENT_DIR/CONTEXT.md"
 if [ -f "$CTX_FILE" ]; then
     CTX_LINES=$(wc -l < "$CTX_FILE" 2>/dev/null || echo 0)
     if [ "$CTX_LINES" -gt 180 ]; then
-        NUDGE="CONTEXT.md is ${CTX_LINES} lines — run \`innie context compress\` to dedup open items."
+        NUDGE="CONTEXT.md is ${CTX_LINES} lines — run \`g context compress\` to dedup open items."
     fi
 fi
 
-# Rule 2: 5+ consecutive non-innie Bash calls → debugging streak
+# Rule 2: 5+ consecutive non-grove Bash calls → debugging streak
 if [ -z "$NUDGE" ] && [ "$BASH_COUNT" -ge 5 ]; then
-    NUDGE="Active bash streak (${BASH_COUNT} calls) — if you found a root cause, consider \`innie memory store learning\`."
+    NUDGE="Active bash streak (${BASH_COUNT} calls) — if you found a root cause, consider \`g memory store learning\`."
     echo 0 > "$BASH_COUNTER_FILE"  # Reset streak after nudge
 fi
 

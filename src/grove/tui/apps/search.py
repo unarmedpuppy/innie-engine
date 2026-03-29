@@ -198,7 +198,7 @@ class SearchApp(App):
             db_path = paths.index_db()
             if not db_path.exists():
                 self.query_one("#preview", Markdown).update(
-                    "*No index found. Run `innie index` first.*"
+                    "*No index found. Run `g index` first.*"
                 )
                 return
 

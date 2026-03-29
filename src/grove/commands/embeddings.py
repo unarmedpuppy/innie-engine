@@ -1,4 +1,4 @@
-"""innie embeddings — manage the local embedding service (Docker)."""
+"""grove embeddings — manage the local embedding service (Docker)."""
 
 import subprocess
 from pathlib import Path
@@ -19,8 +19,8 @@ def _compose_file() -> Path:
 def _run_compose(*args: str, capture: bool = False) -> subprocess.CompletedProcess:
     compose = _compose_file()
     if not compose.exists():
-        console.print("[red]docker-compose.yml not found at ~/.innie/docker-compose.yml[/red]")
-        console.print("  Re-run [bold]innie init[/bold] with embedding provider = docker.")
+        console.print("[red]docker-compose.yml not found at ~/.grove/docker-compose.yml[/red]")
+        console.print("  Re-run [bold]g init[/bold] with embedding provider = docker.")
         raise typer.Exit(1)
     cmd = ["docker", "compose", "-f", str(compose), *args]
     return subprocess.run(cmd, capture_output=capture, text=True)
@@ -57,7 +57,7 @@ def up(
             if resp.status_code == 200:
                 console.print("[green]ready[/green]")
                 console.print(f"\n  [green]✓[/green] Embedding service is up.")
-                console.print("  Run [bold]innie index[/bold] to build semantic vectors.")
+                console.print("  Run [bold]g index[/bold] to build semantic vectors.")
                 return
         except Exception:
             pass
@@ -65,7 +65,7 @@ def up(
 
     console.print("[yellow]timeout[/yellow]")
     console.print("  Service may still be starting (model download on first run can take a few minutes).")
-    console.print(f"  Check: [bold]innie embeddings status[/bold]")
+    console.print(f"  Check: [bold]g embeddings status[/bold]")
 
 
 def down():
@@ -114,7 +114,7 @@ def emb_status():
     except Exception as e:
         console.print(f"  Health:   [red]unreachable[/red]  ({e})")
         if provider == "docker":
-            console.print("  Start it: [bold]innie embeddings up[/bold]")
+            console.print("  Start it: [bold]g embeddings up[/bold]")
 
 
 def logs(

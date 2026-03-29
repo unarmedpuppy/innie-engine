@@ -132,7 +132,7 @@ class HeartbeatApp(App):
             agent_label = self._agent or "default"
             mode_suffix = "  [dim](dry run)[/dim]" if self._dry_run else ""
             yield Static(
-                f"innie heartbeat  ·  agent: [bold #00d4c8]{agent_label}[/bold #00d4c8]{mode_suffix}",
+                f"g heartbeat  ·  agent: [bold #00d4c8]{agent_label}[/bold #00d4c8]{mode_suffix}",
                 id="header",
                 markup=True,
             )

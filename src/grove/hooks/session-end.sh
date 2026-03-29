@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-if ! command -v innie &>/dev/null; then
-    echo "[innie] not found in PATH" >&2
+if ! command -v g &>/dev/null; then
+    echo "[grove] not found in PATH" >&2
     exit 0
 fi
 
-exec innie handle session-end 2>/dev/null
+exec g handle session-end 2>/dev/null

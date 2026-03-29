@@ -1,4 +1,4 @@
-"""innie init — interactive setup wizard and hook event handler."""
+"""grove init — interactive setup wizard and hook event handler."""
 
 import os
 import subprocess
@@ -22,7 +22,7 @@ def init(
     ),
     yes: bool = typer.Option(False, "-y", "--yes", help="Accept all defaults non-interactively"),
 ):
-    """Create ~/.innie/, run setup wizard, install hooks, create default agent."""
+    """Create ~/.grove/, run setup wizard, install hooks, create default agent."""
     if not yes and not local:
         from grove.tui.detect import is_interactive
 
@@ -40,13 +40,13 @@ def init(
             )
             return
 
-    console.print("\n  [bold]innie-engine[/bold] — persistent memory for AI coding assistants\n")
+    console.print("\n  [bold]grove[/bold] — persistent memory for AI coding assistants\n")
 
     innie_home = paths.home()
     if innie_home.exists() and (innie_home / "config.toml").exists():
         if yes:
             pass  # Overwrite silently
-        elif not typer.confirm("  ~/.innie already exists. Reconfigure?", default=False):
+        elif not typer.confirm("  ~/.grove already exists. Reconfigure?", default=False):
             raise typer.Abort()
 
     # ── Step 1: Identity ─────────────────────────────────────────────────
@@ -83,7 +83,7 @@ def init(
         enable_heartbeat = False
     else:
         # Setup mode selection
-        console.print("\n  [bold]How do you want to use innie?[/bold]")
+        console.print("\n  [bold]How do you want to use grove?[/bold]")
         console.print("  [1] Full — semantic search (Docker), heartbeat, everything")
         console.print("  [2] Lightweight — keyword search only, no Docker required")
         console.print("  [3] Custom — choose each feature")
@@ -129,7 +129,7 @@ def init(
         # Only ask if not already set by mode selection
         console.print("\n  [bold]Version control for knowledge base?[/bold]")
         console.print("  Git-tracking data/ lets you back up and sync your knowledge base.")
-        enable_git = typer.confirm("  Initialize git repo in ~/.innie?", default=False)
+        enable_git = typer.confirm("  Initialize git repo in ~/.grove?", default=False)
 
     # ── Step 6: Update source ────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ def init(
         update_source = _GITHUB_URL
         update_installer = "uv"
     else:
-        console.print("\n  [bold]Update source for `innie update`[/bold]")
+        console.print("\n  [bold]Update source for `g update`[/bold]")
         console.print(f"  [1] GitHub           {_GITHUB_URL}")
         console.print("  [2] Custom git URL   (private Gitea, GitLab, etc.)")
         console.print("  [3] Local path       (editable install — auto-updates from source)")
@@ -149,7 +149,7 @@ def init(
         if src_choice == "2":
             update_source = typer.prompt("  Git URL", default="")
         elif src_choice == "3":
-            update_source = typer.prompt("  Path to local clone", default=str(Path.home() / "workspace/innie-engine"))
+            update_source = typer.prompt("  Path to local clone", default=str(Path.home() / "workspace/grove"))
         elif src_choice == "4":
             update_source = ""
         else:
@@ -191,7 +191,7 @@ def _custom_setup() -> tuple[str, bool, bool]:
 
     if embed_provider == "external":
         console.print(
-            "\n  [dim]Configure the endpoint in ~/.innie/config.toml"
+            "\n  [dim]Configure the endpoint in ~/.grove/config.toml"
             " under [embedding.external][/dim]"
         )
 
@@ -207,13 +207,13 @@ def _custom_setup() -> tuple[str, bool, bool]:
         console.print("  [1] Yes — install cron job (OpenClaw provider detected)")
     else:
         console.print("  [1] Yes — install cron job (requires Anthropic API key or external URL)")
-    console.print("  [2] No — I'll run `innie heartbeat run` manually")
+    console.print("  [2] No — I'll run `g heartbeat run` manually")
     hb_choice = typer.prompt("  Choice", default="1" if has_openclaw else "2")
     enable_heartbeat = hb_choice == "1"
 
     # Git
     console.print("\n  [bold]Git backup[/bold]")
-    console.print("  Initialize ~/.innie as a git repo? Your knowledge base (data/)")
+    console.print("  Initialize ~/.grove as a git repo? Your knowledge base (data/)")
     console.print("  will be version-controlled. Push to a remote for backup.")
     enable_git = typer.confirm("  Enable git?", default=False)
 
@@ -347,7 +347,7 @@ def _execute_setup(
         features.append(f"hooks: {', '.join(selected_backends)}")
 
     console.print(f"  Features: {' | '.join(features)}")
-    console.print("  Run: [bold]innie status[/bold] to verify everything\n")
+    console.print("  Run: [bold]g status[/bold] to verify everything\n")
 
 
 def _docker_env() -> dict:
@@ -371,7 +371,7 @@ def _setup_docker_embeddings(innie_home: Path):
 
     # Copy docker-compose.yml
     try:
-        compose_data = importlib.resources.files("innie").joinpath("docker-compose.yml").read_text()
+        compose_data = importlib.resources.files("grove").joinpath("docker-compose.yml").read_text()
         compose_dst.write_text(compose_data)
     except Exception:
         compose_src = Path(__file__).parent.parent / "docker-compose.yml"
@@ -381,7 +381,7 @@ def _setup_docker_embeddings(innie_home: Path):
     # Copy services/ build context (embeddings Dockerfile, server.py, requirements.txt)
     services_dst = innie_home / "services"
     try:
-        pkg_services = importlib.resources.files("innie").joinpath("services")
+        pkg_services = importlib.resources.files("grove").joinpath("services")
         with importlib.resources.as_file(pkg_services) as services_src_path:
             shutil.copytree(str(services_src_path), str(services_dst), dirs_exist_ok=True)
     except Exception:
@@ -393,7 +393,7 @@ def _setup_docker_embeddings(innie_home: Path):
     if not (services_dst / "embeddings").exists():
         console.print(
             "  [yellow]![/yellow] services/embeddings not found — "
-            "copy failed. Create ~/.innie/services/embeddings/ manually."
+            "copy failed. Create ~/.grove/services/embeddings/ manually."
         )
         return
 
@@ -436,7 +436,7 @@ def _setup_docker_embeddings(innie_home: Path):
                     console.print("  [green]✓[/green] Docker Desktop ready")
         if not started:
             console.print("  [yellow]![/yellow] Docker unavailable. Start it manually, then run:")
-            console.print("    innie docker up")
+            console.print("    g docker up")
             return
 
     console.print("  Starting embedding service...")
@@ -449,14 +449,14 @@ def _setup_docker_embeddings(innie_home: Path):
     )
     if result.returncode == 0:
         console.print("  [green]✓[/green] Embedding service started")
-        console.print("  Manage it later with: [bold]innie docker up/down/status[/bold]")
+        console.print("  Manage it later with: [bold]g docker up/down/status[/bold]")
     else:
         console.print(f"  [yellow]![/yellow] Docker compose failed: {result.stderr[:200]}")
-        console.print("  You can start it later: [bold]innie docker up[/bold]")
+        console.print("  You can start it later: [bold]g docker up[/bold]")
 
 
 def _setup_git(innie_home: Path):
-    """Initialize git repo in ~/.innie with a .gitignore."""
+    """Initialize git repo in ~/.grove with a .gitignore."""
     git_dir = innie_home / ".git"
     if git_dir.exists():
         console.print("  [dim]Git already initialized[/dim]")
@@ -482,13 +482,13 @@ docker-compose.yml
         # Initial commit
         subprocess.run(["git", "add", "."], cwd=innie_home, capture_output=True)
         subprocess.run(
-            ["git", "commit", "-m", "innie init: initial knowledge base"],
+            ["git", "commit", "-m", "grove init: initial knowledge base"],
             cwd=innie_home,
             capture_output=True,
             text=True,
         )
         console.print("  [green]✓[/green] Initialized git repo with .gitignore")
-        console.print("  [dim]Add a remote: cd ~/.innie && git remote add origin <url>[/dim]")
+        console.print("  [dim]Add a remote: cd ~/.grove && git remote add origin <url>[/dim]")
     else:
         console.print(f"  [yellow]![/yellow] git init failed: {result.stderr[:100]}")
 
@@ -568,8 +568,8 @@ def _install_launchd():
     """Install heartbeat as a launchd plist (macOS)."""
     import os
 
-    innie_path = Path(sys.executable).parent / "innie"
-    log_dir = Path.home() / ".innie" / "logs"
+    innie_path = Path(sys.executable).parent / "g"
+    log_dir = paths.home() / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "heartbeat.log"
 
@@ -585,7 +585,7 @@ def _install_launchd():
     path_str = ":".join([p for p in path_extras if p not in os.environ.get("PATH", "")])
     full_path = f"{path_str}:{os.environ.get('PATH', '/usr/bin:/bin')}"
 
-    plist_label = "com.innie-engine.heartbeat"
+    plist_label = "com.grove.heartbeat"
     plist_path = Path.home() / "Library" / "LaunchAgents" / f"{plist_label}.plist"
     plist_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -632,16 +632,16 @@ def _install_launchd():
 
 def _install_cron():
     """Install heartbeat cron job (non-macOS)."""
-    innie_path = Path(sys.executable).parent / "innie"
+    g_path = Path(sys.executable).parent / "g"
 
-    cron_line = f"*/30 * * * * {innie_path} heartbeat run 2>&1 | logger -t innie-heartbeat"
+    cron_line = f"*/30 * * * * {g_path} heartbeat run 2>&1 | logger -t grove-heartbeat"
 
     # Read current crontab
     result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
     existing = result.stdout if result.returncode == 0 else ""
 
-    # Remove existing innie entries
-    lines = [ln for ln in existing.strip().split("\n") if ln and "innie" not in ln]
+    # Remove existing grove entries
+    lines = [ln for ln in existing.strip().split("\n") if ln and "grove-heartbeat" not in ln]
     lines.append(cron_line)
 
     # Install
@@ -660,7 +660,7 @@ def handle(event: str):
             sys.stdout.write(output)
         except Exception as e:
             # Never block the backend — output minimal context on error
-            sys.stderr.write(f"[innie] session-init error: {e}\n")
+            sys.stderr.write(f"[grove] session-init error: {e}\n")
 
         # Record trace session start
         try:
@@ -773,7 +773,7 @@ def handle(event: str):
                 pass
 
         except Exception as e:
-            sys.stderr.write(f"[innie] prompt-submit error: {e}\n")
+            sys.stderr.write(f"[grove] prompt-submit error: {e}\n")
             sys.exit(0)
 
     elif event == "pre-compact":
@@ -782,7 +782,7 @@ def handle(event: str):
 
             sys.stdout.write(build_precompact_warning())
         except Exception as e:
-            sys.stderr.write(f"[innie] pre-compact error: {e}\n")
+            sys.stderr.write(f"[grove] pre-compact error: {e}\n")
 
     elif event == "session-end":
         # Append to today's session log
@@ -804,7 +804,7 @@ def handle(event: str):
                 f.write("- Key Decisions: \n")
                 f.write("- Notes: \n\n")
         except Exception as e:
-            sys.stderr.write(f"[innie] session-end log error: {e}\n")
+            sys.stderr.write(f"[grove] session-end log error: {e}\n")
             session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
 
         # Close trace session with metrics from env

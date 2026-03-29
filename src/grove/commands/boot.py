@@ -1,4 +1,4 @@
-"""innie boot — full startup sequence: version check, heartbeat, serve, health."""
+"""grove boot — full startup sequence: version check, heartbeat, serve, health."""
 
 import json
 import os
@@ -146,7 +146,7 @@ def _step_heartbeat_scheduler() -> None:
             _check_result("Heartbeat launchd plist installed", plist_path.exists())
     else:
         result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-        has_cron = result.returncode == 0 and "innie" in result.stdout
+        has_cron = result.returncode == 0 and "grove-heartbeat" in result.stdout
         if has_cron:
             _check_result("Heartbeat cron present", True)
         else:
@@ -155,11 +155,11 @@ def _step_heartbeat_scheduler() -> None:
 
             _install_scheduler()
             result2 = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-            _check_result("Heartbeat cron installed", "innie" in result2.stdout)
+            _check_result("Heartbeat cron installed", "grove-heartbeat" in result2.stdout)
 
 
 def _step_skills_symlink() -> None:
-    """Ensure ~/.claude/skills → ~/.innie/skills/ symlink is in place."""
+    """Ensure ~/.claude/skills → ~/.grove/skills/ symlink is in place."""
     console.print("\n[bold]3. Skills Symlink[/bold]")
     shared = paths.shared_skills_dir()
     claude_skills = Path.home() / ".claude" / "skills"
@@ -344,7 +344,7 @@ def boot(
     agent = paths.active_agent()
     port = _serve_port()
 
-    console.print(f"[bold]innie boot[/bold]  agent=[cyan]{agent}[/cyan]  port={port}\n")
+    console.print(f"[bold]g boot[/bold]  agent=[cyan]{agent}[/cyan]  port={port}\n")
 
     _step_version_check(agent, force_update)
     _step_heartbeat_scheduler()

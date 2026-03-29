@@ -45,7 +45,7 @@ def search(
 
     db_path = paths.index_db()
     if not db_path.exists():
-        console.print("[yellow]No index found. Run: innie index[/yellow]")
+        console.print("[yellow]No index found. Run: g index[/yellow]")
         raise typer.Exit(1)
 
     conn = open_db(db_path)

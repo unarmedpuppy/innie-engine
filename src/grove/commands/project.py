@@ -52,7 +52,7 @@ def save(
     key_file = paths.project_key(project)
 
     if not log_file.exists():
-        console.print(f"[red]No log.md found for {project}. Run `innie project log {project} <entry>` first.[/red]")
+        console.print(f"[red]No log.md found for {project}. Run `g project log {project} <entry>` first.[/red]")
         raise typer.Exit(1)
 
     log_content = log_file.read_text()

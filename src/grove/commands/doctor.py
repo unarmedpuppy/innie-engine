@@ -17,7 +17,7 @@ def status():
     # Agent dir check
     adir = paths.agent_dir(agent)
     if not adir.exists():
-        console.print("[red]Agent directory missing! Run: innie init[/red]")
+        console.print("[red]Agent directory missing! Run: g init[/red]")
         return
 
     # Data stats
@@ -107,7 +107,7 @@ def status():
 
 def doctor():
     """Full system health check."""
-    console.print("[bold]innie doctor[/bold]\n")
+    console.print("[bold]g doctor[/bold]\n")
     checks_passed = 0
     checks_total = 0
 
@@ -123,15 +123,15 @@ def doctor():
                 console.print(f"    Fix: {fix}")
 
     # 1. Home dir exists
-    check("~/.innie exists", paths.home().exists(), "Run: innie init")
+    check("~/.grove exists", paths.home().exists(), "Run: g init")
 
     # 2. Config exists
-    check("config.toml exists", paths.config_file().exists(), "Run: innie init")
+    check("config.toml exists", paths.config_file().exists(), "Run: g init")
 
     # 3. Active agent exists
     agent = paths.active_agent()
     agent_exists = paths.agent_dir(agent).exists()
-    check(f"Agent '{agent}' exists", agent_exists, f"Run: innie create {agent}")
+    check(f"Agent '{agent}' exists", agent_exists, f"Run: g create {agent}")
 
     if agent_exists:
         # 4. Profile
@@ -162,7 +162,7 @@ def doctor():
             check(
                 f"{bname} hooks installed",
                 all_ok,
-                f"Run: innie backend install {bname}",
+                f"Run: g backend install {bname}",
             )
 
     # 10. Embedding service
@@ -177,9 +177,9 @@ def doctor():
 
             resp = httpx.get(f"{url}/health", timeout=3.0)
             embed_healthy = resp.status_code == 200
-            check("Embedding service healthy", embed_healthy, "Run: innie docker up")
+            check("Embedding service healthy", embed_healthy, "Run: g docker up")
         except Exception:
-            check("Embedding service healthy", False, "Run: innie docker up")
+            check("Embedding service healthy", False, "Run: g docker up")
 
         if embed_healthy:
             # Verify returned dimensions match configured INNIE_EMBEDDING_DIMS / embedding.dims
@@ -227,7 +227,7 @@ def doctor():
                       f"Check heartbeat.external_url — {resolve_url} is not responding")
 
     # 12. Index exists
-    check("Semantic index exists", paths.index_db(agent).exists(), "Run: innie index")
+    check("Semantic index exists", paths.index_db(agent).exists(), "Run: g index")
 
     console.print(f"\n  {checks_passed}/{checks_total} checks passed.")
 

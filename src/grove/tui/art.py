@@ -1,4 +1,4 @@
-"""innie ASCII block-letter art."""
+"""grove ASCII block-letter art."""
 
 INNIE_ART = """\
   ██╗███╗   ██╗███╗   ██╗██╗███████╗

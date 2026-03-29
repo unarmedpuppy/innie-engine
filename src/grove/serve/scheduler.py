@@ -41,7 +41,7 @@ class ScheduledJob:
 
 
 def _load_schedule(agent: str) -> list[ScheduledJob]:
-    cfg_path = Path.home() / ".innie" / "agents" / agent / "schedule.yaml"
+    cfg_path = paths.agent_dir(agent) / "schedule.yaml"
     if not cfg_path.exists():
         return []
     try:

@@ -1,4 +1,4 @@
-"""TOML config loader for innie-engine."""
+"""TOML config loader for grove."""
 
 import sys
 from pathlib import Path
@@ -35,7 +35,7 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     except Exception as e:
         import sys as _sys
 
-        print(f"[innie] config error in {path}: {e}", file=_sys.stderr)
+        print(f"[grove] config error in {path}: {e}", file=_sys.stderr)
         return {}
 
     # Cache only when we loaded from the default path
@@ -117,6 +117,6 @@ prompt_submit_threshold = 0.08   # min FTS5 score to inject; 0 = inject top resu
 prompt_submit_limit = 3          # max results to inject per user prompt
 
 [update]
-source = ""                 # git URL or local path — set by `innie init`
+source = ""                 # git URL or local path — set by `g init`
 installer = "uv"            # uv | pip
 """

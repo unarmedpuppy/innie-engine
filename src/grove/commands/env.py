@@ -1,7 +1,7 @@
-"""innie env — manage agent secrets via a two-tier .env system.
+"""grove env — manage agent secrets via a two-tier .env system.
 
-~/.innie/.env                — shared across all agents (--shared flag)
-~/.innie/agents/<name>/.env  — agent-specific (default)
+~/.grove/.env                — shared across all agents (--shared flag)
+~/.grove/agents/<name>/.env  — agent-specific (default)
 """
 
 import typer
@@ -18,7 +18,7 @@ def env_set(
     key: str = typer.Argument(..., help="Variable name"),
     value: str = typer.Argument(..., help="Value to store"),
     agent: str = typer.Option("", "--agent", "-a", help="Agent name (default: active)"),
-    shared: bool = typer.Option(False, "--shared", "-s", help="Write to shared ~/.innie/.env instead"),
+    shared: bool = typer.Option(False, "--shared", "-s", help="Write to shared ~/.grove/.env instead"),
 ):
     """Set a secret env var. Default: agent-specific. Use --shared for cross-agent secrets."""
     if shared:
@@ -47,14 +47,14 @@ def env_get(
 
 def env_list(
     agent: str = typer.Option("", "--agent", "-a", help="Agent name (default: active)"),
-    shared: bool = typer.Option(False, "--shared", "-s", help="List only shared ~/.innie/.env"),
+    shared: bool = typer.Option(False, "--shared", "-s", help="List only shared ~/.grove/.env"),
 ):
     """List env vars (values masked). Default: merged view. --shared: shared file only."""
     target = agent or paths.active_agent()
 
     if shared:
         env = load_shared_env()
-        title = "~/.innie/.env (shared)"
+        title = "~/.grove/.env (shared)"
         file_path = paths.shared_env_file()
     else:
         env = load_agent_env(target)
@@ -82,7 +82,7 @@ def env_list(
 def env_unset(
     key: str = typer.Argument(..., help="Variable name to remove"),
     agent: str = typer.Option("", "--agent", "-a", help="Agent name (default: active)"),
-    shared: bool = typer.Option(False, "--shared", "-s", help="Remove from shared ~/.innie/.env instead"),
+    shared: bool = typer.Option(False, "--shared", "-s", help="Remove from shared ~/.grove/.env instead"),
 ):
     """Remove a secret env var from agent-specific or shared .env."""
     if shared:

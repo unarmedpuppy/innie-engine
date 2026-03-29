@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Temp dir for inbound attachments downloaded from Mattermost
-_TEMP_DIR = Path(tempfile.gettempdir()) / "innie-mm"
+_TEMP_DIR = Path(tempfile.gettempdir()) / "grove-mm"
 
 
 def _parse_upload_markers(text: str) -> tuple[str, list[str]]:

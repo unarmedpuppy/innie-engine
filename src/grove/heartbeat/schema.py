@@ -58,7 +58,7 @@ class PersonUpdate(BaseModel):
 
 
 class AgentMessage(BaseModel):
-    to: str      # target agent name: gilfoyle | ralph | colin | jobin | avery
+    to: str      # target agent name: elm | ralph | ash
     subject: str # one-line subject
     content: str # markdown body — what the other agent needs to know
 

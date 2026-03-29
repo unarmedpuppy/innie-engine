@@ -1,4 +1,4 @@
-"""innie docker — manage the full Docker services stack (embeddings, heartbeat, serve)."""
+"""grove docker — manage the full Docker services stack (embeddings, heartbeat, serve)."""
 
 import json
 import subprocess
@@ -38,8 +38,8 @@ def _docker_env() -> dict:
 def _run_compose(*args: str, capture: bool = False, profile: bool = False) -> subprocess.CompletedProcess:
     compose = _compose_file()
     if not compose.exists():
-        console.print("[red]docker-compose.yml not found at ~/.innie/docker-compose.yml[/red]")
-        console.print("  Re-run [bold]innie init[/bold] and select Docker embedding provider.")
+        console.print("[red]docker-compose.yml not found at ~/.grove/docker-compose.yml[/red]")
+        console.print("  Re-run [bold]g init[/bold] and select Docker embedding provider.")
         raise typer.Exit(1)
     cmd = ["docker", "compose", "-f", str(compose)]
     if profile:
@@ -111,7 +111,7 @@ def up(
         serve_port = 8013
         console.print(f"  API server: http://localhost:{serve_port}")
 
-    console.print("  Run [bold]innie docker status[/bold] to check all services.")
+    console.print("  Run [bold]g docker status[/bold] to check all services.")
 
 
 def down(
@@ -151,8 +151,8 @@ def docker_status():
     """Show status of all Docker services."""
     compose = _compose_file()
     if not compose.exists():
-        console.print("[dim]No docker-compose.yml at ~/.innie/ — Docker stack not configured.[/dim]")
-        console.print("  Run [bold]innie init[/bold] and select Docker embedding provider.")
+        console.print("[dim]No docker-compose.yml at ~/.grove/ — Docker stack not configured.[/dim]")
+        console.print("  Run [bold]g init[/bold] and select Docker embedding provider.")
         return
 
     states = _container_states()
@@ -185,7 +185,7 @@ def docker_status():
         state_str = "[green]running[/green]"
     else:
         state_str = "[dim]stopped[/dim]"
-        emb_note = "innie docker up"
+        emb_note = "g docker up"
     table.add_row("embeddings", state_str, emb_health, emb_note)
 
     # Heartbeat
@@ -216,7 +216,7 @@ def docker_status():
             pass
     else:
         hb_state_str = "[dim]stopped[/dim]"
-        hb_note = "innie docker up"
+        hb_note = "g docker up"
     table.add_row("heartbeat", hb_state_str, hb_health, hb_note)
 
     # Serve
@@ -235,7 +235,7 @@ def docker_status():
     else:
         srv_state_str = "[dim]stopped[/dim]"
         srv_health = ""
-        srv_note = "innie docker up --serve"
+        srv_note = "g docker up --serve"
     table.add_row("serve", srv_state_str, srv_health, srv_note)
 
     console.print(table)

@@ -183,7 +183,7 @@ class InitWizardApp(App):
         yield FloatingNumbers(intensity="very_dim", id="numbers")
         with Horizontal(id="shell"):
             with Vertical(id="sidebar"):
-                yield Static("innie", id="sidebar-title")
+                yield Static("grove", id="sidebar-title")
                 for i, step in enumerate(_STEPS):
                     yield Label(f"○ {step}", classes="step-item", id=f"step-{i}")
             with Vertical(id="main"):
@@ -229,8 +229,8 @@ class InitWizardApp(App):
         else:
             cmd = "claude"
 
-        soul = f"~/.innie/agents/{agent}/SOUL.md"
-        ctx = f"~/.innie/agents/{agent}/CONTEXT.md"
+        soul = f"~/.grove/agents/{agent}/SOUL.md"
+        ctx = f"~/.grove/agents/{agent}/CONTEXT.md"
         return (
             f"alias {agent}="
             f"'INNIE_AGENT=\"{agent}\" {cmd}"
@@ -295,7 +295,7 @@ class InitWizardApp(App):
             step_body.mount(Label("Git backup for knowledge base?", classes="field-label"))
             step_body.mount(
                 Select(
-                    [("Yes — init git repo in ~/.innie", "yes"), ("No", "no")],
+                    [("Yes — init git repo in ~/.grove", "yes"), ("No", "no")],
                     value="yes" if self._data["enable_git"] else "no",
                     id="f-git",
                 )

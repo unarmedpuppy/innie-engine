@@ -164,7 +164,7 @@ def format_catalog_for_context(catalog: dict) -> str:
 
     Example output:
       Memory catalog: docker (31), traefik (14), vllm (7), harbor (9)
-      Projects: innie-engine, polyjuiced, homelab-ai, bird
+      Projects: grove, polyjuiced, homelab-ai, bird
     """
     lines = []
 

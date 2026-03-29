@@ -1,4 +1,4 @@
-"""innie inbox — read and send async A2A inbox messages."""
+"""grove inbox — read and send async A2A inbox messages."""
 
 from datetime import datetime
 from pathlib import Path
@@ -86,7 +86,7 @@ def read_message(
 
 
 def send(
-    to: str = typer.Argument(..., help="Target agent name (gilfoyle, ralph, colin, jobin)"),
+    to: str = typer.Argument(..., help="Target agent name (elm, ralph, ash)"),
     subject: str = typer.Option(..., "--subject", "-s", help="Message subject"),
     message: str = typer.Option(None, "--message", "-m", help="Message body (or use stdin)"),
     agent: str = typer.Option(None, "--agent", "-a", help="Sender agent name"),

@@ -1,4 +1,4 @@
-"""Typer CLI entry point for innie-engine."""
+"""Typer CLI entry point for grove."""
 
 import subprocess
 import sys
@@ -6,7 +6,7 @@ import sys
 import typer
 
 app = typer.Typer(
-    name="innie",
+    name="g",
     help="Persistent memory and identity for AI coding assistants.",
     no_args_is_help=False,
     invoke_without_command=True,

@@ -1,4 +1,4 @@
-"""innie serve — start the FastAPI server."""
+"""grove serve — start the FastAPI server."""
 
 import os
 
@@ -10,7 +10,7 @@ def serve(
     port: int = typer.Option(8013, help="Port number"),
     reload: bool = typer.Option(False, help="Auto-reload on code changes"),
 ):
-    """Start the innie API server (jobs, chat completions, memory)."""
+    """Start the grove API server (jobs, chat completions, memory)."""
     try:
         import uvicorn
     except ImportError:

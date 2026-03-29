@@ -20,8 +20,8 @@ if [ -z "$AGENT" ]; then
     exit 0
 fi
 
-INNIE_HOME="${INNIE_HOME:-$HOME/.innie}"
-PROFILE="$INNIE_HOME/agents/$AGENT/profile.yaml"
+GROVE_HOME="${GROVE_HOME:-${INNIE_HOME:-$HOME/.grove}}"
+PROFILE="$GROVE_HOME/agents/$AGENT/profile.yaml"
 
 # Quick check: does profile mention dcg? (avoids parsing YAML in bash)
 if [ -f "$PROFILE" ]; then
@@ -48,7 +48,7 @@ if [ -z "$COMMAND" ]; then
 fi
 
 # Load dcg config if specified
-DCG_CONFIG="$INNIE_HOME/agents/$AGENT/dcg-config.toml"
+DCG_CONFIG="$GROVE_HOME/agents/$AGENT/dcg-config.toml"
 DCG_ARGS=""
 if [ -f "$DCG_CONFIG" ]; then
     DCG_ARGS="--config $DCG_CONFIG"

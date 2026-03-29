@@ -123,4 +123,4 @@ def use(
         f"[green]✓[/green] Heartbeat provider set to Ollama at {external_url} "
         f"with model [bold]{model}[/bold]"
     )
-    console.print("  Run [bold]innie heartbeat run[/bold] to test.")
+    console.print("  Run [bold]g heartbeat run[/bold] to test.")

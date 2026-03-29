@@ -260,7 +260,7 @@ def record_span(
 def append_trace(event: dict, agent: str | None = None) -> None:
     """Backwards-compatible trace append. Writes to both JSONL (fast) and SQLite.
 
-    Called from observability.sh via innie handle, or directly from Python.
+    Called from observability.sh via g handle, or directly from Python.
     """
     # Fast JSONL append (for PostToolUse bash path that reads JSONL)
     tdir = paths.trace_dir(agent)

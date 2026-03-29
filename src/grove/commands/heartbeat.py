@@ -20,11 +20,11 @@ def run(
     mode: str = typer.Option("default", "--mode", "-m", help="LLM routing mode: default | claude (routes extraction through local proxy)"),
 ):
     """Run one heartbeat cycle: collect → extract → route."""
-    sys.argv[0] = "innie-heartbeat"
+    sys.argv[0] = "grove-heartbeat"
     try:
         import ctypes
 
-        ctypes.CDLL(None).setproctitle(b"innie-heartbeat")
+        ctypes.CDLL(None).setproctitle(b"grove-heartbeat")
     except Exception:
         pass
 
@@ -164,11 +164,11 @@ def run(
 
 
 def _self_update():
-    """Pull and reinstall the latest innie-engine if auto_update is enabled.
+    """Pull and reinstall the latest grove if auto_update is enabled.
 
     Detects install type from direct_url.json:
     - Editable/local: reinstall from the local source dir (picks up working-tree changes)
-    - PyPI/remote: uv tool upgrade innie-engine --reinstall
+    - PyPI/remote: uv tool upgrade grove --reinstall
     """
     import json
     import subprocess
@@ -219,7 +219,7 @@ def _self_update():
         _reinstall_hooks_after_update()
         _restart_serve_after_update()
     else:
-        console.print(f"  [yellow]![/yellow] innie-engine update failed: {result.stderr.strip()[:120]}")
+        console.print(f"  [yellow]![/yellow] grove update failed: {result.stderr.strip()[:120]}")
 
 
 def _reinstall_hooks_after_update() -> None:
@@ -247,7 +247,7 @@ def _restart_serve_after_update() -> None:
         return
 
     agent = paths.active_agent()
-    label = f"ai.innie.serve.{agent}"
+    label = f"ai.grove.serve.{agent}"
     uid = os.getuid() if hasattr(os, "getuid") else None
     if uid is None:
         return
@@ -268,7 +268,7 @@ def _restart_serve_after_update() -> None:
 
 
 def _has_remote():
-    """Check if the .innie git repo has a remote configured."""
+    """Check if the .grove git repo has a remote configured."""
     import subprocess
 
     innie_home = paths.home()
@@ -425,7 +425,7 @@ def disable():
 
     if sys.platform == "darwin":
         plist_path = (
-            Path.home() / "Library" / "LaunchAgents" / "com.innie-engine.heartbeat.plist"
+            Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
         )
         if not plist_path.exists():
             console.print("[dim]No launchd plist found.[/dim]")
@@ -480,13 +480,13 @@ def hb_status():
 
     if sys.platform == "darwin":
         plist_path = (
-            Path.home() / "Library" / "LaunchAgents" / "com.innie-engine.heartbeat.plist"
+            Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
         )
         has_scheduler = plist_path.exists()
         console.print(f"Launchd: {'[green]enabled[/green]' if has_scheduler else '[dim]disabled[/dim]'}")
     else:
         result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-        has_scheduler = result.returncode == 0 and "innie" in result.stdout
+        has_scheduler = result.returncode == 0 and "grove" in result.stdout
         console.print(f"Cron: {'[green]enabled[/green]' if has_scheduler else '[dim]disabled[/dim]'}")
 
     # Provider + credential check

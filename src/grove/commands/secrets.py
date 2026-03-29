@@ -1,4 +1,4 @@
-"""innie secrets — scan the knowledge base for accidentally committed secrets."""
+"""grove secrets — scan the knowledge base for accidentally committed secrets."""
 
 import typer
 from rich.console import Console
@@ -61,5 +61,5 @@ def scan(
     console.print(
         "\n[yellow]These files are excluded from the search index but may exist in git history.[/yellow]"
     )
-    console.print("  Review and remove secrets, then run: [bold]innie index[/bold]")
+    console.print("  Review and remove secrets, then run: [bold]g index[/bold]")
     raise typer.Exit(1)

@@ -1,7 +1,7 @@
-"""SQLite-backed job store for innie serve.
+"""SQLite-backed job store for grove serve.
 
 Replaces the in-memory `jobs: dict[str, Job]` in app.py.
-Path: ~/.innie/agents/{agent}/state/jobs.db
+Path: ~/.grove/agents/{agent}/state/jobs.db
 
 On startup:
   - Loads all persisted jobs into memory.

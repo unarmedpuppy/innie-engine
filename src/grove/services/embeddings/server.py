@@ -14,7 +14,7 @@ MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
 CACHE_DIR = os.environ.get("CACHE_DIR", "/app/cache")
 PORT = int(os.environ.get("PORT", "8766"))
 
-app = FastAPI(title="innie-embeddings")
+app = FastAPI(title="grove-embeddings")
 model: SentenceTransformer | None = None
 
 

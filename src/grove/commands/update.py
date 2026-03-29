@@ -1,4 +1,4 @@
-"""innie update — upgrade innie-engine from its configured install source."""
+"""grove update — upgrade grove from its configured install source."""
 
 import subprocess
 import sys
@@ -15,9 +15,9 @@ console = Console()
 def update(
     yes: bool = typer.Option(False, "-y", "--yes", help="Skip confirmation and index rebuild prompt"),
 ):
-    """Upgrade innie-engine from its configured install source.
+    """Upgrade grove from its configured install source.
 
-    Install source is set during `innie init` and stored in config.toml
+    Install source is set during `g init` and stored in config.toml
     under [update]. Edit it manually if you switch from Gitea to GitHub or
     change your local clone path.
     """
@@ -26,10 +26,10 @@ def update(
 
     if not source:
         console.print("[red]No update source configured.[/red]")
-        console.print("  Set it in ~/.innie/config.toml:")
+        console.print("  Set it in ~/.grove/config.toml:")
         console.print("  [dim][update]")
-        console.print("  source = \"git+https://github.com/joshuajenquist/innie-engine.git\"[/dim]")
-        console.print("  Or re-run: [bold]innie init[/bold]")
+        console.print("  source = \"git+https://github.com/joshuajenquist/grove.git\"[/dim]")
+        console.print("  Or re-run: [bold]g init[/bold]")
         raise typer.Exit(1)
 
     # Local editable installs — code changes are already live
@@ -85,7 +85,7 @@ def _reinstall_hooks() -> None:
 
 
 def _run_boot(yes: bool) -> None:
-    """Run innie boot after a successful update (skip version re-check and heartbeat)."""
+    """Run g boot after a successful update (skip version re-check and heartbeat)."""
     console.print()
     from grove.commands.boot import boot
 
@@ -95,7 +95,7 @@ def _run_boot(yes: bool) -> None:
 def _prompt_reindex(yes: bool) -> None:
     console.print("\n  [bold]Index rebuild recommended[/bold]")
     console.print("  Chunk configuration may have changed. Old chunks may be stale.")
-    if yes or typer.confirm("  Run `innie index` now?", default=True):
+    if yes or typer.confirm("  Run `g index` now?", default=True):
         console.print()
         try:
             from grove.core import paths
@@ -108,4 +108,4 @@ def _prompt_reindex(yes: bool) -> None:
             conn.close()
             console.print(f"  [green]✓[/green] Index rebuilt ({indexed} files).")
         except Exception as e:
-            console.print(f"[yellow]Index rebuild failed: {e} — run `innie index` manually.[/yellow]")
+            console.print(f"[yellow]Index rebuild failed: {e} — run `g index` manually.[/yellow]")

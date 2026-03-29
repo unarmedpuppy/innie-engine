@@ -142,7 +142,7 @@ def scan_for_injection(text: str) -> list[str]:
     """Scan text for prompt injection patterns.
 
     Returns list of matched pattern descriptions. Empty list = clean.
-    Called by `innie memory store` before writing any content to disk.
+    Called by `g memory store` before writing any content to disk.
     """
     matched = []
     for pattern in INJECTION_PATTERNS:

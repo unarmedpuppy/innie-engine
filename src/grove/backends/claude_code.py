@@ -1,7 +1,7 @@
 """Claude Code backend adapter.
 
 Handles hook installation into ~/.claude/settings.json using safe
-namespace-based merge (only touches entries containing 'innie').
+namespace-based merge (only touches grove hook entries).
 """
 
 import json
@@ -58,14 +58,17 @@ class ClaudeCodeBackend(Backend):
             ),
         ]
 
-    def _is_innie_entry(self, entry: dict) -> bool:
-        """Check if a hook entry belongs to innie (works with both old and new formats)."""
+    def _is_grove_entry(self, entry: dict) -> bool:
+        """Check if a hook entry belongs to grove (handles legacy innie and current grove hooks)."""
+        _patterns = ("/grove/hooks/", "innie")  # covers both new grove paths and legacy innie
         # New format: matcher + hooks array
         for h in entry.get("hooks", []):
-            if "innie" in h.get("command", ""):
+            cmd = h.get("command", "")
+            if any(p in cmd for p in _patterns):
                 return True
         # Old format: bare command at top level
-        if "innie" in entry.get("command", ""):
+        cmd = entry.get("command", "")
+        if any(p in cmd for p in _patterns):
             return True
         return False
 
@@ -76,7 +79,7 @@ class ClaudeCodeBackend(Backend):
         # Load existing config
         if config_path.exists():
             # Backup
-            backup = config_path.with_suffix(".innie-backup")
+            backup = config_path.with_suffix(".grove-backup")
             shutil.copy2(config_path, backup)
             with open(config_path) as f:
                 config = json.load(f)
@@ -89,10 +92,10 @@ class ClaudeCodeBackend(Backend):
         for hook in new_hooks:
             event_hooks = hooks.get(hook.event, [])
 
-            # Remove existing innie entries (namespace-based)
-            event_hooks = [h for h in event_hooks if not self._is_innie_entry(h)]
+            # Remove existing grove/innie entries (namespace-based)
+            event_hooks = [h for h in event_hooks if not self._is_grove_entry(h)]
 
-            # Append new innie hook in the new matcher + hooks format
+            # Append new grove hook in the new matcher + hooks format
             cmd_entry: dict = {"type": "command", "command": hook.command}
             if hook.timeout != 10000:
                 cmd_entry["timeout"] = hook.timeout
@@ -122,7 +125,7 @@ class ClaudeCodeBackend(Backend):
 
         hooks = config.get("hooks", {})
         for event in list(hooks.keys()):
-            hooks[event] = [h for h in hooks[event] if not self._is_innie_entry(h)]
+            hooks[event] = [h for h in hooks[event] if not self._is_grove_entry(h)]
             if not hooks[event]:
                 del hooks[event]
 
@@ -144,7 +147,7 @@ class ClaudeCodeBackend(Backend):
         result = {}
         for event in ["SessionStart", "PreCompact", "Stop", "PostToolUse", "PreToolUse"]:
             event_hooks = hooks.get(event, [])
-            result[event] = any(self._is_innie_entry(h) for h in event_hooks)
+            result[event] = any(self._is_grove_entry(h) for h in event_hooks)
         return result
 
     def launch_cmd(self, agent: str) -> list[str]:

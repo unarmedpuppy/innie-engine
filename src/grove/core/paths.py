@@ -1,7 +1,7 @@
-"""Path resolution for innie-engine.
+"""Path resolution for grove.
 
 All paths derive from two env vars:
-  INNIE_HOME  — root of all innie data (default: ~/.innie)
+  GROVE_HOME  — root of all grove data (default: ~/.grove); INNIE_HOME accepted as fallback
   INNIE_AGENT — active agent name (default: from config.toml)
 """
 
@@ -10,7 +10,11 @@ from pathlib import Path
 
 
 def home() -> Path:
-    return Path(os.environ.get("INNIE_HOME", Path.home() / ".innie"))
+    return Path(
+        os.environ.get("GROVE_HOME")
+        or os.environ.get("INNIE_HOME")
+        or str(Path.home() / ".grove")
+    )
 
 
 def config_file() -> Path:
@@ -78,7 +82,7 @@ def data_dir(agent: str | None = None) -> Path:
     """Return the data directory for an agent.
 
     If defaults.world is configured in config.toml, data lives in the world dir
-    (synced across machines). Otherwise falls back to ~/.innie/agents/<name>/data/.
+    (synced across machines). Otherwise falls back to ~/.grove/agents/<name>/data/.
     """
     from grove.core.config import load_config
     cfg = load_config()
@@ -172,12 +176,12 @@ def shared_skills_dir() -> Path:
 
 
 def env_file(agent: str | None = None) -> Path:
-    """Agent-specific secrets. ~/.innie/agents/<name>/.env"""
+    """Agent-specific secrets. ~/.grove/agents/<name>/.env"""
     return agent_dir(agent) / ".env"
 
 
 def shared_env_file() -> Path:
-    """Shared secrets for all agents. ~/.innie/.env"""
+    """Shared secrets for all agents. ~/.grove/.env"""
     return home() / ".env"
 
 

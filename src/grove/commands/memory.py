@@ -1,8 +1,8 @@
 """Live in-session memory management commands.
 
-innie memory store <type> <title> <content>  — write directly to knowledge base
-innie memory forget <path> <reason>          — supersede a file immediately
-innie memory ops [--since HOURS]             — show recent memory operations
+g memory store <type> <title> <content>  — write directly to knowledge base
+g memory forget <path> <reason>          — supersede a file immediately
+g memory ops [--since HOURS]             — show recent memory operations
 """
 
 import json
@@ -293,7 +293,7 @@ def quality(
     decay = [(f, c) for f, c in learnings_never if c == "low"]
     if decay:
         console.print(f"\n[yellow]Decay candidates:[/yellow] {len(decay)} low-confidence learnings never retrieved")
-        console.print("[dim]Consider: innie memory forget <path> \"no longer relevant\"[/dim]")
+        console.print("[dim]Consider: g memory forget <path> \"no longer relevant\"[/dim]")
 
     # Confidence distribution
     if conf_counts:
@@ -500,7 +500,7 @@ Output only the four sections above, no preamble."""
         pass
 
     console.print(f"[green]✓[/green] learnings/{category}/_consolidated.md ({len(entries)} sources)")
-    console.print("[dim]Use 'innie index --changed-only' to pick up embedding for this file.[/dim]")
+    console.print("[dim]Use 'g index --changed-only' to pick up embedding for this file.[/dim]")
 
 
 def _is_superseded_file(path: Path) -> bool:

@@ -12,7 +12,7 @@ console = Console()
 def install(
     name: str = typer.Argument(..., help="Backend name (claude-code, opencode, cursor)"),
 ):
-    """Install innie hooks into a backend."""
+    """Install grove hooks into a backend."""
     from grove.backends.registry import get_backend
 
     backend = get_backend(name)
@@ -51,7 +51,7 @@ def uninstall(
     name: str = typer.Argument(..., help="Backend name (claude-code, opencode, cursor)"),
     yes: bool = typer.Option(False, "-y", "--yes", help="Skip confirmation"),
 ):
-    """Remove innie hooks from a backend."""
+    """Remove grove hooks from a backend."""
     from grove.backends.registry import get_backend
 
     backend = get_backend(name)
@@ -59,7 +59,7 @@ def uninstall(
     installed = [event for event, ok in hooks.items() if ok]
 
     if not installed:
-        console.print(f"[dim]No innie hooks installed for {name}.[/dim]")
+        console.print(f"[dim]No grove hooks installed for {name}.[/dim]")
         return
 
     console.print(f"  Hooks to remove from [bold]{name}[/bold]: {', '.join(installed)}")
@@ -91,4 +91,4 @@ def check(
             all_ok = False
 
     if not all_ok:
-        console.print(f"\nRun: [bold]innie backend install {name}[/bold]")
+        console.print(f"\nRun: [bold]g backend install {name}[/bold]")

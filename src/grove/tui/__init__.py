@@ -1,1 +1,1 @@
-"""Lumon-themed Textual TUI for innie-engine."""
+"""Lumon-themed Textual TUI for grove."""

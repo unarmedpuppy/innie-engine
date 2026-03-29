@@ -42,12 +42,12 @@ class Backend(ABC):
 
     @abstractmethod
     def install_hooks(self, hooks_dir: Path) -> None:
-        """Install innie hooks into the backend's config (namespace-safe merge)."""
+        """Install grove hooks into the backend's config (namespace-safe merge)."""
         ...
 
     @abstractmethod
     def uninstall_hooks(self) -> None:
-        """Remove all innie hooks from the backend's config."""
+        """Remove all grove hooks from the backend's config."""
         ...
 
     @abstractmethod

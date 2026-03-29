@@ -1,4 +1,4 @@
-"""innie migrate — import data from other AI memory systems.
+"""grove migrate — import data from other AI memory systems.
 
 Supports:
   - agent-harness: ~/.agent-harness/
@@ -67,7 +67,7 @@ def _migrate_agent_harness(
     agents: list[str] | None = None,
     dry_run: bool = False,
 ):
-    """Migrate from agent-harness to innie-engine."""
+    """Migrate from agent-harness to grove."""
     harness_home = Path(source["home"])
     harness_repo = Path(source["repo"])
     profiles_dir = harness_repo / "profiles" if harness_repo.exists() else None
@@ -104,7 +104,7 @@ def _migrate_agent_harness(
                 "SOUL.md": "SOUL.md",
                 "IDENTITY.md": "SOUL.md",  # Merge IDENTITY into SOUL
                 "CLAUDE.md": "CLAUDE.md",
-                "USER.md": None,  # Goes to ~/.innie/user.md if not exists
+                "USER.md": None,  # Goes to ~/.grove/user.md if not exists
                 "TOOLS.md": "TOOLS.md",
                 "HEARTBEAT.md": "HEARTBEAT.md",
                 "MEMORY.md": None,  # Route to data/learnings/
@@ -195,7 +195,7 @@ def _migrate_agent_harness(
 
 
 def _migrate_openclaw(source: dict, agent_name: str = "innie", dry_run: bool = False):
-    """Migrate from openclaw to innie-engine."""
+    """Migrate from openclaw to grove."""
     openclaw_home = Path(source["home"])
     workspace = openclaw_home / "workspace"
 
@@ -464,12 +464,12 @@ def migrate(
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without making changes"),
     all_agents: bool = typer.Option(False, "--all", help="Migrate all detected agents"),
 ):
-    """Import data from other AI memory systems into innie."""
-    console.print("\n  [bold]innie migrate[/bold]\n")
+    """Import data from other AI memory systems into grove."""
+    console.print("\n  [bold]g migrate[/bold]\n")
 
-    # Ensure innie is initialized
+    # Ensure grove is initialized
     if not paths.home().exists():
-        console.print("  [red]Run 'innie init' first to create ~/.innie/[/red]")
+        console.print("  [red]Run 'g init' first to create ~/.grove/[/red]")
         raise typer.Exit(1)
 
     # Auto-detect if no source specified
@@ -477,8 +477,8 @@ def migrate(
         detected = _detect_sources()
         if not detected:
             console.print("  No migratable sources detected.")
-            console.print("  Specify a source: innie migrate agent-harness")
-            console.print("  Or a directory:   innie migrate /path/to/data")
+            console.print("  Specify a source: g migrate agent-harness")
+            console.print("  Or a directory:   g migrate /path/to/data")
             raise typer.Exit(0)
 
         console.print("  Detected sources:")
@@ -523,8 +523,8 @@ def migrate(
 
     mode = " (dry run)" if dry_run else ""
     console.print(f"\n  [bold green]Migration complete!{mode}[/bold green]")
-    console.print("  Run: [bold]innie doctor[/bold] to verify")
-    console.print("  Run: [bold]innie index[/bold] to rebuild search index\n")
+    console.print("  Run: [bold]g doctor[/bold] to verify")
+    console.print("  Run: [bold]g index[/bold] to rebuild search index\n")
 
 
 def _dispatch_migrate(

@@ -622,11 +622,11 @@ def format_results_index(
     """Compact index-only format — data/-relative paths and scores, no content snippets.
 
     Paths are shown relative to data/ so they can be passed directly to
-    `innie context load <path>` without further manipulation.
+    `g context load <path>` without further manipulation.
     """
     if not results:
         return ""
-    lines = ["Relevant memory (index-only — use `innie context load <path>` for full content):\n"]
+    lines = ["Relevant memory (index-only — use `g context load <path>` for full content):\n"]
     for i, r in enumerate(results, 1):
         fp = r["file_path"]
         if data_dir:

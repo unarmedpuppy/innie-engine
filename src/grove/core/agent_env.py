@@ -1,11 +1,11 @@
-"""Two-tier .env loading for innie-engine agents.
+"""Two-tier .env loading for grove agents.
 
 Secrets are split across two files:
-- ~/.innie/.env          — shared across all agents (GH_TOKEN, GOG_KEYRING_PASSWORD, etc.)
-- ~/.innie/agents/<n>/.env — agent-specific (MATTERMOST_BOT_TOKEN, etc.)
+- ~/.grove/.env          — shared across all agents (GH_TOKEN, GOG_KEYRING_PASSWORD, etc.)
+- ~/.grove/agents/<n>/.env — agent-specific (MATTERMOST_BOT_TOKEN, etc.)
 
 Loading order: shared first, then agent-specific. Agent-specific keys win on collision.
-Neither file is indexed by search or committed to the ~/.innie git repo.
+Neither file is indexed by search or committed to the ~/.grove git repo.
 
 Format: standard KEY=VALUE, one per line. Comments (#) and blank lines are ignored.
 """
@@ -30,14 +30,14 @@ def _parse_env_file(path: Path) -> dict[str, str]:
 
 
 def load_agent_env(agent: str | None = None) -> dict[str, str]:
-    """Load merged env: shared ~/.innie/.env first, then agent-specific (agent wins)."""
+    """Load merged env: shared ~/.grove/.env first, then agent-specific (agent wins)."""
     merged = _parse_env_file(paths.shared_env_file())
     merged.update(_parse_env_file(paths.env_file(agent)))
     return merged
 
 
 def load_shared_env() -> dict[str, str]:
-    """Load only the shared ~/.innie/.env."""
+    """Load only the shared ~/.grove/.env."""
     return _parse_env_file(paths.shared_env_file())
 
 

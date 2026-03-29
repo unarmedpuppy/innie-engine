@@ -136,7 +136,7 @@ class TraceApp(App):
         with Vertical(id="shell"):
             agent_label = f"agent: [bold #00d4c8]{self._agent}[/bold #00d4c8]" if self._agent else "all agents"
             yield Static(
-                f"innie traces  ·  {agent_label}  ·  sort: date",
+                f"g traces  ·  {agent_label}  ·  sort: date",
                 id="header",
                 markup=True,
             )

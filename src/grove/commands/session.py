@@ -1,7 +1,7 @@
 """Session search and list commands.
 
-innie session list   — list recently indexed sessions
-innie session search — FTS search across session content
+g session list   — list recently indexed sessions
+g session search — FTS search across session content
 """
 
 import time
@@ -27,7 +27,7 @@ def list_sessions(
 
     db_path = paths.index_db(agent)
     if not db_path.exists():
-        console.print("[dim]No index found. Run: innie index[/dim]")
+        console.print("[dim]No index found. Run: g index[/dim]")
         raise typer.Exit(1)
 
     conn = open_db(db_path)
@@ -73,7 +73,7 @@ def search_sessions(
 
     db_path = paths.index_db(agent)
     if not db_path.exists():
-        console.print("[dim]No index found. Run: innie index[/dim]")
+        console.print("[dim]No index found. Run: g index[/dim]")
         raise typer.Exit(1)
 
     conn = open_db(db_path)
@@ -149,7 +149,7 @@ def read_session(
 
     db_path = paths.index_db(agent)
     if not db_path.exists():
-        console.print("[dim]No index found. Run: innie index[/dim]")
+        console.print("[dim]No index found. Run: g index[/dim]")
         raise typer.Exit(1)
 
     conn = open_db(db_path)

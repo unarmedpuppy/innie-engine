@@ -32,7 +32,7 @@ def list_agents():
     """List all agents with role and stats."""
     agents = _list_agents()
     if not agents:
-        console.print("No agents found. Run [bold]innie init[/bold] to get started.")
+        console.print("No agents found. Run [bold]g init[/bold] to get started.")
         return
 
     active = paths.active_agent()

@@ -1,4 +1,4 @@
-"""Boot animation — floating numbers reveal with innie ASCII art."""
+"""Boot animation — floating numbers reveal with grove ASCII art."""
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding

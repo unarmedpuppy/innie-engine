@@ -124,7 +124,7 @@ def build_session_context(
         f"- Agent: {profile.name} ({profile.role})",
         f"- Time: {now.strftime('%Y-%m-%d %H:%M')} {tz}",
         f"- Knowledge base: {paths.data_dir(profile.name)}",
-        '- Search: `innie search "query"`',
+        '- Search: `g search "query"`',
     ]
     if cwd:
         status_lines.append(f"- Working dir: {cwd}")
@@ -133,7 +133,7 @@ def build_session_context(
 
     # 6. Memory tools reference — fixed budget, not squeezed
     load_hint = (
-        '  innie context load PATH                           # read full file from data/ (index-only mode active)\n'
+        '  g context load PATH                           # read full file from data/ (index-only mode active)\n'
         if index_only else ""
     )
 
@@ -150,19 +150,19 @@ def build_session_context(
     parts.append(
         "<memory-tools>\n"
         "Live knowledge base ops (call anytime — no need to wait for heartbeat):\n"
-        '  innie search "query"                              # search knowledge base\n'
-        '  innie ls [path]                                   # browse data/ directory\n'
+        '  g search "query"                              # search knowledge base\n'
+        '  g ls [path]                                   # browse data/ directory\n'
         + load_hint +
-        '  innie memory store learning "Title" "Content"     # store a learning\n'
+        '  g memory store learning "Title" "Content"     # store a learning\n'
         "    --category debugging|patterns|tools|infrastructure|processes\n"
         "    --confidence high|medium|low\n"
-        '  innie memory store decision "Title" "Content"     # store a decision\n'
+        '  g memory store decision "Title" "Content"     # store a decision\n'
         "    --project PROJECT\n"
-        '  innie memory store project "Name" "Progress"      # update project context\n'
-        '  innie memory forget PATH "Why it\'s wrong"         # supersede (PATH relative to data/)\n'
-        '  innie context add "- Open item text"              # add open item (next session)\n'
-        '  innie context remove "text"                       # remove open item (next session)\n'
-        "  innie context compress                            # LLM dedup of open items\n"
+        '  g memory store project "Name" "Progress"      # update project context\n'
+        '  g memory forget PATH "Why it\'s wrong"         # supersede (PATH relative to data/)\n'
+        '  g context add "- Open item text"              # add open item (next session)\n'
+        '  g context remove "text"                       # remove open item (next session)\n'
+        "  g context compress                            # LLM dedup of open items\n"
         + catalog_lines
         + "</memory-tools>"
     )
@@ -177,18 +177,18 @@ def build_precompact_warning(agent_name: str | None = None) -> str:
     ctx_path = paths.context_file(name)
     project = _detect_project(os.getcwd())
     project_step = (
-        f'\n0. `innie project log {project} "<one-line summary of what happened this session>"` — spine entry before compaction\n'
+        f'\n0. `g project log {project} "<one-line summary of what happened this session>"` — spine entry before compaction\n'
         if project else ""
     )
     return f"""<system-reminder priority="critical">
 CONTEXT COMPACTION IMMINENT — Flush your working memory NOW before it is lost.
 
 Run these in order:{project_step}
-1. `innie memory store learning "Title" "Content"` — for any non-obvious discoveries made this session
-2. `innie memory store decision "Title" "Content" --project NAME` — for any arch choices made
-3. `innie memory forget PATH "reason"` — for anything you now know is wrong
-4. `innie context add "- item"` — for new open items not yet in CONTEXT.md
-5. `innie context remove "text"` — for anything now resolved
+1. `g memory store learning "Title" "Content"` — for any non-obvious discoveries made this session
+2. `g memory store decision "Title" "Content" --project NAME` — for any arch choices made
+3. `g memory forget PATH "reason"` — for anything you now know is wrong
+4. `g context add "- item"` — for new open items not yet in CONTEXT.md
+5. `g context remove "text"` — for anything now resolved
 6. Update {ctx_path} directly for any focus shift or critical state
 
 Keep CONTEXT.md under 200 lines. Prune stale entries.

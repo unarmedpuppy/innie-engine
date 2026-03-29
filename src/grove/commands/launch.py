@@ -1,4 +1,4 @@
-"""innie launch — exec claude directly as this agent.
+"""grove launch — exec claude directly as this agent.
 
 Always replaces the current process with claude (no tmux wrapping).
 
@@ -46,7 +46,7 @@ def _validate_env(agent: str, merged: dict[str, str], mode: str) -> list[str]:
 
     for key in ENV_SCHEMA["shared"]:
         if key not in shared:
-            warnings.append(f"[shared] {key} missing from ~/.innie/.env")
+            warnings.append(f"[shared] {key} missing from ~/.grove/.env")
 
     for key in ENV_SCHEMA["agent"]:
         if key not in merged:
@@ -182,7 +182,7 @@ def env_check(
     shared = load_shared_env()
 
     # Shared checks
-    console.print("\n[bold]Shared (~/.innie/.env)[/bold]")
+    console.print("\n[bold]Shared (~/.grove/.env)[/bold]")
     for key in ENV_SCHEMA["shared"]:
         status = "[green]✓[/green]" if key in shared else "[red]✗ MISSING[/red]"
         console.print(f"  {status}  {key}")

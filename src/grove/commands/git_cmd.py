@@ -22,7 +22,7 @@ def _set_config_value(key: str, value: bool) -> None:
     """Write a true/false value in the [git] section of config.toml."""
     config_path = paths.home() / "config.toml"
     if not config_path.exists():
-        console.print("[red]No config.toml found. Run `innie init` first.[/red]")
+        console.print("[red]No config.toml found. Run `g init` first.[/red]")
         raise typer.Exit(1)
 
     content = config_path.read_text()

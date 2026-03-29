@@ -1,7 +1,7 @@
-"""FastAPI application for innie serve — jobs API, chat completions, memory CRUD.
+"""FastAPI application for grove serve — jobs API, chat completions, memory CRUD.
 
 Usage:
-    innie serve [--port 8013] [--host 0.0.0.0]
+    g serve [--port 8013] [--host 0.0.0.0]
 """
 
 import asyncio
@@ -117,7 +117,7 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
 
 
 def _ensure_dirs() -> None:
-    """Ensure standard innie directory structure exists."""
+    """Ensure standard grove directory structure exists."""
     agent = paths.active_agent()
     for d in [
         paths.shared_skills_dir(),
@@ -132,7 +132,7 @@ def _ensure_dirs() -> None:
 
 
 def _ensure_skills_symlink() -> None:
-    """Ensure ~/.claude/skills symlinks to the shared innie skills directory."""
+    """Ensure ~/.claude/skills symlinks to the shared grove skills directory."""
     shared = paths.shared_skills_dir()
     claude_skills = Path.home() / ".claude" / "skills"
     if claude_skills.is_symlink() and claude_skills.resolve() == shared.resolve():
@@ -193,7 +193,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="innie-engine",
+    title="grove",
     description="Persistent memory and identity for AI coding assistants",
     version=__version__,
     lifespan=lifespan,
@@ -428,7 +428,7 @@ def _detect_service_info(agent: str) -> dict:
     """Auto-detect restart and install commands from platform + install metadata."""
     import sys
 
-    # Read direct_url.json from dist-info — tells us how innie-engine was installed
+    # Read direct_url.json from dist-info — tells us how grove was installed
     install_url: str | None = None
     try:
         from importlib.metadata import distribution
@@ -436,7 +436,7 @@ def _detect_service_info(agent: str) -> dict:
         raw = dist.read_text("direct_url.json")
         if raw:
             data = json.loads(raw)
-            install_url = data.get("url")  # e.g. "file:///path/to/innie-engine" or "ssh://..."
+            install_url = data.get("url")  # e.g. "file:///path/to/grove" or "ssh://..."
     except Exception as e:
         logger.debug("Could not detect install URL from dist-info: %s", e)
 
@@ -455,7 +455,7 @@ def _detect_service_info(agent: str) -> dict:
         uid = os.getuid()
         restart_cmd = f"launchctl kickstart -k gui/{uid}/ai.grove.serve.{agent}"
     else:
-        restart_cmd = f"sudo systemctl restart innie-{agent}.service"
+        restart_cmd = f"sudo systemctl restart grove-{agent}.service"
 
     return {"restart_cmd": restart_cmd, "install_cmd": install_cmd}
 
@@ -520,7 +520,7 @@ async def health():
 @app.get("/v1/agent/info")
 async def agent_info():
     agent = paths.active_agent()
-    profile_path = Path.home() / ".innie" / "agents" / (agent or "") / "profile.yaml"
+    profile_path = paths.profile_file(agent or None)
     role = ""
     model = None
     provider = None
@@ -555,7 +555,7 @@ async def restart_agent(background_tasks: BackgroundTasks):
     """Trigger a graceful self-restart via launchctl kickstart.
 
     Returns immediately. The process will die and launchd will restart it.
-    Only works on macOS with a launchd plist named ai.innie.serve.<agent>.
+    Only works on macOS with a launchd plist named ai.grove.serve.<agent>.
     """
     agent = paths.active_agent()
     background_tasks.add_task(_trigger_launchd_restart, agent)
@@ -657,7 +657,7 @@ async def agent_schedule():
 @app.get("/v1/agent/identity")
 async def agent_identity():
     agent = paths.active_agent() or ""
-    base = Path.home() / ".innie" / "agents" / agent
+    base = paths.agent_dir(agent)
 
     def _read(path: Path) -> str | None:
         try:
@@ -676,7 +676,7 @@ async def agent_identity():
 @app.get("/v1/agent/avatar")
 async def agent_avatar():
     agent = paths.active_agent() or ""
-    base = Path.home() / ".innie" / "agents" / agent
+    base = paths.agent_dir(agent)
     for ext, mime in [("png", "image/png"), ("jpg", "image/jpeg"), ("jpeg", "image/jpeg"), ("webp", "image/webp"), ("gif", "image/gif")]:
         path = base / f"avatar.{ext}"
         if path.exists():

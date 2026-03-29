@@ -463,7 +463,7 @@ def route_confidence_decay(agent: str | None = None, threshold_days: int = 30) -
 
     Returns count of decay candidates (files that are old, low-confidence, and
     have not appeared in retrieval-log.jsonl within threshold_days).
-    Does not modify any files — candidates surface in `innie memory quality`.
+    Does not modify any files — candidates surface in `g memory quality`.
     """
     import json
 

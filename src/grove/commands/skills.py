@@ -1,4 +1,4 @@
-"""innie skill — list, run, install, show, and remove skills."""
+"""grove skill — list, run, install, show, and remove skills."""
 
 import json
 import shutil
@@ -49,7 +49,7 @@ def run_skill(
     skill_fn = getattr(builtins, name, None)
     if not skill_fn:
         typer.echo(f"Unknown built-in skill: {name}")
-        typer.echo("Use 'innie skill list' to see available skills.")
+        typer.echo("Use 'g skill list' to see available skills.")
         raise typer.Exit(1)
 
     kwargs = {}

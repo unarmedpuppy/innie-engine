@@ -40,7 +40,7 @@ def get_channel_health() -> list[dict]:
 
 
 def load_channels_config(agent: str | None = None) -> dict | None:
-    """Read ~/.innie/agents/{agent}/channels.yaml. Returns None if not found."""
+    """Read ~/.grove/agents/{agent}/channels.yaml. Returns None if not found."""
     if agent is None:
         agent = paths.active_agent()
     if not agent:
@@ -96,7 +96,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
             contacts=bb_cfg.get("contacts", {}),
         )
         innie_url = os.environ.get("INNIE_PUBLIC_URL", "http://127.0.0.1:8013")
-        await bluebubbles.start(bb, _sessions, agent or "avery", innie_url)
+        await bluebubbles.start(bb, _sessions, agent or paths.active_agent(), innie_url)
         app.include_router(bluebubbles.router)
         _channel_health["bluebubbles"] = {"name": "bluebubbles", "enabled": True, "connected": True}
         logger.info("[channels] BlueBubbles adapter started")
@@ -117,7 +117,7 @@ async def start_channels(app: FastAPI, agent: str | None = None) -> None:
             group_allow_from=mm_cfg.get("group_allow_from", []),
             require_mention=mm_cfg.get("require_mention", False),
         )
-        adapter = MattermostAdapter(mm, _sessions, agent or "avery")
+        adapter = MattermostAdapter(mm, _sessions, agent or paths.active_agent())
         _mm_task = asyncio.create_task(adapter.run())
         _channel_health["mattermost"] = {
             "name": "mattermost",

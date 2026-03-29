@@ -54,7 +54,6 @@ def _register_commands():
         doctor,
         edit,
         env,
-        fleet,
         git_cmd,
         heartbeat,
         inbox,
@@ -166,13 +165,6 @@ def _register_commands():
     hb_app.command("status")(heartbeat.hb_status)
     hb_app.command("reset-state")(heartbeat.reset_state)
     app.add_typer(hb_app, name="heartbeat")
-
-    # Fleet subcommands
-    fleet_app = typer.Typer(help="Fleet gateway for multi-machine agent coordination.")
-    fleet_app.command("start")(fleet.start)
-    fleet_app.command("agents")(fleet.agents)
-    fleet_app.command("stats")(fleet.stats)
-    app.add_typer(fleet_app, name="fleet")
 
     # Git subcommands
     git_app = typer.Typer(help="Manage git backup settings (auto-commit, auto-push).")

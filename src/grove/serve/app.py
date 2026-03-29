@@ -453,7 +453,7 @@ def _detect_service_info(agent: str) -> dict:
     restart_cmd: str | None = None
     if sys.platform == "darwin":
         uid = os.getuid()
-        restart_cmd = f"launchctl kickstart -k gui/{uid}/ai.innie.serve.{agent}"
+        restart_cmd = f"launchctl kickstart -k gui/{uid}/ai.grove.serve.{agent}"
     else:
         restart_cmd = f"sudo systemctl restart innie-{agent}.service"
 
@@ -565,7 +565,7 @@ async def restart_agent(background_tasks: BackgroundTasks):
 async def _trigger_launchd_restart(agent: str) -> None:
     import subprocess
     uid = os.getuid()
-    plist_label = f"ai.innie.serve.{agent}"
+    plist_label = f"ai.grove.serve.{agent}"
     await asyncio.sleep(0.3)  # allow response to flush
     subprocess.Popen(
         ["launchctl", "kickstart", "-k", f"gui/{uid}/{plist_label}"],

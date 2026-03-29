@@ -24,7 +24,7 @@ def _serve_port() -> int:
 
 
 def _serve_label(agent: str) -> str:
-    return f"ai.innie.serve.{agent}"
+    return f"ai.grove.serve.{agent}"
 
 
 def _health_url(port: int) -> str:
@@ -134,7 +134,7 @@ def _step_heartbeat_scheduler() -> None:
 
     if sys.platform == "darwin":
         plist_path = (
-            Path.home() / "Library" / "LaunchAgents" / "com.innie-engine.heartbeat.plist"
+            Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
         )
         if plist_path.exists():
             _check_result("Heartbeat launchd plist present", True)

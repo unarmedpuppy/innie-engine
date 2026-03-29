@@ -3,6 +3,13 @@
 
 *Created: 2026-03-09*
 *Last updated: 2026-03-09*
+
+> **⚠️ Superseded — historical reference only.**
+> Phases 0–5B complete as of 2026-03-29. Authoritative decisions live in ADRs 0054–0059.
+> Key changes since this doc: ADR-0055 (per-agent LLM router keys — all agents now use
+> `ANTHROPIC_BASE_URL` + `ANTHROPIC_API_KEY` via homelab router, including ralph);
+> ADR-0057 (fleet-gateway retired); ADR-0058 (fleet module removed); ADR-0059 (ralph kept,
+> colin/jobin retired). The `no ANTHROPIC_BASE_URL` notes for ralph are outdated.
 *Status: In Progress — Phase 0 COMPLETE, Phase 1 COMPLETE, Phase 2 COMPLETE, Phase 3 COMPLETE, Phase 4 COMPLETE — **Phase 5 next***
 *Supersedes: `consolidation-plan.md`, `agent-harness/docs/CHANNEL-ADAPTERS-PLAN.md`*
 

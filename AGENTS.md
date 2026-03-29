@@ -55,7 +55,7 @@ At serve startup, `inject_into_os_env()` loads both — shared first, then agent
 
 ### How secrets get into the process
 
-`inject_into_os_env(agent)` runs at the top of `innie serve`'s lifespan startup (in `serve/app.py`). It loads both `.env` files into `os.environ` before channels, scheduler, or job store initialize. All subprocesses inherit the environment.
+`inject_into_os_env(agent)` runs at the top of `g serve`'s lifespan startup (in `serve/app.py`). It loads both `.env` files into `os.environ` before channels, scheduler, or job store initialize. All subprocesses inherit the environment.
 
 Priority (highest first): **launchd env > agent-specific .env > shared .env**
 

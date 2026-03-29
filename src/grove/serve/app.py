@@ -1236,3 +1236,48 @@ async def trace_stats_api(
         "sessions_by_agent": s.sessions_by_agent,
         "sessions_by_day": s.sessions_by_day,
     }
+
+
+# ── Inbox ──────────────────────────────────────────────────────────────────────
+
+
+@app.get("/v1/inbox")
+async def inbox_list(
+    _: None = Depends(_require_auth),
+):
+    """List pending inbox messages for this agent."""
+    from grove.core.collector import collect_inbox
+    msgs = collect_inbox()
+    return {"messages": msgs}
+
+
+@app.post("/v1/inbox", status_code=201)
+async def inbox_receive(
+    request: Request,
+    _: None = Depends(_require_auth),
+):
+    """Receive an inbox message from another agent and write it to data/inbox/."""
+    import re
+    data = await request.json()
+    from_agent = data.get("from", "unknown")
+    to_agent = data.get("to", paths.active_agent())
+    subject = data.get("subject", "untitled")
+    body = data.get("body", "")
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    inbox_dir = paths.inbox_dir(to_agent)
+    inbox_dir.mkdir(parents=True, exist_ok=True)
+
+    slug = re.sub(r"[^a-z0-9]+", "-", subject.lower().strip())[:40].strip("-")
+    dest = inbox_dir / f"{date}-from-{from_agent}-{slug}.md"
+    i = 1
+    while dest.exists():
+        dest = inbox_dir / f"{date}-from-{from_agent}-{slug}-{i}.md"
+        i += 1
+
+    dest.write_text(
+        f"---\nfrom: {from_agent}\nto: {to_agent}\ndate: {date}\nsubject: {subject}\n---\n\n{body}\n",
+        encoding="utf-8",
+    )
+    logger.info("Inbox message received from %s: %s → %s", from_agent, subject, dest.name)
+    return {"filename": dest.name, "status": "received"}

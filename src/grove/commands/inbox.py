@@ -92,6 +92,7 @@ def send(
     agent: str = typer.Option(None, "--agent", "-a", help="Sender agent name"),
 ) -> None:
     """Send an inbox message to another agent."""
+    import os
     import re
     import sys
 
@@ -106,10 +107,18 @@ def send(
     sender = agent or paths.active_agent()
     today = datetime.now().strftime("%Y-%m-%d")
 
+    # Try HTTP delivery first if fleet gateway is configured
+    fleet_url = os.environ.get("GROVE_FLEET_URL") or os.environ.get("INNIE_FLEET_URL", "")
+    if fleet_url:
+        delivered = _send_http(to, sender, subject, body, fleet_url)
+        if delivered:
+            return
+
+    # Fallback: write to local filesystem (same-machine agents)
+    slug = re.sub(r"[^a-z0-9]+", "-", subject.lower().strip())[:40].strip("-")
     target_inbox = paths.agents_dir() / to / "data" / "inbox"
     target_inbox.mkdir(parents=True, exist_ok=True)
 
-    slug = re.sub(r"[^a-z0-9]+", "-", subject.lower().strip())[:40].strip("-")
     dest = target_inbox / f"{today}-from-{sender}-{slug}.md"
     i = 1
     while dest.exists():
@@ -121,6 +130,45 @@ def send(
         encoding="utf-8",
     )
     console.print(f"[green]Sent[/green] → {dest.name}")
+
+
+def _send_http(to: str, sender: str, subject: str, body: str, fleet_url: str) -> bool:
+    """Attempt HTTP delivery to target agent via fleet gateway. Returns True if delivered."""
+    import os
+    import httpx
+
+    try:
+        resp = httpx.get(f"{fleet_url}/api/agents/{to}", timeout=3.0)
+        if resp.status_code != 200:
+            return False
+        data = resp.json()
+        endpoint = data.get("direct_url") or data.get("endpoint", "")
+        if not endpoint:
+            return False
+
+        token = (
+            os.environ.get(f"GROVE_AGENT_{to.upper()}_TOKEN")
+            or os.environ.get(f"INNIE_AGENT_{to.upper()}_TOKEN", "")
+        )
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        r = httpx.post(
+            f"{endpoint.rstrip('/')}/v1/inbox",
+            json={"from": sender, "to": to, "subject": subject, "body": body},
+            headers=headers,
+            timeout=10.0,
+        )
+        if r.status_code == 201:
+            result = r.json()
+            console.print(f"[green]Sent[/green] → {result.get('filename', to)} (HTTP)")
+            return True
+        console.print(f"[yellow]HTTP delivery failed ({r.status_code}), falling back to filesystem[/yellow]")
+        return False
+    except Exception as e:
+        console.print(f"[dim]HTTP delivery unavailable ({e}), falling back to filesystem[/dim]")
+        return False
 
 
 def archive(

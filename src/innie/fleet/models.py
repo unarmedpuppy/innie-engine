@@ -105,7 +105,7 @@ class FleetStats(BaseModel):
 class JobCreateRequest(BaseModel):
     agent_id: str
     prompt: str
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "claude-sonnet-4-6"
     working_directory: str | None = None
     system_prompt: str | None = None
     include_memory: bool = False

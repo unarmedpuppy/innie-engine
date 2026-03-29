@@ -17,7 +17,7 @@ def serve(
         typer.echo("Missing serve dependencies. Install with: pip install grove[serve]")
         raise typer.Exit(1)
 
-    os.environ["INNIE_SERVE_PORT"] = str(port)
+    os.environ["GROVE_SERVE_PORT"] = str(port)
 
     typer.echo(f"Starting grove server on {host}:{port}")
     uvicorn.run(

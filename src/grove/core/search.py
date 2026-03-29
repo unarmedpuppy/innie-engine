@@ -17,9 +17,9 @@ EMBEDDING_DIMS = 768  # default; use get_embedding_dims() at call sites for over
 
 
 def get_embedding_dims() -> int:
-    """Return configured embedding dimensions. Reads INNIE_EMBEDDING_DIMS env, then config, then 768."""
+    """Return configured embedding dimensions. Reads GROVE_EMBEDDING_DIMS env, then config, then 768."""
     import os
-    val = os.environ.get("INNIE_EMBEDDING_DIMS", "")
+    val = os.environ.get("GROVE_EMBEDDING_DIMS") or os.environ.get("INNIE_EMBEDDING_DIMS", "")
     if val.isdigit():
         return int(val)
     return get("embedding.dims", EMBEDDING_DIMS)
@@ -383,7 +383,7 @@ def index_files(
                 if raw_embeddings and len(raw_embeddings[0]) != expected_dims:
                     logger.error(
                         "Embedding dimension mismatch for %s: got %d, expected %d "
-                        "(set INNIE_EMBEDDING_DIMS=%d or update embedding.dims in config.toml). "
+                        "(set GROVE_EMBEDDING_DIMS=%d or update embedding.dims in config.toml). "
                         "Skipping vector index for this file.",
                         f, len(raw_embeddings[0]), expected_dims, len(raw_embeddings[0]),
                     )
@@ -489,7 +489,7 @@ def search_semantic(conn: sqlite3.Connection, query: str, limit: int = 10) -> li
 def _expand_query(query: str) -> str | None:
     """Generate one alternative phrasing via LLM. Returns None on any failure."""
     import os
-    if not get("search.query_expansion", False) and not os.environ.get("INNIE_QUERY_EXPANSION"):
+    if not get("search.query_expansion", False) and not os.environ.get("GROVE_QUERY_EXPANSION") and not os.environ.get("INNIE_QUERY_EXPANSION"):
         return None
     try:
         import httpx

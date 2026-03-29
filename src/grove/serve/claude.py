@@ -35,7 +35,7 @@ def _claude_binary() -> str:
 
 
 def _default_model() -> str:
-    return os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
+    return os.environ.get("GROVE_DEFAULT_MODEL") or os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
 
 
 async def stream_claude_events(

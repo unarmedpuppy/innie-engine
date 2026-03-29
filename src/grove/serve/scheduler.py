@@ -12,7 +12,7 @@ from grove.core import paths
 
 
 def _default_model() -> str:
-    return os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
+    return os.environ.get("GROVE_DEFAULT_MODEL") or os.environ.get("INNIE_DEFAULT_MODEL", "claude-sonnet-4-6")
 
 logger = logging.getLogger(__name__)
 

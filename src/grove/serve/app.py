@@ -41,8 +41,8 @@ from grove.serve.models import (
 
 logger = logging.getLogger(__name__)
 
-SYNC_TIMEOUT = int(os.environ.get("INNIE_SYNC_TIMEOUT", 1800))
-ASYNC_TIMEOUT = int(os.environ.get("INNIE_ASYNC_TIMEOUT", 7200))
+SYNC_TIMEOUT = int(os.environ.get("GROVE_SYNC_TIMEOUT") or os.environ.get("INNIE_SYNC_TIMEOUT", 1800))
+ASYNC_TIMEOUT = int(os.environ.get("GROVE_ASYNC_TIMEOUT") or os.environ.get("INNIE_ASYNC_TIMEOUT", 7200))
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -51,7 +51,7 @@ async def _require_auth(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> None:
-    token = os.environ.get("INNIE_API_TOKEN", "")
+    token = os.environ.get("GROVE_API_TOKEN") or os.environ.get("INNIE_API_TOKEN", "")
     if not token or request.url.path == "/health":
         return
     if credentials is None or credentials.credentials != token:
@@ -60,20 +60,20 @@ async def _require_auth(
 
 async def _register_with_fleet() -> None:
     """Register this serve instance with the fleet gateway on startup."""
-    fleet_url = os.environ.get("INNIE_FLEET_URL", "")
+    fleet_url = os.environ.get("GROVE_FLEET_URL") or os.environ.get("INNIE_FLEET_URL", "")
     if not fleet_url:
         return
     agent = paths.active_agent()
     if not agent:
         return
-    host = os.environ.get("INNIE_SERVE_HOST", "")
+    host = os.environ.get("GROVE_SERVE_HOST") or os.environ.get("INNIE_SERVE_HOST", "")
     if not host:
         import socket
         try:
             host = socket.gethostbyname(socket.gethostname())
         except Exception:
             return
-    port = int(os.environ.get("INNIE_SERVE_PORT", "8013"))
+    port = int(os.environ.get("GROVE_SERVE_PORT") or os.environ.get("INNIE_SERVE_PORT", "8013"))
     endpoint = f"http://{host}:{port}"
     try:
         async with httpx.AsyncClient() as client:
@@ -298,7 +298,7 @@ async def notify_reply_to(job: Job) -> None:
             new_prompt = f"[Message from {from_agent}]\n\n{result_text}"
             token = (
                 os.environ.get(f"GROVE_AGENT_{target_agent.upper()}_TOKEN")
-                or os.environ.get(f"INNIE_AGENT_{target_agent.upper()}_TOKEN", "")
+                or os.environ.get(f"INNIE_AGENT_{target_agent.upper()}_TOKEN") or ""
             )
             headers = {"Content-Type": "application/json"}
             if token:

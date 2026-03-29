@@ -199,7 +199,7 @@ def doctor():
                 check(
                     f"Embedding dims match ({actual})",
                     dims_ok,
-                    f"Set INNIE_EMBEDDING_DIMS={actual} or embedding.dims={actual} in config.toml"
+                    f"Set GROVE_EMBEDDING_DIMS={actual} or embedding.dims={actual} in config.toml"
                     if not dims_ok else "",
                 )
             except Exception as e:

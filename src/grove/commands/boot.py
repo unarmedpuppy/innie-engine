@@ -20,7 +20,7 @@ console = Console()
 
 
 def _serve_port() -> int:
-    return int(os.environ.get("INNIE_SERVE_PORT", get("serve.port", 8013)))
+    return int(os.environ.get("GROVE_SERVE_PORT") or os.environ.get("INNIE_SERVE_PORT", get("serve.port", 8013)))
 
 
 def _serve_label(agent: str) -> str:
@@ -279,7 +279,7 @@ def _step_health_check(agent: str, port: int) -> None:
         console.print("  [dim]─[/dim] No channels configured")
 
     # Fleet gateway registration
-    fleet_url = os.environ.get("INNIE_FLEET_URL", "")
+    fleet_url = os.environ.get("GROVE_FLEET_URL") or os.environ.get("INNIE_FLEET_URL", "")
     if fleet_url:
         try:
             import httpx
@@ -290,7 +290,7 @@ def _step_health_check(agent: str, port: int) -> None:
         except Exception as e:
             _check_result(f"Fleet gateway reachable ({fleet_url})", False, str(e)[:60])
     else:
-        console.print("  [dim]─[/dim] INNIE_FLEET_URL not set — fleet check skipped")
+        console.print("  [dim]─[/dim] GROVE_FLEET_URL not set — fleet check skipped")
 
     # Env vars
     console.print("\n  [dim]Env vars (from .env files):[/dim]")
@@ -300,7 +300,7 @@ def _step_health_check(agent: str, port: int) -> None:
 
     required_vars = [
         ("MATTERMOST_BOT_TOKEN", "Mattermost auth"),
-        ("INNIE_API_TOKEN", "Agent API auth"),
+        ("GROVE_API_TOKEN", "Agent API auth"),
     ]
     # Conditional: check Anthropic key only if no external URL configured
     external_url = get("heartbeat.external_url", "")

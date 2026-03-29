@@ -52,7 +52,7 @@ def search(
 
     # --expand temporarily sets the env-level override without mutating config on disk
     if expand:
-        os.environ["INNIE_QUERY_EXPANSION"] = "1"
+        os.environ["GROVE_QUERY_EXPANSION"] = "1"
 
     if keyword:
         results = search_keyword(conn, query, limit)
@@ -62,7 +62,7 @@ def search(
         results = search_hybrid(conn, query, limit)
 
     if expand:
-        os.environ.pop("INNIE_QUERY_EXPANSION", None)
+        os.environ.pop("GROVE_QUERY_EXPANSION", None)
 
     conn.close()
 

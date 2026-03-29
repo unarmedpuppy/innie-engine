@@ -1,4 +1,4 @@
-# AGENTS.md — innie-engine
+# AGENTS.md — grove (innie-engine)
 
 Meta-rules for working in this repo. Read before touching anything.
 
@@ -7,7 +7,7 @@ Meta-rules for working in this repo. Read before touching anything.
 ## Repo Layout
 
 ```
-src/innie/
+src/grove/
   cli.py                  # CLI entry point — all subcommands registered here
   core/                   # Shared primitives (paths, agent_env, context, search, trace)
   serve/                  # FastAPI server (app.py, claude.py, job_store, scheduler)
@@ -15,7 +15,7 @@ src/innie/
   skills/                 # Skills registry and runner
   commands/               # CLI command modules (env, memory, search, etc.)
 
-~/.innie/                 # Runtime data — NOT in this repo
+~/.grove/                 # Runtime data — NOT in this repo
   .env                    # Shared secrets — all agents (GH_TOKEN, GOG_KEYRING_PASSWORD, etc.)
   agents/<name>/          # Per-agent data directory
     .env                  # Agent-specific secrets — (MATTERMOST_BOT_TOKEN, etc.) gitignored
@@ -27,7 +27,7 @@ src/innie/
     data/                 # Knowledge base files
   skills/                 # Shared skills directory (all agents)
                           # ~/.claude/skills symlinks here — maintained by self_update cron
-                          # New skills always go in ~/.innie/skills/, never in ~/.claude/skills/
+                          # New skills always go in ~/.grove/skills/, never in ~/.claude/skills/
 ```
 
 ---
@@ -38,8 +38,8 @@ src/innie/
 
 Secrets use a two-tier system:
 
-- **`~/.innie/.env`** — shared across all agents. Use for credentials that any agent or skill might need: `GH_TOKEN`, `GOG_KEYRING_PASSWORD`, `ANTHROPIC_API_KEY`, service passwords, etc.
-- **`~/.innie/agents/<name>/.env`** — agent-specific. Use for per-agent secrets: `MATTERMOST_BOT_TOKEN` (each agent has its own bot).
+- **`~/.grove/.env`** — shared across all agents. Use for credentials that any agent or skill might need: `GH_TOKEN`, `GOG_KEYRING_PASSWORD`, `ANTHROPIC_API_KEY`, service passwords, etc.
+- **`~/.grove/agents/<name>/.env`** — agent-specific. Use for per-agent secrets: `MATTERMOST_BOT_TOKEN` (each agent has its own bot).
 
 At serve startup, `inject_into_os_env()` loads both — shared first, then agent-specific. Agent-specific values win on collision. Neither launchd-set vars nor already-set env vars are overwritten.
 
@@ -47,10 +47,10 @@ At serve startup, `inject_into_os_env()` loads both — shared first, then agent
 
 | Item | Location |
 |------|----------|
-| Mattermost bot token | `~/.innie/agents/<name>/.env` as `MATTERMOST_BOT_TOKEN` |
-| GitHub token, API keys, shared passwords | `~/.innie/.env` |
-| Agent identity, role, display name | `~/.innie/agents/<name>/profile.yaml` |
-| Channel adapter config (URLs, policies) | `~/.innie/agents/<name>/channels.yaml` |
+| Mattermost bot token | `~/.grove/agents/<name>/.env` as `MATTERMOST_BOT_TOKEN` |
+| GitHub token, API keys, shared passwords | `~/.grove/.env` |
+| Agent identity, role, display name | `~/.grove/agents/<name>/profile.yaml` |
+| Channel adapter config (URLs, policies) | `~/.grove/agents/<name>/channels.yaml` |
 | Process routing (port, host, fleet URL) | launchd plist `EnvironmentVariables` |
 
 ### How secrets get into the process
@@ -62,15 +62,15 @@ Priority (highest first): **launchd env > agent-specific .env > shared .env**
 ### CLI
 
 ```bash
-innie env set KEY value [--agent name]
-innie env get KEY [--agent name]
-innie env list [--agent name]
-innie env unset KEY [--agent name]
+g env set KEY value [--agent name]
+g env get KEY [--agent name]
+g env list [--agent name]
+g env unset KEY [--agent name]
 ```
 
 ### gitignore
 
-`~/.innie/.gitignore` must contain both `.env` (shared) and `agents/*/.env` (per-agent). Do not remove these entries.
+`~/.grove/.gitignore` must contain both `.env` (shared) and `agents/*/.env` (per-agent). Do not remove these entries.
 
 See ADR-0035 for full details.
 
@@ -82,13 +82,13 @@ Each agent has its own git identity. This prevents commits from being attributed
 
 | Agent | Name | Email | Where set |
 |-------|------|-------|-----------|
-| Oak (Mac Mini) | `Oak` | `oak@innie.local` | `~/.gitconfig` (global, set once) |
-| Ralph (server container) | `Ralph` | `ralph@innie.local` | Docker env vars → `entrypoint.sh` configures `git config --global` |
+| Oak (Mac Mini) | `Oak` | `oak@grove.local` | `~/.gitconfig` (global, set once) |
+| Ralph (server container) | `Ralph` | `ralph@grove.local` | Docker env vars → `entrypoint.sh` configures `git config --global` |
 
 **Mac Mini setup** (Oak):
 ```bash
 git config --global user.name "Oak"
-git config --global user.email "oak@innie.local"
+git config --global user.email "oak@grove.local"
 ```
 
 **Container agents** (Ralph): set via `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` env vars in `docker-compose.yml`. The entrypoint handles `git config --global` from these.
@@ -97,7 +97,7 @@ git config --global user.email "oak@innie.local"
 ```yaml
 git:
   name: Oak
-  email: oak@innie.local
+  email: oak@grove.local
 ```
 
 ---
@@ -116,10 +116,10 @@ The script updates `pyproject.toml` and stages it. Write the commit message your
 
 **Do not hardcode version strings.** All code reads version via:
 ```python
-from innie import __version__
+from grove import __version__
 ```
 
-Which in turn reads from `importlib.metadata.version("innie-engine")`. The canonical source is `pyproject.toml`.
+Which in turn reads from `importlib.metadata.version("grove")`. The canonical source is `pyproject.toml`.
 
 After bumping and committing, reinstall on each agent machine:
 ```bash
@@ -135,15 +135,15 @@ See ADR-0041 for full details.
 ## Deployment
 
 - **Never push to main to deploy.** This repo is installed as a tool via `uv`.
-- To update the installed tool: `uv tool install --editable "/path/to/innie-engine[serve]"`
+- To update the installed tool: `uv tool install --editable "/path/to/grove[serve]"`
 - The `[serve]` extra is required — omitting it drops uvicorn and the server won't start.
 
 ### Reloading a running agent
 
 After code changes:
 ```bash
-launchctl unload ~/Library/LaunchAgents/ai.innie.serve.<agent>.plist
-launchctl load ~/Library/LaunchAgents/ai.innie.serve.<agent>.plist
+launchctl unload ~/Library/LaunchAgents/ai.grove.serve.<agent>.plist
+launchctl load ~/Library/LaunchAgents/ai.grove.serve.<agent>.plist
 ```
 
 Or use the fleet gateway remote restart (launchd agents only):
@@ -155,11 +155,11 @@ curl -X POST https://fleet-gateway.server.unarmedpuppy.com/api/agents/<agent_id>
 
 ## Channel Adapters
 
-Adapters live in `src/innie/channels/`. The loader (`channels/loader.py`) reads `~/.innie/agents/<name>/channels.yaml` and starts enabled adapters at serve startup.
+Adapters live in `src/grove/channels/`. The loader (`channels/loader.py`) reads `~/.grove/agents/<name>/channels.yaml` and starts enabled adapters at serve startup.
 
 **Token resolution order for Mattermost:**
 1. Inline `bot_token` in `channels.yaml` (deprecated — migrate to `.env`)
-2. `MATTERMOST_BOT_TOKEN` from `~/.innie/.env`
+2. `MATTERMOST_BOT_TOKEN` from `~/.grove/.env`
 3. Empty string → adapter fails to connect (intentional, not silent)
 
 ### BlueBubbles specifics
@@ -197,11 +197,10 @@ Do not remove this line. Without it, job execution silently fails.
 Plists live in `~/Library/LaunchAgents/`. They are not part of this repo.
 
 **Plist EnvironmentVariables should only contain:**
-- `INNIE_AGENT` — agent name
-- `INNIE_HOME` — path to `~/.innie`
+- `INNIE_AGENT` — agent name (kept as-is; only `INNIE_HOME` was renamed)
+- `GROVE_HOME` — path to `~/.grove`
 - `INNIE_SERVE_PORT` / `INNIE_SERVE_HOST` — networking
 - `INNIE_PUBLIC_URL` — callback URL for BlueBubbles
-- `INNIE_FLEET_URL` — fleet gateway URL
 - `PATH` — must include `/opt/homebrew/bin` if agent uses Homebrew tools
 
 **Never add tokens, passwords, or API keys to a plist.**

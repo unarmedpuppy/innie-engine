@@ -89,7 +89,7 @@ async def _register_with_fleet() -> None:
 
 async def _resolve_agent_endpoint(agent_name: str) -> str:
     """Resolve agent name to endpoint URL. Fleet gateway first, env var fallback."""
-    fleet_url = os.environ.get("INNIE_FLEET_URL", "")
+    fleet_url = os.environ.get("GROVE_FLEET_URL") or os.environ.get("INNIE_FLEET_URL", "")
     if fleet_url:
         try:
             async with httpx.AsyncClient() as client:
@@ -99,21 +99,17 @@ async def _resolve_agent_endpoint(agent_name: str) -> str:
                 )
                 if resp.status_code == 200:
                     data = resp.json()
+                    # direct_url is the Tailscale-routable URL for cross-machine A2A
+                    direct_url = data.get("direct_url", "")
+                    if direct_url:
+                        return direct_url.rstrip("/")
                     endpoint = data.get("endpoint", "")
-                    tailscale_dns = data.get("tailscale_dns", "")
                     if endpoint:
-                        from urllib.parse import urlparse
-
-                        hostname = urlparse(endpoint).hostname or ""
-                        # Docker-internal hostnames have no dots — prefer tailscale_dns for
-                        # cross-machine A2A (e.g. "ralph" → "ralph.server.unarmedpuppy.com")
-                        if "." not in hostname and tailscale_dns:
-                            return f"https://{tailscale_dns}"
                         return endpoint.rstrip("/")
         except Exception as e:
             logger.debug("Fleet endpoint lookup failed for %s: %s", agent_name, e)
-    env_key = f"INNIE_AGENT_{agent_name.upper()}_URL"
-    return os.environ.get(env_key, "").rstrip("/")
+    env_key = f"GROVE_AGENT_{agent_name.upper()}_URL"
+    return (os.environ.get(env_key) or os.environ.get(f"INNIE_AGENT_{agent_name.upper()}_URL", "")).rstrip("/")
 
 
 def _ensure_dirs() -> None:
@@ -294,13 +290,16 @@ async def notify_reply_to(job: Job) -> None:
             if not endpoint:
                 logger.warning(
                     f"Cannot resolve agents://{target_agent} — "
-                    f"set INNIE_FLEET_URL or INNIE_AGENT_{target_agent.upper()}_URL"
+                    f"set GROVE_FLEET_URL or GROVE_AGENT_{target_agent.upper()}_URL"
                 )
                 return
             from_agent = job.agent or paths.active_agent()
             result_text = (job.result or job.error or "")[:40_000]
             new_prompt = f"[Message from {from_agent}]\n\n{result_text}"
-            token = os.environ.get(f"INNIE_AGENT_{target_agent.upper()}_TOKEN", "")
+            token = (
+                os.environ.get(f"GROVE_AGENT_{target_agent.upper()}_TOKEN")
+                or os.environ.get(f"INNIE_AGENT_{target_agent.upper()}_TOKEN", "")
+            )
             headers = {"Content-Type": "application/json"}
             if token:
                 headers["Authorization"] = f"Bearer {token}"
@@ -700,6 +699,54 @@ async def agent_audit():
             "context": identity["context"],
         },
     }
+
+
+@app.patch("/v1/schedule/{job_name}")
+async def patch_schedule_job(job_name: str, request: Request):
+    """Update a single scheduled job — toggle enabled, change cron/interval, etc.
+
+    Only the fields present in the request body are updated; all others are left as-is.
+    Reloads APScheduler after writing so changes take effect immediately without a restart.
+    """
+    from grove.serve.scheduler import setup_scheduler, teardown_scheduler
+    agent = paths.active_agent() or ""
+    cfg_path = paths.agent_dir(agent) / "schedule.yaml"
+
+    if not cfg_path.exists():
+        raise HTTPException(status_code=404, detail="No schedule.yaml for this agent")
+
+    body = await request.json()
+
+    import yaml as _yaml
+    try:
+        data = _yaml.safe_load(cfg_path.read_text()) or {}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read schedule.yaml: {e}")
+
+    jobs = data.get("jobs") or {}
+    if job_name not in jobs:
+        raise HTTPException(status_code=404, detail=f"Job '{job_name}' not found in schedule.yaml")
+
+    # Merge patch — only update provided fields
+    allowed_patch_fields = {"enabled", "cron", "interval_hours", "prompt", "model", "permission_mode"}
+    for field, value in body.items():
+        if field in allowed_patch_fields:
+            jobs[job_name][field] = value
+
+    data["jobs"] = jobs
+    try:
+        cfg_path.write_text(_yaml.dump(data, default_flow_style=False, allow_unicode=True))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to write schedule.yaml: {e}")
+
+    # Reload APScheduler in-process — no restart needed
+    try:
+        teardown_scheduler()
+        setup_scheduler(agent)
+    except Exception as e:
+        logger.warning("Scheduler reload after patch failed: %s", e)
+
+    return {"status": "updated", "job": job_name, "changes": {k: v for k, v in body.items() if k in allowed_patch_fields}}
 
 
 @app.post("/v1/schedule/{job_name}/trigger")

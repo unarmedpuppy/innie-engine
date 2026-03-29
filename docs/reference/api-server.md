@@ -1,9 +1,9 @@
 # API Server Reference
 
-`innie serve` starts a FastAPI server providing the jobs API, OpenAI-compatible chat completions, and memory endpoints.
+`g serve` starts a FastAPI server providing the jobs API, OpenAI-compatible chat completions, memory, schedule, and agent info endpoints.
 
 ```bash
-innie serve --port 8013 --host 0.0.0.0
+g serve --port 8013 --host 0.0.0.0
 ```
 
 Base URL: `http://localhost:8013`
@@ -162,7 +162,7 @@ Search the agent's knowledge base.
 {
   "results": [
     {
-      "file_path": "~/.innie/agents/innie/data/learnings/debugging/2026-02-15-jwt-edge-case.md",
+      "file_path": "~/.grove/agents/oak/data/learnings/debugging/2026-02-15-jwt-edge-case.md",
       "content": "JWT refresh tokens expire silently when...",
       "score": 0.847
     }
@@ -291,8 +291,91 @@ When a job is created with `reply_to`, the server delivers the result asynchrono
   "job_id": "abc123",
   "status": "completed",
   "result": "...",
-  "agent": "innie"
+  "agent": "oak"
 }
+```
+
+---
+
+## Agent Info API
+
+### `GET /v1/agent/skills`
+
+List all skills available to this agent.
+
+**Response:**
+```json
+{
+  "skills": [
+    {"name": "task-hygiene", "description": "Execution quality patterns for all grove agents"},
+    {"name": "completion-sync", "description": "Sync docs and ADRs after completing features"}
+  ]
+}
+```
+
+---
+
+## Schedule API
+
+Schedules are defined in `~/.grove/agents/<name>/schedule.yaml` and managed by APScheduler running in-process inside `g serve`. No system cron is involved — schedule changes take effect without restarting the agent process.
+
+### `GET /v1/agent/schedule`
+
+List all scheduled jobs and their current state.
+
+**Response:**
+```json
+{
+  "jobs": [
+    {
+      "name": "morning-brief",
+      "enabled": true,
+      "cron": "0 7 * * 1-5",
+      "action": "run_prompt",
+      "prompt_preview": "Prepare a morning briefing...",
+      "deliver_to": {"channel": "mattermost://channel-id"},
+      "next_run": "2026-03-30T12:00:00Z"
+    }
+  ]
+}
+```
+
+### `PATCH /v1/schedule/{job_name}`
+
+Update a scheduled job's configuration. Writes to `schedule.yaml` and reloads APScheduler in-process — no agent restart needed.
+
+**Request (allowed fields):**
+```json
+{
+  "enabled": false,
+  "cron": "0 8 * * 1-5",
+  "interval_hours": 4,
+  "prompt": "Updated prompt text",
+  "model": "claude-sonnet-4-6",
+  "permission_mode": "default"
+}
+```
+
+Only fields present in the request body are updated. Omitted fields are unchanged.
+
+**Response:**
+```json
+{
+  "status": "updated",
+  "job": "morning-brief",
+  "changes": {"enabled": false}
+}
+```
+
+**Error:** 404 if `job_name` not found in `schedule.yaml`.
+
+### `POST /v1/schedule/{job_name}/trigger`
+
+Fire a scheduled job immediately, regardless of its schedule or enabled state.
+
+**Response:**
+```json
+{"status": "triggered", "job": "morning-brief"}
 ```
 
 ---
@@ -301,5 +384,5 @@ When a job is created with `reply_to`, the server delivers the result asynchrono
 
 | Variable | Default | Description |
 |---|---|---|
-| `INNIE_SYNC_TIMEOUT` | `1800` | Sync job max seconds |
-| `INNIE_ASYNC_TIMEOUT` | `7200` | Async job max seconds |
+| `GROVE_SYNC_TIMEOUT` | `1800` | Sync job max seconds |
+| `GROVE_ASYNC_TIMEOUT` | `7200` | Async job max seconds |

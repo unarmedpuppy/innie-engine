@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "innie-engine"
-version = "0.14.7"
+name = "grove"
+version = "0.15.0"
 description = "Persistent memory and identity for AI coding assistants"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -57,13 +57,12 @@ docs = [
 ]
 
 [project.scripts]
-innie = "innie.cli:app"
-g = "innie.cli:app"
+g = "grove.cli:app"
 
-[project.entry-points."innie.backends"]
-claude-code = "innie.backends.claude_code:ClaudeCodeBackend"
-opencode = "innie.backends.opencode:OpenCodeBackend"
-cursor = "innie.backends.cursor:CursorBackend"
+[project.entry-points."grove.backends"]
+claude-code = "grove.backends.claude_code:ClaudeCodeBackend"
+opencode = "grove.backends.opencode:OpenCodeBackend"
+cursor = "grove.backends.cursor:CursorBackend"
 
 [project.urls]
 Homepage = "https://github.com/joshuajenquist/innie-engine"
@@ -76,11 +75,11 @@ Issues = "https://github.com/joshuajenquist/innie-engine/issues"
 prerelease = "if-necessary-and-explicit"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/innie"]
+packages = ["src/grove"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"src/innie/hooks" = "innie/hooks"
-"src/innie/templates" = "innie/templates"
+"src/grove/hooks" = "grove/hooks"
+"src/grove/templates" = "grove/templates"
 
 [tool.ruff]
 target-version = "py311"

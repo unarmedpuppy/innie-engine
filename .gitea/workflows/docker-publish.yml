@@ -27,5 +27,5 @@ jobs:
           file: services/serve/Dockerfile
           push: true
           tags: |
-            harbor.server.unarmedpuppy.com/library/innie-engine:latest
-            harbor.server.unarmedpuppy.com/library/innie-engine:${{ github.ref_name }}
+            harbor.server.unarmedpuppy.com/library/grove:latest
+            harbor.server.unarmedpuppy.com/library/grove:${{ github.ref_name }}

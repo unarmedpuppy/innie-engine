@@ -456,7 +456,9 @@ Output only the four sections above, no preamble."""
             summary = _call_openai_compatible(prompt, m, url, api_key=key)
         elif provider == "external":
             import os
-            key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+            key = (get("heartbeat.external_api_key", "")
+                   or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+                   or os.environ.get("ANTHROPIC_API_KEY", ""))
             summary = _call_openai_compatible(
                 prompt,
                 model if model != "auto" else "default",

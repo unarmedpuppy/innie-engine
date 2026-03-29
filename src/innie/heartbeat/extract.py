@@ -300,7 +300,9 @@ def extract(collected: dict, agent: str | None = None) -> HeartbeatExtraction:
                 "  model = \"llama3.1:8b\""
             )
         import os
-        external_api_key = get("heartbeat.external_api_key", "") or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+        external_api_key = (get("heartbeat.external_api_key", "")
+                            or os.environ.get("INNIE_HEARTBEAT_API_KEY", "")
+                            or os.environ.get("ANTHROPIC_API_KEY", ""))
         text = _call_openai_compatible(prompt, model, external_url, api_key=external_api_key)
     else:
         text = _call_anthropic(prompt, model)

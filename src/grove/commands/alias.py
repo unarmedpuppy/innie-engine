@@ -91,7 +91,7 @@ def _build_alias(name: str) -> str:
         parts.append(f'--append-system-prompt "$(cat {cat_cmd})"')
 
     cmd = " ".join(parts)
-    return f'alias {name}=\'INNIE_AGENT="{name}" {cmd}\''
+    return f'alias {name}=\'GROVE_AGENT="{name}" {cmd}\''
 
 
 def add(name: str = typer.Argument(..., help="Agent name to create alias for")):

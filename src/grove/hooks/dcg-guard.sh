@@ -14,7 +14,7 @@ if [ "$TOOL_NAME" != "Bash" ]; then
 fi
 
 # Check if this agent has dcg enabled
-AGENT="${INNIE_AGENT:-}"
+AGENT="${GROVE_AGENT:-${INNIE_AGENT:-}}"
 if [ -z "$AGENT" ]; then
     echo '{"decision": "approve"}'
     exit 0

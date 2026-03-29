@@ -2,7 +2,7 @@
 
 All paths derive from two env vars:
   GROVE_HOME  — root of all grove data (default: ~/.grove); INNIE_HOME accepted as fallback
-  INNIE_AGENT — active agent name (default: from config.toml)
+  GROVE_AGENT — active agent name (default: from config.toml); INNIE_AGENT accepted as fallback
 """
 
 import os
@@ -35,12 +35,12 @@ def agent_dir(name: str | None = None) -> Path:
 
 
 def active_agent() -> str:
-    if agent := os.environ.get("INNIE_AGENT"):
+    if agent := os.environ.get("GROVE_AGENT") or os.environ.get("INNIE_AGENT"):
         return agent
     from grove.core.config import load_config
 
     cfg = load_config()
-    return cfg.get("defaults", {}).get("agent", "innie")
+    return cfg.get("defaults", {}).get("agent", "oak")
 
 
 # Agent sub-paths

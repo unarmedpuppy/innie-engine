@@ -6,8 +6,8 @@
 set -euo pipefail
 
 GROVE_HOME="${GROVE_HOME:-${INNIE_HOME:-$HOME/.grove}}"
-INNIE_AGENT="${INNIE_AGENT:-innie}"
-AGENT_DIR="$GROVE_HOME/agents/$INNIE_AGENT"
+GROVE_AGENT="${GROVE_AGENT:-${INNIE_AGENT:-oak}}"
+AGENT_DIR="$GROVE_HOME/agents/$GROVE_AGENT"
 TRACE_DIR="$AGENT_DIR/state/trace"
 TODAY=$(date +%Y-%m-%d)
 TRACE_FILE="$TRACE_DIR/$TODAY.jsonl"

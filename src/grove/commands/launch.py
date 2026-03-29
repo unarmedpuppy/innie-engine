@@ -89,7 +89,7 @@ def _build_claude_cmd(agent: str) -> list[str]:
 def _build_env(agent: str, mode: str) -> dict[str, str]:
     """Build the env dict to inject when launching claude."""
     merged = load_agent_env(agent)
-    env: dict[str, str] = {"INNIE_AGENT": agent}
+    env: dict[str, str] = {"GROVE_AGENT": agent}
 
     # Pass through all agent env vars
     env.update(merged)

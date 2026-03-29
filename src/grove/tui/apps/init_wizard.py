@@ -233,7 +233,7 @@ class InitWizardApp(App):
         ctx = f"~/.grove/agents/{agent}/CONTEXT.md"
         return (
             f"alias {agent}="
-            f"'INNIE_AGENT=\"{agent}\" {cmd}"
+            f"'GROVE_AGENT=\"{agent}\" {cmd}"
             f" --append-system-prompt \"$(cat {soul} {ctx} 2>/dev/null)\"'"
         )
 

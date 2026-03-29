@@ -242,7 +242,7 @@ def _step_run_heartbeat(agent: str, skip: bool) -> None:
         cmd,
         capture_output=False,  # let output stream through
         text=True,
-        env={**os.environ, "INNIE_AGENT": agent, "TERM": "dumb"},
+        env={**os.environ, "GROVE_AGENT": agent, "TERM": "dumb"},
     )
     if result.returncode != 0:
         console.print("  [yellow]![/yellow] Heartbeat exited non-zero.")

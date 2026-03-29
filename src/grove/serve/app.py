@@ -603,7 +603,7 @@ async def _run_wake(agent: str) -> None:
     cmd = [str(g_bin), "heartbeat", "run"] if g_bin.exists() else [sys.executable, "-m", "grove.cli", "heartbeat", "run"]
     subprocess.Popen(
         cmd,
-        env={**os.environ, "INNIE_AGENT": agent},
+        env={**os.environ, "GROVE_AGENT": agent},
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

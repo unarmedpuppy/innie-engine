@@ -1,22 +1,16 @@
-"""innie launch — launch an agent in a tmux session (or directly if tmux unavailable).
+"""innie launch — exec claude directly as this agent.
 
-Behavior:
-  - tmux available, not in session → create/attach session named <agent>
-  - tmux available, already in session → create new window named <agent>
-  - tmux unavailable → exec claude directly
+Always replaces the current process with claude (no tmux wrapping).
 
 Modes:
-  default   — route through LLM router (LLM_ROUTER_URL + LLM_ROUTER_API_KEY/LLM_ROUTER_KEY)
-              falls back to localhost:9292 if LLM router not configured
+  default   — route through LLM router via ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY from agent .env
   claude    — use Claude Code native OAuth (clears ANTHROPIC_BASE_URL + ANTHROPIC_API_KEY)
               requires `claude login` on the host machine
 """
 
 import os
 import shlex
-import shutil
 import subprocess
-import sys
 from typing import Optional
 
 import typer
@@ -32,13 +26,12 @@ console = Console()
 # These are warnings, not hard failures — the launch proceeds regardless.
 ENV_SCHEMA: dict[str, list[str]] = {
     "shared": [
-        "INNIE_HEARTBEAT_API_KEY",
         "GITEA_TOKEN",
     ],
     "agent": [
         "MATTERMOST_BOT_TOKEN",
-        "LLM_ROUTER_API_KEY",
-        "LLM_ROUTER_URL",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_BASE_URL",
     ],
     "claude": [],  # no required keys — uses Claude Code native OAuth
 }
@@ -55,18 +48,9 @@ def _validate_env(agent: str, merged: dict[str, str], mode: str) -> list[str]:
         if key not in shared:
             warnings.append(f"[shared] {key} missing from ~/.innie/.env")
 
-    agent_env_path = paths.env_file(agent)
-    if agent_env_path.exists():
-        from innie.core.agent_env import _parse_env_file
-        agent_only = _parse_env_file(agent_env_path)
-    else:
-        agent_only = {}
-
     for key in ENV_SCHEMA["agent"]:
         if key not in merged:
             warnings.append(f"[{agent}] {key} missing from agent or shared .env")
-
-    # claude mode uses native OAuth — no additional keys required
 
     return warnings
 
@@ -117,8 +101,6 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
         env.pop("ANTHROPIC_OAUTH_TOKEN", None)
     else:
         # Default — use ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY from agent .env.
-        # Agents set these to point at the homelab router (lai_ key).
-        # Falls back to local proxy if not configured.
         env["ANTHROPIC_BASE_URL"] = merged.get("ANTHROPIC_BASE_URL", "http://localhost:9292")
         if api_key := merged.get("ANTHROPIC_API_KEY"):
             env["ANTHROPIC_API_KEY"] = api_key
@@ -130,7 +112,7 @@ def _build_env(agent: str, mode: str) -> dict[str, str]:
 
 
 def _exec_direct(cmd: list[str], env: dict[str, str]) -> None:
-    """Replace current process with claude (for the no-tmux path).
+    """Replace current process with claude.
 
     Sets env vars directly in os.environ (safe for multiline values like private keys),
     then execs sh to handle $(...) subshell expansion in --append-system-prompt.
@@ -152,19 +134,6 @@ def _exec_direct(cmd: list[str], env: dict[str, str]) -> None:
     os.execlp("sh", "sh", "-c", " ".join(parts))
 
 
-def _tmux_inner_cmd(agent: str, mode: str) -> str:
-    """Build the shell command tmux will run inside the new window/session.
-
-    Env vars are passed via tmux -e flags, not embedded in the command string,
-    so multiline values (private keys etc.) don't break shell parsing.
-    """
-    parts = [f"innie launch {shlex.quote(agent)}"]
-    if mode != "default":
-        parts.append(f"--mode {shlex.quote(mode)}")
-    # Keep the window alive after claude exits so the user can see output
-    return " ".join(parts) + "; exec $SHELL"
-
-
 def apply_mode_env(agent: str, mode: str) -> None:
     """Inject mode-specific env vars into os.environ in-process.
 
@@ -180,7 +149,7 @@ def launch(
     agent: str = typer.Argument(..., help="Agent name to launch"),
     mode: str = typer.Option("default", "--mode", "-m", help="Launch mode: default | claude"),
 ):
-    """Launch an agent in a tmux session (creates or attaches). Falls back to direct exec if tmux unavailable."""
+    """Launch an agent by exec-ing claude directly (replaces current process)."""
     if not paths.agent_dir(agent).exists():
         console.print(f"[red]Agent not found: {agent}[/red]")
         raise typer.Exit(1)
@@ -198,38 +167,7 @@ def launch(
     env = _build_env(agent, mode)
     cmd = _build_claude_cmd(agent)
 
-    no_tmux = (
-        os.environ.get("INNIE_NO_TMUX")
-        or not shutil.which("tmux")
-        or os.environ.get("TERM", "").startswith("xterm-ghostty")
-    )
-
-    if no_tmux:
-        # Direct exec — replaces this process
-        _exec_direct(cmd, env)
-        return  # unreachable
-
-    in_tmux = bool(os.environ.get("TMUX"))
-    inner = _tmux_inner_cmd(agent, mode)
-
-    if in_tmux:
-        # Already in tmux — open new window
-        # Pass INNIE_NO_TMUX via -e so multiline env vars don't break shell parsing
-        os.execlp("tmux", "tmux", "new-window", "-n", agent, "-e", "INNIE_NO_TMUX=1", inner)
-    else:
-        # Outside tmux — create session if needed, then attach
-        exists = subprocess.run(
-            ["tmux", "has-session", "-t", agent],
-            capture_output=True,
-        ).returncode == 0
-
-        if not exists:
-            subprocess.run(
-                ["tmux", "new-session", "-d", "-s", agent, "-e", "INNIE_NO_TMUX=1", inner],
-                check=True,
-            )
-
-        os.execlp("tmux", "tmux", "attach-session", "-t", agent)
+    _exec_direct(cmd, env)
 
 
 def env_check(
@@ -237,7 +175,6 @@ def env_check(
     mode: str = typer.Option("default", "--mode", "-m", help="Check for mode: default | claude"),
 ):
     """Validate required env vars across shared and agent .env files."""
-    from rich.table import Table
     from innie.core.agent_env import load_shared_env, _parse_env_file
     from innie.core.profile import list_agents
 

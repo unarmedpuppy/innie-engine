@@ -56,3 +56,13 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0044](0044-retrieval-tracking-and-memory-quality.md) | Retrieval Tracking and Memory Quality Dashboard | Accepted | 2026-03-14 |
 | [0045](0045-progressive-disclosure-context-load.md) | Progressive Disclosure and `innie context load` | Accepted | 2026-03-14 |
 | [0046](0046-session-index-and-search.md) | Session Index and Search | Accepted | 2026-03-14 |
+| [0047](0047-auto-compress-context-on-heartbeat.md) | Auto-Compress Context on Heartbeat | Accepted | 2026-03-14 |
+| [0048](0048-recency-decay-in-hybrid-search.md) | Recency Decay in Hybrid Search | Accepted | 2026-03-14 |
+| [0049](0049-memory-consolidate-command.md) | Memory Consolidate Command | Accepted | 2026-03-14 |
+| [0050](0050-userpromptsubmit-hook-proactive-injection.md) | UserPromptSubmit Hook for Proactive Injection | Accepted | 2026-03-14 |
+| [0051](0051-topic-catalog-session-discovery.md) | Topic Catalog and Session Discovery | Accepted | 2026-03-14 |
+| [0052](0052-confidence-weighted-search-scoring.md) | Confidence-Weighted Search Scoring | Accepted | 2026-03-14 |
+| [0053](0053-freshness-lock-context-compression.md) | Freshness Lock for Context Compression | Accepted | 2026-03-14 |
+| [0054](0054-grove-migration-and-rename.md) | Grove Migration — Agent Consolidation, World Directory, and Rename | Accepted | 2026-03-28 |
+| [0055](0055-per-agent-llm-router-keys.md) | Per-Agent LLM Router Keys — Single Credential Per Agent | Accepted | 2026-03-29 |
+| [0056](0056-no-tmux-in-launch.md) | Remove tmux from `g launch` | Accepted | 2026-03-29 |

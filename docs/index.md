@@ -1,8 +1,8 @@
-# innie-engine
+# grove
 
 **Persistent memory and identity for AI coding assistants.**
 
-innie-engine is a self-contained Python library and CLI that gives AI coding assistants (Claude Code, Cursor, OpenCode) a knowledge base that persists across sessions, a consistent identity, and the ability to remember what matters.
+grove is a self-contained Python library and CLI that gives AI coding assistants (Claude Code, Cursor, OpenCode) a knowledge base that persists across sessions, a consistent identity, and the ability to remember what matters.
 
 ---
 
@@ -32,8 +32,8 @@ Every session with an AI coding assistant starts cold. The assistant has no memo
 
 ```bash
 uv tool install git+https://github.com/joshuajenquist/innie-engine.git
-innie init                    # interactive wizard
-innie backend install         # wire hooks into your AI assistant
+g init                        # interactive wizard
+g backend install             # wire hooks into your AI assistant
 ```
 
 Then start your AI assistant. It will automatically receive your SOUL.md and CONTEXT.md at session start.
@@ -43,11 +43,11 @@ Then start your AI assistant. It will automatically receive your SOUL.md and CON
 ## Architecture at a Glance
 
 ```
-~/.innie/
+~/.grove/
 ├── config.toml               ← global config
 ├── user.md                   ← your profile (name, role, preferences)
 └── agents/
-    └── innie/                ← your agent
+    └── oak/                  ← your agent
         ├── SOUL.md           ← permanent identity and principles
         ├── CONTEXT.md        ← working memory (bounded, auto-decays)
         ├── profile.yaml      ← metadata
@@ -70,7 +70,7 @@ Then start your AI assistant. It will automatically receive your SOUL.md and CON
             └── heartbeat-state.json
 ```
 
-Two-layer storage is the central architectural choice: `data/` is permanent and git-trackable; `state/` is ephemeral and rebuildable. If `state/` is lost, `innie index` rebuilds it from `data/`.
+Two-layer storage is the central architectural choice: `data/` is permanent and git-trackable; `state/` is ephemeral and rebuildable. If `state/` is lost, `g index` rebuilds it from `data/`.
 
 ---
 
@@ -79,6 +79,6 @@ Two-layer storage is the central architectural choice: `data/` is permanent and 
 - **[Getting Started](getting-started.md)** — install, configure, first agent
 - **[Architecture](architecture/overview.md)** — how the pieces fit together
 - **[Diagrams](diagrams/data-flow.md)** — data flow, host integration, storage maps
-- **[Reference](reference/cli.md)** — CLI commands, config options, API
+- **[Reference](reference/cli.md)** — CLI commands, config options, API, [env vars](reference/env.md)
 - **[ADRs](adrs/index.md)** — every architectural decision with context and rationale
 - **[Implementation Plan](IMPLEMENTATION_PLAN.md)** — the full design process

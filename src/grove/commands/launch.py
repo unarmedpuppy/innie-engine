@@ -55,14 +55,14 @@ def _validate_env(agent: str, merged: dict[str, str], mode: str) -> list[str]:
     return warnings
 
 
-def _build_claude_cmd(agent: str) -> list[str]:
+def _build_claude_cmd(agent: str, model_override: str | None = None) -> list[str]:
     """Build the claude CLI invocation for this agent (without env vars)."""
     profile = load_profile(agent)
     cc = profile.backend_config or {}
 
     cmd = ["claude"]
 
-    model = cc.get("model")
+    model = model_override or cc.get("model")
     if model:
         cmd += ["--model", model]
 
@@ -148,6 +148,7 @@ def apply_mode_env(agent: str, mode: str) -> None:
 def launch(
     agent: str = typer.Argument(..., help="Agent name to launch"),
     mode: str = typer.Option("default", "--mode", "-m", help="Launch mode: default | claude"),
+    model: Optional[str] = typer.Option(None, "--model", "-M", help="Model override (e.g. homelab/auto, claude-sonnet-4-6)"),
 ):
     """Launch an agent by exec-ing claude directly (replaces current process)."""
     if not paths.agent_dir(agent).exists():
@@ -165,7 +166,7 @@ def launch(
         console.print(f"[yellow]⚠ {w}[/yellow]")
 
     env = _build_env(agent, mode)
-    cmd = _build_claude_cmd(agent)
+    cmd = _build_claude_cmd(agent, model_override=model)
 
     _exec_direct(cmd, env)
 

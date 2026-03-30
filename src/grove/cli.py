@@ -54,6 +54,7 @@ def _register_commands():
         doctor,
         edit,
         env,
+        fleet,
         git_cmd,
         heartbeat,
         inbox,
@@ -227,6 +228,12 @@ def _register_commands():
     project_app.command("save")(project.save)
     project_app.command("list")(project.list_projects)
     app.add_typer(project_app, name="project")
+
+    # Fleet subcommands
+    fleet_app = typer.Typer(help="Manage grove agents across the fleet.")
+    fleet_app.command("status")(fleet.status)
+    fleet_app.command("upgrade")(fleet.upgrade)
+    app.add_typer(fleet_app, name="fleet")
 
     # Sync command — push/pull world directory
     app.command("sync")(sync.sync)

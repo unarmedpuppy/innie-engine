@@ -70,3 +70,5 @@ ADRs are immutable records of intent at a point in time. When a decision is reve
 | [0057](0057-fleet-gateway-retirement.md) | Retire fleet-gateway — dashboard-api as Sole Fleet Coordinator | Accepted | 2026-03-29 |
 | [0058](0058-remove-fleet-module.md) | Remove innie fleet Module from grove | Accepted (pending Phase 1 stability) | 2026-03-29 |
 | [0059](0059-phase3-agent-consolidation.md) | Phase 3 Agent Consolidation — Retire Colin/Jobin, Keep Ralph | Accepted | 2026-03-29 |
+| [0060](0060-schedule-management-api.md) | Schedule Management API | Accepted | 2026-03-29 |
+| [0061](0061-self-managing-distributed-upgrades.md) | Self-Managing Distributed Upgrades | Accepted | 2026-03-29 |

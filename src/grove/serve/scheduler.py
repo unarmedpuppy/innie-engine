@@ -111,12 +111,18 @@ def setup_scheduler(agent: str) -> None:
     _register_expire_stale(ScheduledJob(name="session_cleanup", interval_hours=1.0))
     registered = 1
 
+    # Built-in: upgrade check runs if auto_update is enabled in config
+    from grove.core.config import get as _get_cfg
+    if _get_cfg("heartbeat.auto_update", False):
+        _register_upgrade_check(ScheduledJob(name="upgrade_check", interval_hours=1.0))
+        registered += 1
+
     agent_jobs = _load_schedule(agent)
     for job in agent_jobs:
         if not job.enabled:
             continue
-        if job.action == "expire_stale_sessions":
-            continue  # already registered as built-in
+        if job.action in ("expire_stale_sessions", "check_for_upgrade"):
+            continue  # already registered as built-ins
         _register_job(job)
         registered += 1
 
@@ -397,6 +403,113 @@ async def _expire_sessions_once() -> None:
             _sessions.expire_stale(idle_hours=2.0)
     except Exception as e:
         logger.warning(f"[scheduler] manual expire_stale_sessions failed: {e}")
+
+
+def _register_upgrade_check(job: ScheduledJob) -> None:
+    """Register the built-in upgrade check action."""
+    hours = job.interval_hours or 1.0
+
+    async def _check():
+        try:
+            await _check_and_upgrade()
+        except Exception as e:
+            logger.warning("[upgrade-check] error: %s", e)
+
+    _scheduler.add_job(_check, "interval", id=job.name, hours=hours)
+    logger.info("[scheduler] registered upgrade_check every %sh", hours)
+
+
+def _parse_semver(version_str: str) -> tuple[int, ...]:
+    """Parse a semver string like '0.15.7' or 'v0.15.7' into a comparable tuple."""
+    v = version_str.lstrip("v").split("-")[0]  # strip 'v' prefix and pre-release suffix
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except ValueError:
+        return (0,)
+
+
+def _derive_tags_url() -> str:
+    """Derive the Gitea tags API URL from the grove dist-info direct_url.json."""
+    import json
+    import re
+    import sys
+    from pathlib import Path
+
+    dist_info = next(
+        Path(sys.executable).parent.parent.glob("lib/python*/site-packages/grove*.dist-info"),
+        None,
+    )
+    if not dist_info:
+        return ""
+    direct_url_file = dist_info / "direct_url.json"
+    if not direct_url_file.exists():
+        return ""
+    try:
+        info = json.loads(direct_url_file.read_text())
+        url = info.get("url", "")
+        # Match gitea host in SSH or HTTPS URL
+        # e.g. ssh://git@gitea.server.unarmedpuppy.com:2223/homelab/grove.git
+        #   or https://gitea.server.unarmedpuppy.com/homelab/grove.git
+        m = re.search(r'((?:https?://)?(?:git@)?(gitea\.[^:/]+)(?::\d+)?)[:/]([^/]+/[^/.]+?)(?:\.git)?$', url)
+        if m:
+            host = m.group(2)
+            repo = m.group(3)
+            return f"https://{host}/api/v1/repos/{repo}/tags?limit=20"
+    except Exception:
+        pass
+    return ""
+
+
+async def _check_and_upgrade() -> None:
+    """Check for a newer grove version tag; trigger self-upgrade via local API if behind."""
+    import os
+
+    import httpx
+
+    from grove import __version__
+
+    check_url = os.environ.get("GROVE_UPGRADE_CHECK_URL", "") or _derive_tags_url()
+    if not check_url:
+        logger.debug("[upgrade-check] no tags URL available — skipping")
+        return
+
+    gitea_token = os.environ.get("GITEA_TOKEN", "")
+    headers = {"Authorization": f"token {gitea_token}"} if gitea_token else {}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(check_url, headers=headers, timeout=10.0)
+        if resp.status_code != 200:
+            logger.debug("[upgrade-check] tags API returned %d", resp.status_code)
+            return
+
+        tags = resp.json()
+        versions = []
+        for t in tags:
+            name = t.get("name", "")
+            parsed = _parse_semver(name)
+            if parsed != (0,):
+                versions.append(parsed)
+
+        if not versions:
+            return
+
+        latest = max(versions)
+        current = _parse_semver(__version__)
+
+        if latest <= current:
+            logger.debug("[upgrade-check] up to date (v%s)", __version__)
+            return
+
+        latest_str = ".".join(str(x) for x in latest)
+        logger.info("[upgrade-check] new version v%s available (current v%s) — triggering upgrade", latest_str, __version__)
+
+        port = int(os.environ.get("GROVE_SERVE_PORT") or os.environ.get("INNIE_SERVE_PORT", "8013"))
+        async with httpx.AsyncClient() as client:
+            await client.post(f"http://127.0.0.1:{port}/v1/agent/upgrade", timeout=5.0)
+
+    except Exception as e:
+        logger.debug("[upgrade-check] failed: %s", e)
 
 
 def teardown_scheduler() -> None:

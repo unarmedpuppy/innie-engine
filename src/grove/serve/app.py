@@ -550,27 +550,83 @@ async def agent_info():
 
 
 @app.post("/v1/agent/restart")
-async def restart_agent(background_tasks: BackgroundTasks):
-    """Trigger a graceful self-restart via launchctl kickstart.
+async def restart_agent(
+    background_tasks: BackgroundTasks,
+    _: None = Depends(_require_auth),
+):
+    """Trigger a graceful self-restart. Works on macOS (launchd) and Linux (systemd).
 
-    Returns immediately. The process will die and launchd will restart it.
-    Only works on macOS with a launchd plist named ai.grove.serve.<agent>.
+    Returns immediately. The supervisor restarts the process automatically.
     """
     agent = paths.active_agent()
-    background_tasks.add_task(_trigger_launchd_restart, agent)
-    return {"status": "restarting", "agent": agent, "timestamp": datetime.utcnow().isoformat()}
+    info = _detect_service_info(agent)
+    background_tasks.add_task(_trigger_service_restart, info.get("restart_cmd", ""))
+    return {"status": "restarting", "agent": agent, "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
-async def _trigger_launchd_restart(agent: str) -> None:
+async def _trigger_service_restart(restart_cmd: str) -> None:
+    import shlex
     import subprocess
-    uid = os.getuid()
-    plist_label = f"ai.grove.serve.{agent}"
-    await asyncio.sleep(0.3)  # allow response to flush
+    if not restart_cmd:
+        logger.warning("[restart] No restart command available — cannot self-restart")
+        return
+    await asyncio.sleep(0.3)  # allow HTTP response to flush
     subprocess.Popen(
-        ["launchctl", "kickstart", "-k", f"gui/{uid}/{plist_label}"],
+        shlex.split(restart_cmd),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+
+
+@app.post("/v1/agent/upgrade")
+async def upgrade_agent(
+    background_tasks: BackgroundTasks,
+    _: None = Depends(_require_auth),
+):
+    """Install the latest grove version and restart.
+
+    Derives install and restart commands from dist-info metadata — no manual
+    configuration needed. Returns immediately; upgrade runs in the background.
+    The agent restarts automatically after a successful install.
+    """
+    agent = paths.active_agent()
+    info = _detect_service_info(agent)
+    background_tasks.add_task(_run_upgrade, agent, info)
+    return {"status": "upgrading", "agent": agent, "current_version": __version__, "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+async def _run_upgrade(agent: str, info: dict) -> None:
+    import shlex
+    import subprocess as _sp
+    install_cmd = info.get("install_cmd", "")
+    restart_cmd = info.get("restart_cmd", "")
+    if not install_cmd:
+        logger.warning("[upgrade] No install command available for agent %s — skipping", agent)
+        return
+    try:
+        logger.info("[upgrade] Running: %s", install_cmd)
+        result = _sp.run(
+            shlex.split(install_cmd),
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if result.returncode != 0:
+            logger.error("[upgrade] Install failed (exit %d): %s", result.returncode, result.stderr[:500])
+            return
+        logger.info("[upgrade] Install succeeded — restarting agent %s", agent)
+    except Exception as e:
+        logger.error("[upgrade] Install error: %s", e)
+        return
+    if restart_cmd:
+        await asyncio.sleep(0.5)
+        _sp.Popen(
+            shlex.split(restart_cmd),
+            stdout=_sp.DEVNULL,
+            stderr=_sp.DEVNULL,
+        )
+    else:
+        logger.warning("[upgrade] No restart command — agent %s will not restart automatically", agent)
 
 
 @app.post("/v1/agent/wake")

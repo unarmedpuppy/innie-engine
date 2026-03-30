@@ -177,20 +177,36 @@ def _step_skills_symlink() -> None:
         else:
             _check_result("agent-memory pull", False, result.stderr.strip()[:80])
 
-    claude_skills = Path.home() / ".claude" / "skills"
+    claude_dir = Path.home() / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
 
+    # ~/.claude/skills → ~/.grove/skills/
+    claude_skills = claude_dir / "skills"
     if claude_skills.is_symlink() and claude_skills.resolve() == shared.resolve():
         _check_result(f"~/.claude/skills → {shared}", True)
-        return
+    else:
+        try:
+            if claude_skills.exists() or claude_skills.is_symlink():
+                claude_skills.unlink()
+            claude_skills.symlink_to(shared)
+            _check_result(f"~/.claude/skills → {shared} (created)", True)
+        except Exception as e:
+            _check_result(f"~/.claude/skills symlink", False, str(e)[:80])
 
-    try:
-        claude_skills.parent.mkdir(parents=True, exist_ok=True)
-        if claude_skills.exists() or claude_skills.is_symlink():
-            claude_skills.unlink()
-        claude_skills.symlink_to(shared)
-        _check_result(f"~/.claude/skills → {shared} (created)", True)
-    except Exception as e:
-        _check_result(f"~/.claude/skills symlink", False, str(e)[:80])
+    # ~/.claude/AGENTS.md → ~/.grove/AGENTS.md
+    grove_agents = grove_home / "AGENTS.md"
+    claude_agents = claude_dir / "AGENTS.md"
+    if grove_agents.exists():
+        if claude_agents.is_symlink() and claude_agents.resolve() == grove_agents.resolve():
+            _check_result(f"~/.claude/AGENTS.md → {grove_agents}", True)
+        else:
+            try:
+                if claude_agents.exists() or claude_agents.is_symlink():
+                    claude_agents.unlink()
+                claude_agents.symlink_to(grove_agents)
+                _check_result(f"~/.claude/AGENTS.md → {grove_agents} (created)", True)
+            except Exception as e:
+                _check_result(f"~/.claude/AGENTS.md symlink", False, str(e)[:80])
 
 
 def _step_restart_serve(agent: str, port: int) -> bool:

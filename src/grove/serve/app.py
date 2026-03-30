@@ -603,6 +603,14 @@ async def _run_upgrade(agent: str, info: dict) -> None:
     if not install_cmd:
         logger.warning("[upgrade] No install command available for agent %s — skipping", agent)
         return
+
+    # Sync agent-memory (skills, SOULs, config) before reinstalling grove
+    grove_home = paths.home()
+    if (grove_home / ".git").exists():
+        logger.info("[upgrade] Syncing agent-memory at %s", grove_home)
+        _sp.run(["git", "-C", str(grove_home), "pull", "--rebase", "--autostash"],
+                capture_output=True, text=True, timeout=60)
+
     try:
         logger.info("[upgrade] Running: %s", install_cmd)
         result = _sp.run(

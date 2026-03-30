@@ -159,9 +159,24 @@ def _step_heartbeat_scheduler() -> None:
 
 
 def _step_skills_symlink() -> None:
-    """Ensure ~/.claude/skills → ~/.grove/skills/ symlink is in place."""
-    console.print("\n[bold]3. Skills Symlink[/bold]")
+    """Sync agent-memory, then ensure ~/.claude/skills → ~/.grove/skills/ symlink is in place."""
+    import subprocess as _sp
+    console.print("\n[bold]3. Skills Sync + Symlink[/bold]")
     shared = paths.shared_skills_dir()
+    grove_home = paths.home()
+
+    # Pull latest agent-memory (skills, SOULs, config) if it's a git repo
+    if (grove_home / ".git").exists():
+        result = _sp.run(
+            ["git", "-C", str(grove_home), "pull", "--rebase", "--autostash"],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            summary = result.stdout.strip().splitlines()[-1] if result.stdout.strip() else "ok"
+            _check_result(f"agent-memory pull ({summary})", True)
+        else:
+            _check_result("agent-memory pull", False, result.stderr.strip()[:80])
+
     claude_skills = Path.home() / ".claude" / "skills"
 
     if claude_skills.is_symlink() and claude_skills.resolve() == shared.resolve():

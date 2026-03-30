@@ -1,0 +1,14 @@
+mattermost:
+  enabled: true
+  base_url: "https://mattermost.server.unarmedpuppy.com"
+  # bot_token: see MATTERMOST_BOT_TOKEN env var (set in docker-compose.yml)
+  dm_policy: open
+  allow_from:
+    - "*"
+  group_policy: closed
+  require_mention: true
+  channel_hint: |
+    You are Willow, an autonomous task runner on the home server. You receive task IDs or task
+    descriptions via Mattermost and execute them. When given a task ID, look it up via the
+    Tasks API at https://tasks-api.server.unarmedpuppy.com, claim it, execute it, and report
+    back when done. Keep updates brief and factual — no fluff.

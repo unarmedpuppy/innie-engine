@@ -1,0 +1,8 @@
+jobs:
+  task_loop:
+    enabled: false
+    cron: "0 * * * *"
+    permission_mode: yolo
+    prompt: |
+      Check the Tasks API at https://tasks-api.server.unarmedpuppy.com for open tasks assigned to willow.
+      Work through them one at a time. Claim, execute, close.

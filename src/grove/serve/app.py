@@ -322,6 +322,46 @@ async def notify_reply_to(job: Job) -> None:
         logger.warning(f"reply_to failed for job {job.id}: {e}")
 
 
+# ── Workspace sync ───────────────────────────────────────────────────────────
+
+
+async def _sync_workspace() -> None:
+    """Pull latest on all git repos in ~/workspace/ before job execution."""
+    workspace = Path.home() / "workspace"
+    if not workspace.is_dir():
+        return
+
+    import subprocess
+
+    for repo_dir in sorted(workspace.iterdir()):
+        git_dir = repo_dir / ".git"
+        if not git_dir.is_dir():
+            continue
+        try:
+            proc = await asyncio.to_thread(
+                subprocess.run,
+                ["git", "pull", "--ff-only", "--quiet"],
+                cwd=repo_dir,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if proc.returncode == 0:
+                logger.debug("[workspace-sync] pulled %s", repo_dir.name)
+            else:
+                # ff-only failed, try fetch instead
+                await asyncio.to_thread(
+                    subprocess.run,
+                    ["git", "fetch", "--quiet"],
+                    cwd=repo_dir,
+                    capture_output=True,
+                    timeout=30,
+                )
+                logger.debug("[workspace-sync] fetched %s (ff-only failed)", repo_dir.name)
+        except Exception as e:
+            logger.debug("[workspace-sync] %s failed: %s", repo_dir.name, e)
+
+
 # ── Job execution ────────────────────────────────────────────────────────────
 
 
@@ -334,6 +374,12 @@ async def execute_job(job_id: str) -> None:
     job.status = JobStatus.RUNNING
     job.started_at = datetime.utcnow().isoformat()
     jobs.update(job)
+
+    # Sync workspace repos before starting work
+    try:
+        await _sync_workspace()
+    except Exception as e:
+        logger.debug("Workspace sync failed for job %s: %s", job_id, e)
 
     working_dir = _resolve_working_dir(job.working_directory)
     context = _resolve_context(job.agent, job.include_memory)

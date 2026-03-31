@@ -18,6 +18,7 @@ def _default_model() -> str:
 logger = logging.getLogger(__name__)
 
 _scheduler = None  # APScheduler instance — lazy import
+_background_tasks: set = set()  # Keep references to prevent GC of fire-and-forget tasks
 
 
 @dataclass
@@ -391,9 +392,11 @@ async def trigger_job(job_name: str, agent: str) -> bool:
     if not job:
         return False
     if job.action == "expire_stale_sessions":
-        asyncio.create_task(_expire_sessions_once())
+        task = asyncio.create_task(_expire_sessions_once())
     else:
-        asyncio.create_task(_run_scheduled_job(job))
+        task = asyncio.create_task(_run_scheduled_job(job))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     return True
 
 

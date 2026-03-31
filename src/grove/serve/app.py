@@ -544,6 +544,19 @@ async def health():
     except Exception:
         host = None
 
+    # Collect profile data (role, model) for the dashboard
+    profile_data: dict = {}
+    try:
+        from grove.core.profile import load_profile
+        profile = load_profile(agent)
+        profile_data = {
+            "role": profile.role,
+            "model": (profile.backend_config or {}).get("model"),
+            "permissions": profile.permissions,
+        }
+    except Exception:
+        pass
+
     return {
         "status": "healthy",
         "agent": agent,
@@ -555,6 +568,7 @@ async def health():
         "heartbeat": heartbeat,
         "model_provider": provider,
         "service": service,
+        "profile": profile_data,
         "timestamp": datetime.utcnow().isoformat(),
     }
 

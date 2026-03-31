@@ -1,5 +1,6 @@
 """grove serve — start the FastAPI server."""
 
+import logging
 import os
 
 import typer
@@ -18,6 +19,9 @@ def serve(
         raise typer.Exit(1)
 
     os.environ["GROVE_SERVE_PORT"] = str(port)
+
+    # Configure root logger so grove.* module logs are visible in the serve log
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 
     typer.echo(f"Starting grove server on {host}:{port}")
     uvicorn.run(

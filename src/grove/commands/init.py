@@ -133,7 +133,7 @@ def init(
 
     # ── Step 6: Update source ────────────────────────────────────────────
 
-    _GITHUB_URL = "git+https://github.com/joshuajenquist/innie-engine.git"
+    _GITHUB_URL = "git+https://github.com/joshuajenquist/grove.git"
 
     if yes or local:
         update_source = _GITHUB_URL

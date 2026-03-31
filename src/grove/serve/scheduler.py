@@ -1,5 +1,6 @@
 """APScheduler — morning briefing, session cleanup, Ralph loop replacement."""
 
+import asyncio
 import logging
 import os
 from dataclasses import dataclass, field

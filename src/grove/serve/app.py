@@ -24,6 +24,7 @@ from grove import __version__
 from grove.core import paths
 from grove.core.context import build_session_context
 from grove.serve.claude import collect_stream, graceful_kill, stream_claude_events
+from grove.serve.proxy import router as _proxy_router
 from grove.serve.job_store import JobStore
 from grove.serve.models import (
     ChatCompletionRequest,
@@ -229,6 +230,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Anthropic → Ollama proxy — active only when GROVE_OLLAMA_MODEL is set
+app.include_router(_proxy_router, prefix="/v1")
 
 # Persistent job store — initialised in lifespan so agent name is resolved
 jobs: JobStore | None = None

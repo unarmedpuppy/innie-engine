@@ -68,15 +68,14 @@ async def _probe_url(url: str) -> bool:
         return False
 
 
-async def _choose_base_url() -> str:
-    """Return the inference base URL to use for this job.
+async def _choose_base_url() -> tuple[str, str | None]:
+    """Return (inference_base_url, model_override) for this job.
 
-    If ANTHROPIC_FALLBACK_BASE_URL is not set, returns ANTHROPIC_BASE_URL
-    unchanged (no circuit breaker logic applied).
+    model_override is non-None when on fallback and GROVE_FALLBACK_MODEL is set,
+    allowing the caller to swap the model to one the fallback endpoint understands.
 
-    If the fallback is configured, probes the primary on a cached interval.
-    Returns the fallback URL when primary is unreachable, primary otherwise.
-    Logs transitions so operators can see when switching occurs.
+    If ANTHROPIC_FALLBACK_BASE_URL is not set, returns (ANTHROPIC_BASE_URL, None)
+    with no circuit breaker logic applied.
     """
     global _primary_healthy, _last_probe_time, _last_probe_wall
 
@@ -84,26 +83,84 @@ async def _choose_base_url() -> str:
     fallback = os.environ.get("ANTHROPIC_FALLBACK_BASE_URL", "")
 
     if not fallback:
-        return primary  # no fallback configured — pass through unchanged
+        return primary, None
 
     now = time.monotonic()
     if (now - _last_probe_time) >= _probe_interval():
         async with _get_probe_lock():
-            # Re-check after acquiring lock — another coroutine may have probed already
             if (time.monotonic() - _last_probe_time) >= _probe_interval():
                 _last_probe_time = time.monotonic()
                 _last_probe_wall = time.time()
                 was_healthy = _primary_healthy
                 _primary_healthy = await _probe_url(primary)
                 if _primary_healthy and not was_healthy:
-                    logger.info("[claude] primary inference URL recovered — switching back to primary: %s", primary)
+                    logger.info(
+                        "[claude] primary inference URL recovered — switching back: %s", primary
+                    )
+                    asyncio.create_task(_notify_fallback_transition(on_fallback=False))
                 elif not _primary_healthy and was_healthy:
-                    logger.warning("[claude] primary inference URL unreachable — switching to fallback: %s", fallback)
+                    logger.warning(
+                        "[claude] primary inference URL unreachable — switching to fallback: %s",
+                        fallback,
+                    )
+                    asyncio.create_task(_notify_fallback_transition(on_fallback=True))
 
     if _primary_healthy:
-        return primary
+        return primary, None
     else:
-        return fallback
+        return fallback, (os.environ.get("GROVE_FALLBACK_MODEL") or None)
+
+
+async def _notify_fallback_transition(on_fallback: bool) -> None:
+    """Fire-and-forget Mattermost DM to Josh when circuit breaker trips or recovers."""
+    channel = os.environ.get("GROVE_FALLBACK_NOTIFY_MM_CHANNEL", "")
+    token = os.environ.get("MATTERMOST_BOT_TOKEN", "")
+    if not channel or not token:
+        return
+
+    mm_url = _mm_base_url()
+    if not mm_url:
+        return
+
+    agent = os.environ.get("GROVE_AGENT", "agent")
+    fallback_model = os.environ.get("GROVE_FALLBACK_MODEL", "local")
+    primary = os.environ.get("ANTHROPIC_BASE_URL", "?")
+
+    if on_fallback:
+        msg = (
+            f":warning: **{agent}** switched to local ollama fallback "
+            f"(`{fallback_model}`). Primary unreachable: `{primary}`"
+        )
+    else:
+        msg = f":white_check_mark: **{agent}** restored to primary inference: `{primary}`"
+
+    try:
+        import httpx as _httpx
+        async with _httpx.AsyncClient(timeout=5.0) as client:
+            await client.post(
+                f"{mm_url.rstrip('/')}/api/v4/posts",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"channel_id": channel, "message": msg},
+            )
+    except Exception as e:
+        logger.warning("[claude] fallback MM notification failed: %s", e)
+
+
+def _mm_base_url() -> str:
+    """Get Mattermost base URL from env or channels.yaml."""
+    url = os.environ.get("MATTERMOST_BASE_URL", "")
+    if url:
+        return url
+    try:
+        import yaml
+        from grove.core import paths
+        channels_file = paths.agent_dir() / "channels.yaml"
+        if channels_file.exists():
+            data = yaml.safe_load(channels_file.read_text()) or {}
+            return (data.get("mattermost") or {}).get("base_url", "")
+    except Exception:
+        pass
+    return ""
 
 
 @dataclass
@@ -161,7 +218,15 @@ async def stream_claude_events(
     cmd.append(prompt)
 
     env = os.environ.copy()
-    anthropic_base = await _choose_base_url()
+    anthropic_base, model_override = await _choose_base_url()
+    if model_override:
+        model = model_override
+        # Rebuild cmd with updated model — cmd[...--model was already appended above,
+        # but we need to replace it. Easier to rebuild the flag portion.
+        for i, arg in enumerate(cmd):
+            if arg == "--model" and i + 1 < len(cmd):
+                cmd[i + 1] = model
+                break
     if anthropic_base:
         env["ANTHROPIC_BASE_URL"] = anthropic_base
     elif "ANTHROPIC_BASE_URL" in env:

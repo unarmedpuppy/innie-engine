@@ -214,11 +214,12 @@ def _register_commands():
     app.add_typer(trace_app, name="trace")
 
     # Ollama subcommands
-    ollama_app = typer.Typer(help="Manage local Ollama models for heartbeat extraction.")
+    ollama_app = typer.Typer(help="Manage local Ollama — install, configure fallback inference.")
     ollama_app.command("status")(ollama.status)
     ollama_app.command("list")(ollama.list_models)
     ollama_app.command("pull")(ollama.pull)
     ollama_app.command("use")(ollama.use)
+    ollama_app.command("setup")(ollama.setup)
     app.add_typer(ollama_app, name="ollama")
 
     # Project walnut subcommands

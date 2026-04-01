@@ -649,6 +649,44 @@ def _install_cron():
     subprocess.run(["crontab", "-"], input=new_crontab, text=True, check=True)
 
 
+def _forward_trace_event(event_type: str, session_id: str, **kwargs) -> None:
+    """Fire-and-forget: forward a trace event to the dashboard-api traces endpoint.
+
+    Reads GROVE_TRACES_URL from env. Silently no-ops if the URL is not set or the
+    request fails — never blocks or raises.
+    """
+    traces_url = os.environ.get("GROVE_TRACES_URL", "").rstrip("/")
+    if not traces_url:
+        return
+
+    import json as _json
+    import urllib.request
+
+    agent = paths.active_agent() or "unknown"
+    machine_id = os.uname().nodename if hasattr(os, "uname") else os.environ.get("HOSTNAME", "unknown")
+
+    payload = {"type": event_type, "session_id": session_id or "unknown", **kwargs}
+
+    def _post() -> None:
+        try:
+            data = _json.dumps(payload).encode()
+            req = urllib.request.Request(
+                f"{traces_url}/traces/events",
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Machine-ID": machine_id,
+                    "X-Agent-Label": agent,
+                },
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=3)
+        except Exception:
+            pass  # best-effort only
+
+    threading.Thread(target=_post, daemon=True).start()
+
+
 def handle(event: str):
     """Internal: called by bash shims to process hook events."""
     if event == "session-init":
@@ -679,6 +717,9 @@ def handle(event: str):
             conn.close()
         except Exception:
             pass  # Never block the backend
+
+        # Forward to dashboard-api (best-effort)
+        _forward_trace_event("SessionStart", session_id or "", model=model, cwd=cwd)
 
         # Background index refresh
         def _run_index():
@@ -829,6 +870,9 @@ def handle(event: str):
         except Exception:
             pass  # Never block the backend
 
+        # Forward to dashboard-api (best-effort)
+        _forward_trace_event("SessionEnd", session_id)
+
         # Update CONTEXT.md timestamp
         try:
             ctx_file = paths.context_file()
@@ -854,6 +898,7 @@ def handle(event: str):
             data = _json.loads(tool_input) if tool_input else {}
             tool_name = os.environ.get("TOOL_NAME", data.get("tool_name", "unknown"))
             session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
+            tool_output = os.environ.get("TOOL_OUTPUT", "")
 
             from grove.core.trace import open_trace_db, record_span
 
@@ -863,12 +908,27 @@ def handle(event: str):
                 session_id=session_id,
                 tool_name=tool_name,
                 input_json=tool_input[:2000] if tool_input else None,
-                output_summary=os.environ.get("TOOL_OUTPUT", "")[:500] or None,
+                output_summary=tool_output[:500] or None,
                 status="ok",
             )
             conn.close()
         except Exception:
             pass  # Never block the backend
+
+        # Forward to dashboard-api (best-effort)
+        try:
+            import json as _json
+            tool_input_str = os.environ.get("TOOL_INPUT", "{}")
+            parsed_input = _json.loads(tool_input_str) if tool_input_str else {}
+            _forward_trace_event(
+                "PostToolUse",
+                os.environ.get("CLAUDE_SESSION_ID", "unknown"),
+                tool_name=os.environ.get("TOOL_NAME", "unknown"),
+                tool_input=parsed_input,
+                tool_response=os.environ.get("TOOL_OUTPUT", "")[:500] or None,
+            )
+        except Exception:
+            pass
 
     else:
         console.print(f"[yellow]Unknown event: {event}[/yellow]", err=True)

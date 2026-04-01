@@ -316,11 +316,14 @@ def setup(
         console.print(f"\n[green]✓[/green] {chosen} ready")
 
     # ── 5. Write env vars ──────────────────────────────────────────────────────
-    set_env_var("GROVE_OLLAMA_MODEL", chosen, target)
-    console.print(f"[green]✓[/green] GROVE_OLLAMA_MODEL={chosen} → {paths.env_file(target)}")
+    # GROVE_OLLAMA_MODEL and GROVE_FALLBACK_MODEL go in the SHARED env — ollama is a
+    # machine-level install shared by all agents. Per-agent vars (URL, notify channel)
+    # go in the agent-specific env so each agent can have its own serve port.
+    set_env_var("GROVE_OLLAMA_MODEL", chosen, shared=True)
+    console.print(f"[green]✓[/green] GROVE_OLLAMA_MODEL={chosen} → {paths.shared_env_file()} (shared)")
 
-    set_env_var("GROVE_FALLBACK_MODEL", chosen, target)
-    console.print(f"[green]✓[/green] GROVE_FALLBACK_MODEL={chosen}")
+    set_env_var("GROVE_FALLBACK_MODEL", chosen, shared=True)
+    console.print(f"[green]✓[/green] GROVE_FALLBACK_MODEL={chosen} (shared)")
 
     if serve_port:
         fallback_url = f"http://127.0.0.1:{serve_port}"

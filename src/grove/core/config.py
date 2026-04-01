@@ -119,4 +119,8 @@ prompt_submit_limit = 3          # max results to inject per user prompt
 [update]
 source = ""                 # git URL or local path — set by `g init`
 installer = "uv"            # uv | pip
+
+[serve]
+fallback_base_url = ""      # ANTHROPIC_FALLBACK_BASE_URL — fallback when primary is unreachable
+fallback_check_interval = 30  # seconds between primary health probes (also GROVE_FALLBACK_CHECK_INTERVAL)
 """

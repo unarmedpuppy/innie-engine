@@ -5,11 +5,105 @@ import json
 import logging
 import os
 import signal
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 logger = logging.getLogger(__name__)
+
+# ── Inference URL circuit breaker ─────────────────────────────────────────────
+#
+# When ANTHROPIC_FALLBACK_BASE_URL is set, grove probes the primary
+# ANTHROPIC_BASE_URL before each job and routes to the fallback if it's
+# unhealthy. The probe result is cached for GROVE_FALLBACK_CHECK_INTERVAL
+# seconds (default 30) to avoid adding latency to every job.
+#
+# State is module-level (one circuit breaker per process).
+
+_primary_healthy: bool = True
+_last_probe_time: float = 0.0      # monotonic, for interval math
+_last_probe_wall: float = 0.0      # wall clock, for diagnostics
+_probe_lock: Optional[asyncio.Lock] = None
+
+
+def _get_probe_lock() -> asyncio.Lock:
+    global _probe_lock
+    if _probe_lock is None:
+        _probe_lock = asyncio.Lock()
+    return _probe_lock
+
+
+def _probe_interval() -> float:
+    # Env var overrides config; config overrides default
+    env_val = os.environ.get("GROVE_FALLBACK_CHECK_INTERVAL")
+    if env_val:
+        try:
+            return float(env_val)
+        except ValueError:
+            pass
+    try:
+        from grove.core.config import get as _cfg_get
+        return float(_cfg_get("serve.fallback_check_interval", 30))
+    except Exception:
+        return 30.0
+
+
+async def _probe_url(url: str) -> bool:
+    """Check reachability of an Anthropic-compatible base URL.
+
+    Strips the /v1 path suffix and hits /health. Returns True if the server
+    responds with any non-5xx status, False on connection error or timeout.
+    """
+    import httpx
+
+    base = url.rstrip("/")
+    if base.endswith("/v1"):
+        base = base[:-3]
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            r = await client.get(f"{base}/health", follow_redirects=False)
+            return r.status_code < 500
+    except Exception:
+        return False
+
+
+async def _choose_base_url() -> str:
+    """Return the inference base URL to use for this job.
+
+    If ANTHROPIC_FALLBACK_BASE_URL is not set, returns ANTHROPIC_BASE_URL
+    unchanged (no circuit breaker logic applied).
+
+    If the fallback is configured, probes the primary on a cached interval.
+    Returns the fallback URL when primary is unreachable, primary otherwise.
+    Logs transitions so operators can see when switching occurs.
+    """
+    global _primary_healthy, _last_probe_time, _last_probe_wall
+
+    primary = os.environ.get("ANTHROPIC_BASE_URL", "")
+    fallback = os.environ.get("ANTHROPIC_FALLBACK_BASE_URL", "")
+
+    if not fallback:
+        return primary  # no fallback configured — pass through unchanged
+
+    now = time.monotonic()
+    if (now - _last_probe_time) >= _probe_interval():
+        async with _get_probe_lock():
+            # Re-check after acquiring lock — another coroutine may have probed already
+            if (time.monotonic() - _last_probe_time) >= _probe_interval():
+                _last_probe_time = time.monotonic()
+                _last_probe_wall = time.time()
+                was_healthy = _primary_healthy
+                _primary_healthy = await _probe_url(primary)
+                if _primary_healthy and not was_healthy:
+                    logger.info("[claude] primary inference URL recovered — switching back to primary: %s", primary)
+                elif not _primary_healthy and was_healthy:
+                    logger.warning("[claude] primary inference URL unreachable — switching to fallback: %s", fallback)
+
+    if _primary_healthy:
+        return primary
+    else:
+        return fallback
 
 
 @dataclass
@@ -67,9 +161,11 @@ async def stream_claude_events(
     cmd.append(prompt)
 
     env = os.environ.copy()
-    anthropic_base = os.environ.get("ANTHROPIC_BASE_URL")
+    anthropic_base = await _choose_base_url()
     if anthropic_base:
         env["ANTHROPIC_BASE_URL"] = anthropic_base
+    elif "ANTHROPIC_BASE_URL" in env:
+        del env["ANTHROPIC_BASE_URL"]
     # Remove nested-session guard so Claude Code can run as a subprocess
     env.pop("CLAUDECODE", None)
 

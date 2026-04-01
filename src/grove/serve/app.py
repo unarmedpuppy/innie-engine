@@ -143,6 +143,31 @@ def _ensure_skills_symlink() -> None:
         logger.warning(f"Could not link ~/.claude/skills: {e}")
 
 
+def _apply_serve_config() -> None:
+    """Populate inference fallback env vars from config.toml [serve] section.
+
+    Only sets vars that aren't already present in the environment — .env and
+    launchd/systemd values always win over config.toml.
+    """
+    from grove.core.config import get as _cfg_get
+
+    fallback_url = _cfg_get("serve.fallback_base_url", "")
+    if fallback_url:
+        os.environ.setdefault("ANTHROPIC_FALLBACK_BASE_URL", fallback_url)
+
+    check_interval = _cfg_get("serve.fallback_check_interval", None)
+    if check_interval is not None:
+        os.environ.setdefault("GROVE_FALLBACK_CHECK_INTERVAL", str(check_interval))
+
+    if os.environ.get("ANTHROPIC_FALLBACK_BASE_URL"):
+        logger.info(
+            "[serve] inference fallback configured: primary=%s fallback=%s interval=%ss",
+            os.environ.get("ANTHROPIC_BASE_URL", "(none)"),
+            os.environ.get("ANTHROPIC_FALLBACK_BASE_URL"),
+            os.environ.get("GROVE_FALLBACK_CHECK_INTERVAL", "30"),
+        )
+
+
 def _ensure_git_identity() -> None:
     """Apply git identity from profile.yaml if configured."""
     import subprocess
@@ -178,6 +203,7 @@ async def lifespan(app: FastAPI):
     from grove.channels.loader import start_channels, stop_channels
     from grove.serve.scheduler import setup_scheduler, teardown_scheduler
     inject_into_os_env(paths.active_agent())
+    _apply_serve_config()
     await _register_with_fleet()
     await start_channels(app)
     agent = paths.active_agent()
@@ -607,6 +633,34 @@ async def agent_info():
         "uptime_seconds": uptime_s,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.get("/v1/agent/inference")
+async def agent_inference():
+    """Inference routing status — which URL is active and fallback health."""
+    from grove.serve.claude import _primary_healthy, _last_probe_wall, _probe_url
+
+    primary = os.environ.get("ANTHROPIC_BASE_URL", "")
+    fallback = os.environ.get("ANTHROPIC_FALLBACK_BASE_URL", "")
+    interval = os.environ.get("GROVE_FALLBACK_CHECK_INTERVAL", "30")
+
+    result: dict = {
+        "primary_url": primary,
+        "fallback_url": fallback or None,
+        "fallback_configured": bool(fallback),
+        "active_url": primary if _primary_healthy else fallback,
+        "primary_healthy": _primary_healthy,
+        "last_probe_ago_seconds": round(time.time() - _last_probe_wall) if _last_probe_wall else None,
+        "check_interval_seconds": int(interval),
+    }
+
+    # Live probe on demand (non-cached) so the caller can force a fresh check
+    if primary:
+        result["primary_reachable_now"] = await _probe_url(primary)
+    if fallback:
+        result["fallback_reachable_now"] = await _probe_url(fallback)
+
+    return result
 
 
 @app.post("/v1/agent/restart")

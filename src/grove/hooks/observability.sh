@@ -14,8 +14,18 @@ TRACE_FILE="$TRACE_DIR/$TODAY.jsonl"
 
 mkdir -p "$TRACE_DIR"
 
-# Read tool info from environment (Claude Code sets TOOL_NAME, TOOL_INPUT)
-TOOL="${TOOL_NAME:-unknown}"
+# Claude Code sends hook data via stdin as JSON.
+# Read it once and extract fields — env vars may be empty for newer CLI versions.
+HOOK_JSON=$(cat)
+_extract() { echo "$HOOK_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('$1',''))" 2>/dev/null || true; }
+
+_SID=$(_extract session_id)
+_TOOL=$(_extract tool_name)
+_TOOL_INPUT=$(echo "$HOOK_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); v=d.get('tool_input',{}); print(json.dumps(v) if isinstance(v,dict) else str(v))" 2>/dev/null || true)
+_TOOL_OUTPUT=$(_extract tool_response)
+
+TOOL="${_TOOL:-${TOOL_NAME:-unknown}}"
+HOOK_SESSION_ID="${_SID:-${CLAUDE_SESSION_ID:-}}"
 TS=$(date +%s)
 
 # Fast path: JSONL append (always, <1ms)
@@ -23,8 +33,8 @@ echo "{\"ts\":$TS,\"tool\":\"$TOOL\"}" >> "$TRACE_FILE"
 
 # Background: structured SQLite trace (non-blocking)
 if command -v g &>/dev/null; then
-    TOOL_NAME="$TOOL" CLAUDE_SESSION_ID="${CLAUDE_SESSION_ID:-}" \
-        TOOL_INPUT="${TOOL_INPUT:-}" TOOL_OUTPUT="" \
+    TOOL_NAME="$TOOL" CLAUDE_SESSION_ID="$HOOK_SESSION_ID" \
+        TOOL_INPUT="${_TOOL_INPUT:-${TOOL_INPUT:-}}" TOOL_OUTPUT="${_TOOL_OUTPUT:-}" \
         g handle tool-use &>/dev/null &
 fi
 
@@ -57,7 +67,7 @@ fi
 
 if [ "$TOOL" = "Bash" ]; then
     # Check if this bash call was a grove command (reset counter if so)
-    if echo "${TOOL_INPUT:-}" | grep -q '"g '; then
+    if echo "${_TOOL_INPUT:-${TOOL_INPUT:-}}" | grep -q '"g '; then
         BASH_COUNT=0
     else
         BASH_COUNT=$((BASH_COUNT + 1))

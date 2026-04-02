@@ -137,8 +137,9 @@ def _call_anthropic(prompt: str, model: str) -> str:
             "  model = \"your-model-name\""
         )
 
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com").rstrip("/")
     resp = httpx.post(
-        "https://api.anthropic.com/v1/messages",
+        f"{base_url}/v1/messages",
         headers={
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",

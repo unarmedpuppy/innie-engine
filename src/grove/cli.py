@@ -64,12 +64,14 @@ def _register_commands():
         migrate,
         ollama,
         project,
+        roots,
         search,
         secrets,
         serve,
         session,
         skills,
         sync,
+        task,
         trace,
         update,
     )
@@ -238,6 +240,27 @@ def _register_commands():
 
     # Sync command — push/pull world directory
     app.command("sync")(sync.sync)
+
+    # Task subcommands — Tasks API native client
+    task_app = typer.Typer(help="Tasks API — create, list, update, and close tasks.")
+    task_app.command("new")(task.new)
+    task_app.command("list")(task.list_tasks)
+    task_app.command("get")(task.get_task)
+    task_app.command("update")(task.update_task)
+    task_app.command("close")(task.close_task)
+    task_app.command("note")(task.note)
+    task_app.command("tag")(task.tag)
+    task_app.command("untag")(task.untag)
+    app.add_typer(task_app, name="task")
+
+    # Roots subcommands — per-task worktrees and agent sessions
+    roots_app = typer.Typer(help="Roots — isolated git worktrees + agent sessions per task.")
+    roots_app.command("new")(roots.new)
+    roots_app.command("open")(roots.open_workstream)
+    roots_app.command("list")(roots.list_workstreams)
+    roots_app.command("rm")(roots.rm)
+    roots_app.command("status")(roots.status)
+    app.add_typer(roots_app, name="roots")
 
 
 _register_commands()

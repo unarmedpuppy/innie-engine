@@ -537,3 +537,372 @@ def _status_single(task_id: str) -> None:
             console.print(f"    {k}: {v}")
 
     console.print()
+
+
+# ── Gitea client ──────────────────────────────────────────────────────────────
+
+
+_GITEA_URL = "https://gitea.server.unarmedpuppy.com"
+
+
+class GiteaClient:
+    """Thin Gitea API client. Token from GITEA_TOKEN env."""
+
+    def __init__(self) -> None:
+        self.base_url = (os.environ.get("GITEA_URL") or _GITEA_URL).rstrip("/")
+        self.token = os.environ.get("GITEA_TOKEN", "")
+        if not self.token:
+            raise RuntimeError("GITEA_TOKEN not set — add it to ~/.grove/.env")
+
+    def _headers(self) -> dict:
+        return {"Authorization": f"token {self.token}", "Content-Type": "application/json"}
+
+    def _get(self, path: str, **params) -> dict | list:
+        import httpx
+        r = httpx.get(f"{self.base_url}/api/v1{path}", headers=self._headers(),
+                      params={k: v for k, v in params.items() if v is not None}, timeout=10.0)
+        r.raise_for_status()
+        return r.json()
+
+    def _post(self, path: str, data: dict) -> dict:
+        import httpx
+        r = httpx.post(f"{self.base_url}/api/v1{path}", headers=self._headers(),
+                       json=data, timeout=10.0)
+        r.raise_for_status()
+        return r.json()
+
+    def get_repo(self, owner: str, repo: str) -> dict:
+        return self._get(f"/repos/{owner}/{repo}")
+
+    def create_pr(self, owner: str, repo: str, title: str, body: str,
+                  head: str, base: str) -> dict:
+        return self._post(f"/repos/{owner}/{repo}/pulls", {
+            "title": title, "body": body, "head": head, "base": base,
+        })
+
+    def get_pr_for_branch(self, owner: str, repo: str, branch: str) -> dict | None:
+        prs = self._get(f"/repos/{owner}/{repo}/pulls", state="open", head=branch)
+        if isinstance(prs, list) and prs:
+            return prs[0]
+        return None
+
+    def get_ci_statuses(self, owner: str, repo: str, sha: str) -> list:
+        try:
+            return self._get(f"/repos/{owner}/{repo}/statuses/{sha}") or []
+        except Exception:
+            return []
+
+
+def _gitea_owner_repo(project_dir: str) -> tuple[str, str]:
+    """Parse (owner, repo) from git remote origin URL."""
+    r = subprocess.run(
+        ["git", "-C", project_dir, "remote", "get-url", "origin"],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        raise ValueError("No git remote origin found")
+    url = r.stdout.strip().rstrip("/")
+    url = re.sub(r"\.git$", "", url)
+    m = re.search(r"/([^/:]+/[^/]+)$", url)
+    if not m:
+        raise ValueError(f"Cannot parse owner/repo from remote: {url}")
+    parts = m.group(1).split("/")
+    return parts[0], parts[1]
+
+
+# ── LLM helper ────────────────────────────────────────────────────────────────
+
+
+def _call_llm(prompt: str, model: str = "auto") -> str:
+    """Call the llm-router OpenAI-compatible API. Falls back to claude CLI."""
+    llm_url = os.environ.get("LLM_ROUTER_URL", "https://homelab-ai-api.server.unarmedpuppy.com")
+    llm_key = os.environ.get("LLM_ROUTER_API_KEY", "")
+
+    if llm_url and llm_key:
+        try:
+            import httpx
+            r = httpx.post(
+                f"{llm_url.rstrip('/')}/v1/chat/completions",
+                headers={"Authorization": f"Bearer {llm_key}", "Content-Type": "application/json"},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}],
+                      "max_tokens": 512, "temperature": 0.2},
+                timeout=15.0,
+            )
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            console.print(f"[dim]llm-router unavailable ({type(e).__name__}), falling back to claude...[/dim]")
+
+    # Fallback: claude CLI — unset CLAUDECODE to allow nested invocation
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    r = subprocess.run(
+        ["claude", "-p", prompt, "--output-format", "text",
+         "--no-session-persistence", "--dangerously-skip-permissions"],
+        capture_output=True, text=True, timeout=60, env=env,
+    )
+    if r.returncode == 0:
+        return r.stdout.strip()
+    raise RuntimeError(f"LLM call failed: {r.stderr.strip()}")
+
+
+# ── Phase 2: run / stop / init ────────────────────────────────────────────────
+
+
+def run_dev(
+    task_id: str = typer.Argument(..., help="Task ID"),
+) -> None:
+    """Start the 'run' dev server script for a workstream."""
+    try:
+        ws = Workstream.load(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]No workstream for {task_id}.[/red]")
+        raise typer.Exit(1)
+
+    cfg = _load_project_config(ws.project_dir)
+    run_script = cfg.get("run")
+    if not run_script:
+        console.print(f"[yellow]No 'run' script in .grove-roots.json for {ws.project_slug}[/yellow]")
+        raise typer.Exit(1)
+
+    env = _build_env(ws)
+    console.print(f"[dim]Running on port {ws.port}: {run_script}[/dim]")
+
+    # Run inside the tmux session's window so it's visible when attached
+    if _tmux_session_exists(ws.tmux_session):
+        cmd = f"cd {ws.worktree_path}"
+        for k, v in env.items():
+            cmd += f" && export {k}={v}"
+        cmd += f" && {run_script}"
+        subprocess.run(["tmux", "send-keys", "-t", ws.tmux_session, cmd, "Enter"])
+        console.print(f"[green]Started in session {ws.tmux_session}[/green] — attach with [cyan]g roots open {task_id}[/cyan]")
+    else:
+        console.print(f"[yellow]Session not running — use [cyan]g roots open {task_id}[/cyan] first[/yellow]")
+
+
+def init(
+    project: str = typer.Option(None, "--project", "-p", help="Project dir (default: cwd)"),
+) -> None:
+    """Create a .grove-roots.json config in the current project."""
+    project_dir = project or os.getcwd()
+    config_path = Path(project_dir) / ".grove-roots.json"
+
+    if config_path.exists():
+        console.print(f"[yellow].grove-roots.json already exists at {config_path}[/yellow]")
+        raise typer.Exit(0)
+
+    cfg = {
+        "setup": "",
+        "run": "PORT=$GR_PORT npm run dev",
+        "teardown": "",
+        "agent": "claude-code",
+        "model": "auto",
+        "base_branch": "main",
+    }
+    config_path.write_text(json.dumps(cfg, indent=2) + "\n")
+    console.print(f"[green]Created[/green] {config_path}")
+    console.print("Edit it to add your setup/run/teardown scripts.")
+
+
+# ── Phase 4: commit / push / pr / ci ─────────────────────────────────────────
+
+
+def commit(
+    task_id: str = typer.Argument(..., help="Task ID"),
+    all: bool = typer.Option(False, "--all", "-a", help="Stage all changes before committing"),
+    message: str = typer.Option(None, "--message", "-m", help="Commit message (skip LLM generation)"),
+) -> None:
+    """LLM-assisted commit in the task worktree."""
+    try:
+        ws = Workstream.load(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]No workstream for {task_id}.[/red]")
+        raise typer.Exit(1)
+
+    wt = ws.worktree_path
+    if not Path(wt).exists():
+        console.print(f"[red]Worktree not found: {wt}[/red]")
+        raise typer.Exit(1)
+
+    if all:
+        subprocess.run(["git", "-C", wt, "add", "-A"], check=True)
+
+    # Check for staged changes
+    r = subprocess.run(["git", "-C", wt, "diff", "--staged", "--stat"], capture_output=True, text=True)
+    if not r.stdout.strip():
+        console.print("[yellow]Nothing staged. Use --all to stage all changes.[/yellow]")
+        raise typer.Exit(1)
+
+    if not message:
+        diff = subprocess.run(
+            ["git", "-C", wt, "diff", "--staged", "--stat"],
+            capture_output=True, text=True,
+        ).stdout.strip()
+        diff_body = subprocess.run(
+            ["git", "-C", wt, "diff", "--staged", "--unified=2"],
+            capture_output=True, text=True,
+        ).stdout.strip()[:3000]
+
+        console.print("[dim]Generating commit message...[/dim]")
+        prompt = (
+            f"Write a conventional commit message for these changes.\n"
+            f"Task: {ws.title}\n\n"
+            f"Changed files:\n{diff}\n\n"
+            f"Diff (truncated):\n{diff_body}\n\n"
+            f"Output ONLY the commit message. One subject line (max 72 chars), "
+            f"optionally a blank line and body. Use conventional commits format "
+            f"(feat/fix/refactor/docs/chore). No markdown, no quotes."
+        )
+        message = _call_llm(prompt, model=ws.model)
+        console.print(f"\n[bold]{message}[/bold]\n")
+
+    result = subprocess.run(["git", "-C", wt, "commit", "-m", message])
+    if result.returncode != 0:
+        raise typer.Exit(1)
+
+
+def push(
+    task_id: str = typer.Argument(..., help="Task ID"),
+) -> None:
+    """Push the task branch to Gitea."""
+    try:
+        ws = Workstream.load(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]No workstream for {task_id}.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"[dim]Pushing {ws.branch} → origin...[/dim]")
+    r = subprocess.run(
+        ["git", "-C", ws.worktree_path, "push", "-u", "origin", ws.branch],
+    )
+    if r.returncode != 0:
+        raise typer.Exit(1)
+    console.print(f"[green]Pushed[/green] {ws.branch}")
+
+
+def pr(
+    task_id: str = typer.Argument(..., help="Task ID"),
+    draft: bool = typer.Option(False, "--draft", help="Create as draft PR"),
+) -> None:
+    """Create a Gitea PR with LLM-generated description."""
+    try:
+        ws = Workstream.load(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]No workstream for {task_id}.[/red]")
+        raise typer.Exit(1)
+
+    # Check for existing PR
+    try:
+        owner, repo_name = _gitea_owner_repo(ws.project_dir)
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+
+    gitea = GiteaClient()
+    existing = gitea.get_pr_for_branch(owner, repo_name, ws.branch)
+    if existing:
+        pr_url = existing.get("html_url", "")
+        console.print(f"[yellow]PR already exists:[/yellow] {pr_url}")
+        raise typer.Exit(0)
+
+    # Ensure branch is pushed
+    console.print(f"[dim]Pushing {ws.branch}...[/dim]")
+    subprocess.run(
+        ["git", "-C", ws.worktree_path, "push", "-u", "origin", ws.branch],
+        capture_output=True,
+    )
+
+    # Get commits and diff stats
+    base = _base_branch(ws.project_dir)
+    log = subprocess.run(
+        ["git", "-C", ws.worktree_path, "log", f"{base}..HEAD", "--oneline"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+    stat = subprocess.run(
+        ["git", "-C", ws.worktree_path, "diff", "--stat", f"{base}..HEAD"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+
+    # Fetch task description for context
+    from grove.commands.task import TasksClient
+    try:
+        task = TasksClient().get(task_id)
+        task_desc = (task.get("description") or "")[:500]
+    except Exception:
+        task_desc = ""
+
+    # Generate PR title + body
+    console.print("[dim]Generating PR description...[/dim]")
+    prompt = (
+        f"Write a GitHub pull request title and description for this change.\n\n"
+        f"Task: {ws.title}\n"
+        f"Task description: {task_desc}\n\n"
+        f"Commits:\n{log or '(no commits yet)'}\n\n"
+        f"Changed files:\n{stat or '(no changes)'}\n\n"
+        f"Output format — first line is the PR title (conventional commits style, max 70 chars), "
+        f"then a blank line, then the PR body in markdown. "
+        f"Include a ## Summary section and ## Test plan section. "
+        f"Reference the task ID: {task_id}. No extra commentary."
+    )
+    llm_output = _call_llm(prompt, model=ws.model)
+
+    lines = llm_output.strip().splitlines()
+    pr_title = lines[0].strip()
+    pr_body = "\n".join(lines[2:]).strip() if len(lines) > 2 else ""
+
+    console.print(f"\n[bold]{pr_title}[/bold]")
+
+    # Create PR
+    result = gitea.create_pr(owner, repo_name, pr_title, pr_body, ws.branch, base)
+    pr_url = result.get("html_url", "")
+
+    # Update workstream and task
+    ws.pr_url = pr_url
+    ws.updated_at = datetime.now(timezone.utc).isoformat()
+    ws.save()
+
+    try:
+        TasksClient().tag(task_id, "roots_pr_url", pr_url)
+        TasksClient().update(task_id, status="IN_PROGRESS")
+    except Exception:
+        pass
+
+    console.print(f"\n[green]PR created:[/green] {pr_url}")
+
+
+def ci(
+    task_id: str = typer.Argument(..., help="Task ID"),
+) -> None:
+    """Check CI status for the task branch."""
+    try:
+        ws = Workstream.load(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]No workstream for {task_id}.[/red]")
+        raise typer.Exit(1)
+
+    try:
+        owner, repo_name = _gitea_owner_repo(ws.project_dir)
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+
+    sha = subprocess.run(
+        ["git", "-C", ws.worktree_path, "rev-parse", "HEAD"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+
+    if not sha:
+        console.print("[yellow]No commits on branch yet.[/yellow]")
+        raise typer.Exit(0)
+
+    gitea = GiteaClient()
+    statuses = gitea.get_ci_statuses(owner, repo_name, sha)
+
+    if not statuses:
+        console.print(f"[dim]No CI status for {sha[:8]} — pipeline may not have run yet.[/dim]")
+        return
+
+    for s in statuses[:5]:
+        state = s.get("status", "?")
+        context = s.get("context", "?")
+        color = {"success": "green", "failure": "red", "pending": "yellow"}.get(state, "white")
+        console.print(f"  [{color}]{state}[/{color}]  {context}  [dim]{sha[:8]}[/dim]")

@@ -260,6 +260,12 @@ def _register_commands():
     roots_app.command("list")(roots.list_workstreams)
     roots_app.command("rm")(roots.rm)
     roots_app.command("status")(roots.status)
+    roots_app.command("run")(roots.run_dev)
+    roots_app.command("init")(roots.init)
+    roots_app.command("commit")(roots.commit)
+    roots_app.command("push")(roots.push)
+    roots_app.command("pr")(roots.pr)
+    roots_app.command("ci")(roots.ci)
     app.add_typer(roots_app, name="roots")
 
 

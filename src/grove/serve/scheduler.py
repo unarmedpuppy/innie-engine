@@ -113,6 +113,10 @@ def setup_scheduler(agent: str) -> None:
     _register_expire_stale(ScheduledJob(name="session_cleanup", interval_hours=1.0))
     registered = 1
 
+    # Built-in: heartbeat runs every 30 min — no launchd/cron required
+    _register_heartbeat(agent)
+    registered += 1
+
     # Built-in: upgrade check runs if auto_update is enabled in config
     from grove.core.config import get as _get_cfg
     if _get_cfg("heartbeat.auto_update", False):
@@ -407,6 +411,37 @@ async def _expire_sessions_once() -> None:
             _sessions.expire_stale(idle_hours=2.0)
     except Exception as e:
         logger.warning(f"[scheduler] manual expire_stale_sessions failed: {e}")
+
+
+def _register_heartbeat(agent: str) -> None:
+    """Register the built-in heartbeat as a 30-min interval job inside grove serve."""
+    import os
+    import sys
+    import asyncio
+    from pathlib import Path
+
+    g_bin = Path(sys.executable).parent / "g"
+
+    async def _run_heartbeat():
+        cmd = (
+            [str(g_bin), "heartbeat", "run", "--retroactive", "--batch-size", "10"]
+            if g_bin.exists()
+            else [sys.executable, "-m", "grove.cli", "heartbeat", "run", "--retroactive", "--batch-size", "10"]
+        )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                env={**os.environ, "GROVE_AGENT": agent},
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+            logger.info(f"[heartbeat] completed for {agent} (exit {proc.returncode})")
+        except Exception as e:
+            logger.warning(f"[heartbeat] failed to run for {agent}: {e}")
+
+    _scheduler.add_job(_run_heartbeat, "interval", id="heartbeat", minutes=30)
+    logger.info(f"[scheduler] registered built-in heartbeat every 30min for {agent}")
 
 
 def _register_upgrade_check(job: ScheduledJob) -> None:

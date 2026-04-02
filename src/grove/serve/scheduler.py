@@ -117,6 +117,10 @@ def setup_scheduler(agent: str) -> None:
     _register_heartbeat(agent)
     registered += 1
 
+    # Built-in: world sync — git add/commit/push ~/.grove/world every 15 min
+    _register_world_sync()
+    registered += 1
+
     # Built-in: upgrade check runs if auto_update is enabled in config
     from grove.core.config import get as _get_cfg
     if _get_cfg("heartbeat.auto_update", False):
@@ -442,6 +446,38 @@ def _register_heartbeat(agent: str) -> None:
 
     _scheduler.add_job(_run_heartbeat, "interval", id="heartbeat", minutes=30)
     logger.info(f"[scheduler] registered built-in heartbeat every 30min for {agent}")
+
+
+def _register_world_sync() -> None:
+    """Sync ~/.grove/world to Gitea every 15 min — replaces ai.grove.world-sync launchd plist."""
+    import asyncio
+    from pathlib import Path
+
+    world_dir = Path.home() / ".grove" / "world"
+
+    async def _sync():
+        if not world_dir.exists():
+            return
+        try:
+            script = (
+                f"cd {world_dir} && git add -A && "
+                "git diff --cached --quiet || "
+                f"git commit -m \"sync $(date +%H:%M)\" --author=\"grove <grove@innie.local>\" && "
+                "git push origin main --quiet"
+            )
+            proc = await asyncio.create_subprocess_shell(
+                script,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+            if proc.returncode not in (0, 1):  # 1 = nothing to commit
+                logger.warning(f"[world-sync] exited {proc.returncode}")
+        except Exception as e:
+            logger.warning(f"[world-sync] failed: {e}")
+
+    _scheduler.add_job(_sync, "interval", id="world_sync", minutes=15)
+    logger.info("[scheduler] registered world_sync every 15min")
 
 
 def _register_upgrade_check(job: ScheduledJob) -> None:

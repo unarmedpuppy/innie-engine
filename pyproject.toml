@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "grove"
-version = "0.16.6"
+version = "0.16.11"
 description = "Persistent memory and identity for AI coding assistants"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "Joshua Jenquist" }]
 keywords = ["ai", "memory", "cli", "claude", "coding-assistant", "knowledge-base"]
@@ -23,6 +23,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "tomli>=2.0; python_version < '3.11'",
     "typer>=0.15",
     "rich>=13.0",
     "pydantic>=2.0",

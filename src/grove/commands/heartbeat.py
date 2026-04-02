@@ -424,9 +424,14 @@ def disable():
     from pathlib import Path
 
     if sys.platform == "darwin":
-        plist_path = (
-            Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
-        )
+        import os
+        from grove.core import config as grove_config
+        agent = os.environ.get("GROVE_AGENT") or grove_config.get_agent()
+        label = f"com.grove.heartbeat.{agent}" if agent else "com.grove.heartbeat"
+        plist_path = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+        # Fall back to legacy label if per-agent plist doesn't exist
+        if not plist_path.exists():
+            plist_path = Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
         if not plist_path.exists():
             console.print("[dim]No launchd plist found.[/dim]")
             return
@@ -479,9 +484,13 @@ def hb_status():
     from pathlib import Path
 
     if sys.platform == "darwin":
-        plist_path = (
-            Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
-        )
+        import os
+        from grove.core import config as grove_config
+        agent = os.environ.get("GROVE_AGENT") or grove_config.get_agent()
+        label = f"com.grove.heartbeat.{agent}" if agent else "com.grove.heartbeat"
+        plist_path = Path.home() / "Library" / "LaunchAgents" / f"{label}.plist"
+        if not plist_path.exists():
+            plist_path = Path.home() / "Library" / "LaunchAgents" / "com.grove.heartbeat.plist"
         has_scheduler = plist_path.exists()
         console.print(f"Launchd: {'[green]enabled[/green]' if has_scheduler else '[dim]disabled[/dim]'}")
     else:

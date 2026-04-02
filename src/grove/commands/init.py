@@ -565,13 +565,18 @@ def _install_scheduler():
 
 
 def _install_launchd():
-    """Install heartbeat as a launchd plist (macOS)."""
+    """Install heartbeat as a per-agent launchd plist (macOS)."""
     import os
+
+    from grove.core import config as grove_config
 
     innie_path = Path(sys.executable).parent / "g"
     log_dir = paths.home() / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / "heartbeat.log"
+
+    agent = os.environ.get("GROVE_AGENT") or grove_config.get_agent()
+    plist_label = f"com.grove.heartbeat.{agent}" if agent else "com.grove.heartbeat"
+    log_path = log_dir / f"heartbeat-{agent}.log" if agent else log_dir / "heartbeat.log"
 
     # Build PATH with common tool locations
     path_extras = [
@@ -585,7 +590,18 @@ def _install_launchd():
     path_str = ":".join([p for p in path_extras if p not in os.environ.get("PATH", "")])
     full_path = f"{path_str}:{os.environ.get('PATH', '/usr/bin:/bin')}"
 
-    plist_label = "com.grove.heartbeat"
+    # Capture LLM env vars from current environment so launchd jobs can do extraction
+    env_vars = {"PATH": full_path}
+    for key in ("GROVE_AGENT", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"):
+        val = os.environ.get(key, "")
+        if val:
+            env_vars[key] = val
+
+    env_xml = "\n".join(
+        f"        <key>{k}</key>\n        <string>{v}</string>"
+        for k, v in env_vars.items()
+    )
+
     plist_path = Path.home() / "Library" / "LaunchAgents" / f"{plist_label}.plist"
     plist_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -605,8 +621,7 @@ def _install_launchd():
     <integer>1800</integer>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>PATH</key>
-        <string>{full_path}</string>
+{env_xml}
     </dict>
     <key>StandardOutPath</key>
     <string>{log_path}</string>

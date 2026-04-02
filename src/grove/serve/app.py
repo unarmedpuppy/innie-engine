@@ -1317,6 +1317,18 @@ async def list_traces_api(
     conn = open_trace_db(db)
     since = _time.time() - (days * 86400) if days > 0 else None
     sessions = list_sessions(conn, agent_name=agent, limit=limit, since=since)
+
+    # Fetch span counts in one query
+    if sessions:
+        ids = [s.session_id for s in sessions]
+        placeholders = ",".join("?" * len(ids))
+        rows = conn.execute(
+            f"SELECT session_id, COUNT(*) as cnt FROM trace_spans WHERE session_id IN ({placeholders}) GROUP BY session_id",
+            ids,
+        ).fetchall()
+        span_counts = {r["session_id"]: r["cnt"] for r in rows}
+    else:
+        span_counts = {}
     conn.close()
 
     return {
@@ -1332,6 +1344,7 @@ async def list_traces_api(
                 "input_tokens": s.input_tokens,
                 "output_tokens": s.output_tokens,
                 "num_turns": s.num_turns,
+                "span_count": span_counts.get(s.session_id, 0),
             }
             for s in sessions
         ],
@@ -1385,6 +1398,72 @@ async def get_trace_api(session_id: str):
         ],
         "span_count": len(session.spans),
     }
+
+
+@app.get("/v1/traces/{session_id}/transcript")
+async def get_trace_transcript(session_id: str):
+    """Return conversation messages from the local Claude Code JSONL session file."""
+    import json as _json
+    from pathlib import Path
+
+    projects_dir = Path.home() / ".claude" / "projects"
+    jsonl_file = None
+    if projects_dir.exists():
+        for project_dir in projects_dir.iterdir():
+            if not project_dir.is_dir():
+                continue
+            candidate = project_dir / f"{session_id}.jsonl"
+            if candidate.exists():
+                jsonl_file = candidate
+                break
+
+    if not jsonl_file:
+        raise HTTPException(404, "Transcript not found for this session")
+
+    messages = []
+    try:
+        with open(jsonl_file, errors="replace") as f:
+            for raw in f:
+                raw = raw.strip()
+                if not raw:
+                    continue
+                try:
+                    entry = _json.loads(raw)
+                except _json.JSONDecodeError:
+                    continue
+                etype = entry.get("type", "")
+                msg = entry.get("message", {})
+                if not isinstance(msg, dict):
+                    continue
+                if etype in ("user", "assistant"):
+                    role = etype
+                elif etype == "message":
+                    role = msg.get("role", "")
+                else:
+                    continue
+                if role not in ("user", "assistant"):
+                    continue
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    text = content
+                elif isinstance(content, list):
+                    parts = []
+                    for block in content:
+                        if not isinstance(block, dict):
+                            continue
+                        if block.get("type") == "text":
+                            parts.append(block.get("text", ""))
+                    text = "\n".join(parts)
+                else:
+                    continue
+                if text.strip():
+                    messages.append({"role": role, "content": text, "timestamp": entry.get("timestamp")})
+                if len(messages) >= 300:
+                    break
+    except Exception as e:
+        raise HTTPException(500, f"Failed to read transcript: {e}")
+
+    return {"session_id": session_id, "messages": messages}
 
 
 @app.get("/v1/traces/stats")

@@ -449,18 +449,18 @@ def _register_heartbeat(agent: str) -> None:
 
 
 def _register_world_sync() -> None:
-    """Sync ~/.grove/world to Gitea every 15 min — replaces ai.grove.world-sync launchd plist."""
+    """Sync ~/.grove to Gitea every 15 min."""
     import asyncio
     from pathlib import Path
 
-    world_dir = Path.home() / ".grove" / "world"
+    grove_home = Path.home() / ".grove"
 
     async def _sync():
-        if not world_dir.exists():
+        if not grove_home.exists():
             return
         try:
             script = (
-                f"cd {world_dir} && git add -A && "
+                f"cd {grove_home} && git add -A && "
                 "git diff --cached --quiet || "
                 f"git commit -m \"sync $(date +%H:%M)\" --author=\"grove <grove@innie.local>\" && "
                 "git push origin main --quiet"

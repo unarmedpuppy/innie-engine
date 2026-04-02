@@ -1,4 +1,4 @@
-"""World directory sync — commit and push the grove-world Gitea repo."""
+"""Grove home sync — commit and push ~/.grove to Gitea."""
 
 import subprocess
 from datetime import datetime
@@ -15,20 +15,12 @@ def sync(
     pull: bool = typer.Option(False, "--pull", help="Pull latest from remote instead of pushing"),
     message: str = typer.Option("", "--message", "-m", help="Custom commit message"),
 ) -> None:
-    """Sync the world directory to/from Gitea.
+    """Sync ~/.grove to/from Gitea.
 
     Default: commit any changes and push.
     With --pull: pull latest from remote (for server/WSL machines).
     """
-    from grove.core.config import load_config
-    cfg = load_config()
-    world = cfg.get("defaults", {}).get("world")
-
-    if not world:
-        console.print("[red]defaults.world not configured in config.toml[/red]")
-        raise typer.Exit(1)
-
-    world_path = paths.world_dir()
+    world_path = paths.home()
     if not world_path.exists():
         console.print(f"[red]World dir not found: {world_path}[/red]")
         raise typer.Exit(1)
@@ -53,13 +45,13 @@ def sync(
         cwd=world_path, capture_output=True
     )
     if diff.returncode == 0:
-        console.print("[dim]World dir: nothing to commit[/dim]")
+        console.print("[dim]Grove home: nothing to commit[/dim]")
         return
 
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     msg = message or f"sync {ts}"
     commit = subprocess.run(
-        ["git", "commit", "-m", msg, "--author=Oak <oak@innie.local>"],
+        ["git", "commit", "-m", msg, "--author=grove <grove@innie.local>"],
         cwd=world_path, capture_output=True, text=True
     )
     if commit.returncode != 0:
@@ -71,7 +63,7 @@ def sync(
         cwd=world_path, capture_output=True, text=True
     )
     if push.returncode == 0:
-        console.print(f"[green]✓[/green] World dir synced: {msg}")
+        console.print(f"[green]✓[/green] Grove home synced: {msg}")
     else:
         console.print(f"[red]Push failed:[/red] {push.stderr.strip()}")
         raise typer.Exit(1)

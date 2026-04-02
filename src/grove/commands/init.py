@@ -900,9 +900,15 @@ def handle(event: str):
             session_id = os.environ.get("CLAUDE_SESSION_ID", "unknown")
             tool_output = os.environ.get("TOOL_OUTPUT", "")
 
-            from grove.core.trace import open_trace_db, record_span
+            from grove.core.trace import open_trace_db, record_span, start_session
 
             conn = open_trace_db()
+            # Ensure the session exists — session-start may have run without CLAUDE_SESSION_ID
+            exists = conn.execute(
+                "SELECT 1 FROM trace_sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
+            if not exists:
+                start_session(conn, session_id=session_id, interactive=True)
             record_span(
                 conn,
                 session_id=session_id,

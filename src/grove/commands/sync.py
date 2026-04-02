@@ -51,7 +51,7 @@ def sync(
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     msg = message or f"sync {ts}"
     commit = subprocess.run(
-        ["git", "commit", "-m", msg, "--author=grove <grove@innie.local>"],
+        ["git", "commit", "-m", msg, "--author=grove <grove@grove.local>"],
         cwd=world_path, capture_output=True, text=True
     )
     if commit.returncode != 0:

@@ -462,7 +462,7 @@ def _register_world_sync() -> None:
             script = (
                 f"cd {grove_home} && git add -A && "
                 "git diff --cached --quiet || "
-                f"git commit -m \"sync $(date +%H:%M)\" --author=\"grove <grove@innie.local>\" && "
+                f"git commit -m \"sync $(date +%H:%M)\" --author=\"grove <grove@grove.local>\" && "
                 "git push origin main --quiet"
             )
             proc = await asyncio.create_subprocess_shell(

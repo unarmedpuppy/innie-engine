@@ -402,10 +402,76 @@ def open_workstream(
     sys.exit(result.returncode)
 
 
+def _list_fleet() -> None:
+    """Show all active roots workstreams across the fleet via Tasks API metadata."""
+    from grove.commands.task import TasksClient
+
+    try:
+        client = TasksClient()
+        # Fetch all non-closed tasks and filter client-side for roots metadata
+        all_tasks = client._get("/v1/tasks", status="OPEN") .get("tasks", [])
+        all_tasks += client._get("/v1/tasks", status="IN_PROGRESS").get("tasks", [])
+    except Exception as e:
+        console.print(f"[red]Tasks API unreachable:[/red] {e}")
+        raise typer.Exit(1)
+
+    workstreams = [
+        t for t in all_tasks
+        if (t.get("metadata") or {}).get("roots_state") not in (None, "archived")
+    ]
+
+    if not workstreams:
+        console.print("[dim]No active workstreams across the fleet.[/dim]")
+        return
+
+    # Group by machine
+    by_machine: dict[str, list[dict]] = {}
+    for t in workstreams:
+        machine = (t.get("metadata") or {}).get("roots_machine", "unknown")
+        by_machine.setdefault(machine, []).append(t)
+
+    console.print(f"\n[bold]Fleet Roots[/bold]  [dim]{len(workstreams)} active across {len(by_machine)} machine(s)[/dim]\n")
+
+    for machine, tasks in sorted(by_machine.items()):
+        console.print(f"[bold cyan]{machine}[/bold cyan]  [dim]({len(tasks)} workstream{'s' if len(tasks) != 1 else ''})[/dim]")
+        table = Table(show_lines=False, expand=False, box=None, pad_edge=False)
+        table.add_column("Task", style="cyan", no_wrap=True, min_width=10, max_width=24)
+        table.add_column("  ", no_wrap=True, width=8)    # state
+        table.add_column("Title", no_wrap=True, min_width=20, max_width=32)
+        table.add_column("Branch", no_wrap=True, min_width=14, max_width=24)
+        table.add_column("PR", no_wrap=True, width=3)
+        table.add_column("  ", no_wrap=True, width=4)    # age
+
+        for t in tasks:
+            meta = t.get("metadata") or {}
+            state = str(meta.get("roots_state", "?"))
+            state_str = "[green]running[/green]" if state == "running" else f"[dim]{state}[/dim]"
+            branch = str(meta.get("roots_branch", "?"))
+            has_pr = bool(meta.get("roots_pr_url"))
+            title = t.get("title", "")
+            if len(title) > 32:
+                title = title[:29] + "..."
+            table.add_row(
+                t.get("id", "?"),
+                state_str,
+                title,
+                branch,
+                "[blue]PR[/blue]" if has_pr else "[dim]—[/dim]",
+                f"[dim]{_age(t.get('created_at', ''))}[/dim]",
+            )
+        console.print(table)
+        console.print()
+
+
 def list_workstreams(
     all: bool = typer.Option(False, "--all", help="Include archived workstreams"),
+    fleet: bool = typer.Option(False, "--fleet", help="Show workstreams across all fleet machines (reads Tasks API)"),
 ) -> None:
-    """List active workstreams on this machine."""
+    """List active workstreams. --fleet shows all machines via Tasks API."""
+    if fleet:
+        _list_fleet()
+        return
+
     workstreams = Workstream.load_all()
     if not all:
         workstreams = [w for w in workstreams if w.state != "archived"]
@@ -596,6 +662,85 @@ def recover() -> None:
         if worktree_exists and dirty:
             console.print(f"    → [cyan]g roots commit {ws.task_id} --all[/cyan]  (save changes)")
         console.print()
+
+
+def delegate(
+    task_id: str = typer.Argument(..., help="Task ID to hand off"),
+    to_agent: str = typer.Argument(..., help="Target agent: elm, ash, willow, birch"),
+    message: str = typer.Option("", "--message", "-m", help="Optional note to the receiving agent"),
+) -> None:
+    """Hand off a workstream to another agent via A2A inbox.
+
+    The receiving agent gets the task ID, branch, worktree context, and instructions
+    to run 'g roots new <task-id> --project <repo>' to pick it up on their machine.
+    """
+    try:
+        ws = Workstream.load(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]No workstream for {task_id}.[/red] Run [cyan]g roots new {task_id}[/cyan] first.")
+        raise typer.Exit(1)
+
+    from grove.core import paths
+
+    sender = paths.active_agent()
+    branch_note = f"Branch `{ws.branch}` has been pushed." if ws.pr_url or True else "Branch not yet pushed — run `g roots push` first."
+
+    body = (
+        f"I'm handing off a roots workstream to you.\n\n"
+        f"**Task:** {task_id} — {ws.title}\n"
+        f"**Branch:** `{ws.branch}`\n"
+        f"**Project repo:** `{ws.project_dir}`\n"
+        f"**Current state:** {ws.state}\n"
+    )
+    if ws.pr_url:
+        body += f"**PR:** {ws.pr_url}\n"
+    if message:
+        body += f"\n**Note from {sender}:** {message}\n"
+
+    body += (
+        f"\nTo pick this up, run:\n"
+        f"```\ng roots new {task_id} --project {ws.project_dir}\n```\n"
+        f"The branch `{ws.branch}` is in the shared remote — your worktree will check it out.\n"
+    )
+
+    # Push branch first so the receiving agent can check it out
+    dirty = Path(ws.worktree_path).exists() and _git_dirty(ws.worktree_path)
+    if dirty:
+        console.print(f"[yellow]Warning: worktree has uncommitted changes. Commit them first with:[/yellow]")
+        console.print(f"  [cyan]g roots commit {task_id} --all[/cyan]")
+        if not typer.confirm("Delegate anyway?"):
+            raise typer.Exit(0)
+
+    console.print(f"[dim]Pushing branch {ws.branch}...[/dim]")
+    r = subprocess.run(
+        ["git", "-C", ws.worktree_path, "push", "-u", "origin", ws.branch],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        console.print(f"[yellow]Push failed (branch may already be up to date): {r.stderr.strip()}[/yellow]")
+
+    # Send A2A inbox message
+    r = subprocess.run(
+        ["g", "inbox", "send", to_agent,
+         "--subject", f"roots delegate: {task_id}",
+         "--message", body,
+         "--agent", sender],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        console.print(f"[red]Failed to send inbox message:[/red] {r.stderr.strip()}")
+        raise typer.Exit(1)
+
+    # Update Tasks API
+    from grove.commands.task import TasksClient
+    try:
+        TasksClient().tag(task_id, "roots_delegated_to", to_agent)
+        TasksClient().note(task_id, f"Workstream delegated to {to_agent} by {sender}")
+    except Exception:
+        pass
+
+    console.print(f"[green]Delegated[/green] {task_id} → {to_agent}")
+    console.print(f"  They can pick it up with: [cyan]g roots new {task_id} --project {ws.project_dir}[/cyan]")
 
 
 # ── Gitea client ──────────────────────────────────────────────────────────────

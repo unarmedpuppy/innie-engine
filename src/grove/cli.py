@@ -267,6 +267,7 @@ def _register_commands():
     roots_app.command("pr")(roots.pr)
     roots_app.command("ci")(roots.ci)
     roots_app.command("recover")(roots.recover)
+    roots_app.command("delegate")(roots.delegate)
     app.add_typer(roots_app, name="roots")
 
 

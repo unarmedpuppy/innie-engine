@@ -417,21 +417,24 @@ def list_workstreams(
     table = Table(title=f"Roots — {os.uname().nodename}", show_lines=False, expand=False, box=None, pad_edge=False)
     table.add_column("Task", style="cyan", no_wrap=True, min_width=10, max_width=22)
     table.add_column("  ", no_wrap=True, width=5)    # session state
+    table.add_column("  ", no_wrap=True, width=6)    # dirty
     table.add_column("Title", no_wrap=True, min_width=20, max_width=32)
     table.add_column("Branch", no_wrap=True, min_width=14, max_width=24)
-    table.add_column("Port", no_wrap=True, width=6)
     table.add_column("  ", no_wrap=True, width=4)    # age
 
     for ws in workstreams:
         session_live = _tmux_session_exists(ws.tmux_session)
         session_str = "[green]live[/green]" if session_live else "[dim]dead[/dim]"
+        worktree_exists = Path(ws.worktree_path).exists()
+        dirty = worktree_exists and _git_dirty(ws.worktree_path)
+        dirty_str = "[yellow]dirty[/yellow]" if dirty else "[dim]clean[/dim]"
         title = ws.title if len(ws.title) <= 32 else ws.title[:29] + "..."
         table.add_row(
             ws.task_id,
             session_str,
+            dirty_str,
             title,
             ws.branch,
-            str(ws.port),
             f"[dim]{_age(ws.created_at)}[/dim]",
         )
 
@@ -537,6 +540,62 @@ def _status_single(task_id: str) -> None:
             console.print(f"    {k}: {v}")
 
     console.print()
+
+
+def recover() -> None:
+    """Find orphaned or interrupted workstreams with unsaved changes.
+
+    Shows all non-archived workstreams whose tmux session is dead or whose
+    worktree has uncommitted changes. Prints the commands to revive each one.
+    """
+    workstreams = [w for w in Workstream.load_all() if w.state != "archived"]
+
+    if not workstreams:
+        console.print("[dim]No active workstreams found.[/dim]")
+        return
+
+    orphaned = []
+    for ws in workstreams:
+        worktree_exists = Path(ws.worktree_path).exists()
+        session_live = _tmux_session_exists(ws.tmux_session)
+        dirty = worktree_exists and _git_dirty(ws.worktree_path)
+        orphaned.append((ws, worktree_exists, session_live, dirty))
+
+    # Only report ones worth recovering: dead session OR dirty worktree
+    recoverable = [(ws, wt, sl, d) for ws, wt, sl, d in orphaned if not sl or d]
+
+    if not recoverable:
+        console.print("[green]✓ No orphaned workstreams.[/green] All sessions live and worktrees clean.")
+        return
+
+    console.print(f"\n[bold]Recoverable workstreams ({len(recoverable)})[/bold]\n")
+
+    for ws, worktree_exists, session_live, dirty in recoverable:
+        status_parts = []
+        if not session_live:
+            status_parts.append("[dim]session dead[/dim]")
+        if dirty:
+            status_parts.append("[yellow]uncommitted changes[/yellow]")
+        if not worktree_exists:
+            status_parts.append("[red]worktree missing[/red]")
+
+        console.print(f"  [cyan]{ws.task_id}[/cyan]  {ws.title[:48]}")
+        console.print(f"    {' · '.join(status_parts)}")
+        console.print(f"    branch: {ws.branch}  |  {ws.worktree_path}")
+
+        if worktree_exists and dirty:
+            # Show a summary of what's dirty
+            r = subprocess.run(
+                ["git", "-C", ws.worktree_path, "status", "--short"],
+                capture_output=True, text=True,
+            )
+            for line in r.stdout.strip().splitlines()[:5]:
+                console.print(f"    [dim]{line}[/dim]")
+
+        console.print(f"    → [cyan]g roots open {ws.task_id}[/cyan]    (reattach)")
+        if worktree_exists and dirty:
+            console.print(f"    → [cyan]g roots commit {ws.task_id} --all[/cyan]  (save changes)")
+        console.print()
 
 
 # ── Gitea client ──────────────────────────────────────────────────────────────

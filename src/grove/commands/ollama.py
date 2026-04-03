@@ -1,6 +1,7 @@
 """Ollama local model management commands."""
 
 import json
+import os
 import platform
 import re
 import subprocess

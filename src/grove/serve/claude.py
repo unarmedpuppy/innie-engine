@@ -52,8 +52,9 @@ def _probe_interval() -> float:
 async def _probe_url(url: str) -> bool:
     """Check reachability of an Anthropic-compatible base URL.
 
-    Strips the /v1 path suffix and hits /health. Returns True if the server
-    responds with any non-5xx status, False on connection error or timeout.
+    Probes /health on the base URL. Returns True only on 2xx so that a
+    Traefik/nginx 404 (backend container down) correctly trips the breaker.
+    Falls back to probing /v1/models if /health returns 404.
     """
     import httpx
 
@@ -63,7 +64,13 @@ async def _probe_url(url: str) -> bool:
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
             r = await client.get(f"{base}/health", follow_redirects=False)
-            return r.status_code < 500
+            if 200 <= r.status_code < 300:
+                return True
+            # /health not found — try /v1/models as a secondary probe
+            if r.status_code == 404:
+                r2 = await client.get(f"{base}/v1/models", follow_redirects=False)
+                return 200 <= r2.status_code < 300
+            return False
     except Exception:
         return False
 
@@ -197,6 +204,7 @@ async def stream_claude_events(
     session_id: str | None = None,
     working_directory: str = ".",
     timeout: float = 1800,
+    allowed_tools: list[str] | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Stream JSONL events from Claude Code CLI."""
     if model is None:
@@ -213,6 +221,8 @@ async def stream_claude_events(
         cmd.extend(["--system-prompt", system_prompt])
     if session_id:
         cmd.extend(["--resume", session_id])
+    if allowed_tools:
+        cmd.extend(["--allowedTools", ",".join(allowed_tools)])
 
     cmd.append("--")
     cmd.append(prompt)
@@ -301,6 +311,7 @@ async def collect_stream(
     session_id: str | None = None,
     working_directory: str = ".",
     timeout: float = 1800,
+    allowed_tools: list[str] | None = None,
 ) -> StreamResult:
     """Run Claude CLI and collect full result."""
     result = StreamResult()
@@ -313,6 +324,7 @@ async def collect_stream(
         session_id=session_id,
         working_directory=working_directory,
         timeout=timeout,
+        allowed_tools=allowed_tools,
     ):
         event_type = data.get("type")
         result.events.append(data)

@@ -106,4 +106,8 @@ llm-router recovers
 
 ## Implementation
 
-grove v0.16.0–v0.16.3. See `src/grove/serve/proxy.py` and `src/grove/commands/ollama.py`.
+grove v0.16.0–v0.16.4. See `src/grove/serve/proxy.py` and `src/grove/commands/ollama.py`.
+
+**v0.16.4 fix:** `_probe_url` now requires a 2xx response (not just non-5xx). Previously, Traefik returning
+404 for a down backend container would fool the probe into thinking the primary was healthy. Now: `/health`
+must return 2xx, with fallback probe to `/v1/models` if `/health` returns 404.

@@ -40,6 +40,7 @@ class ScheduledJob:
     working_directory: str | None = None
     deliver_to: DeliverTo | None = None
     reply_to: str | None = None  # 'mattermost://<channel-id>'
+    allowed_tools: list[str] | None = None  # e.g. ["Bash","Read","Glob"] — restricts MCP loading
 
 
 def _load_schedule(agent: str) -> list[ScheduledJob]:
@@ -61,6 +62,9 @@ def _load_schedule(agent: str) -> list[ScheduledJob]:
         if raw.get("deliver_to"):
             dt = raw["deliver_to"]
             deliver_to = DeliverTo(channel=dt["channel"], contact=dt["contact"])
+        allowed_tools = raw.get("allowed_tools")
+        if isinstance(allowed_tools, str):
+            allowed_tools = [t.strip() for t in allowed_tools.split(",") if t.strip()]
         jobs.append(ScheduledJob(
             name=name,
             enabled=raw.get("enabled", True),
@@ -73,6 +77,7 @@ def _load_schedule(agent: str) -> list[ScheduledJob]:
             working_directory=raw.get("working_directory"),
             deliver_to=deliver_to,
             reply_to=raw.get("reply_to"),
+            allowed_tools=allowed_tools or None,
         ))
     return jobs
 
@@ -280,6 +285,7 @@ async def _run_scheduled_job(job: ScheduledJob) -> None:
             model=job.model,
             permission_mode=job.permission_mode,
             working_directory=job.working_directory or str(Path.home()),
+            allowed_tools=job.allowed_tools,
         )
 
         if result.is_error:
